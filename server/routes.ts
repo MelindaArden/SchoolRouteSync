@@ -121,8 +121,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const driverId = parseInt(req.params.driverId);
       const routes = await storage.getRoutesByDriver(driverId);
-      res.json(routes);
+      
+      // Get detailed route information including schools and students
+      const detailedRoutes = await Promise.all(
+        routes.map(async (route) => {
+          const routeSchools = await storage.getRouteSchools(route.id);
+          const students = await storage.getStudentsByRoute(route.id);
+          const assignments = await storage.getRouteAssignments(route.id);
+          
+          // Get school details for each route school
+          const schoolsWithDetails = await Promise.all(
+            routeSchools.map(async (rs) => {
+              const school = await storage.getSchool(rs.schoolId);
+              const schoolStudents = students.filter(s => 
+                assignments.some(a => a.studentId === s.id && a.schoolId === rs.schoolId)
+              );
+              return {
+                ...rs,
+                school,
+                students: schoolStudents,
+              };
+            })
+          );
+          
+          // Sort schools by order
+          schoolsWithDetails.sort((a, b) => a.estimatedArrivalTime.localeCompare(b.estimatedArrivalTime));
+          
+          return {
+            ...route,
+            schools: schoolsWithDetails,
+            totalStudents: students.length,
+          };
+        })
+      );
+      
+      res.json(detailedRoutes);
     } catch (error) {
+      console.error('Error fetching driver routes:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

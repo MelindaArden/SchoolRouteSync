@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/lib/types";
 import Navigation from "@/components/shared/navigation";
-import RouteCard from "@/components/driver/route-card";
-import SchoolCard from "@/components/driver/school-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +14,9 @@ import {
   Clock,
   MapPin,
   Users,
-  Route as RouteIcon
+  Route as RouteIcon,
+  Home,
+  User as UserIcon
 } from "lucide-react";
 
 interface DriverDashboardProps {
@@ -33,45 +33,45 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
 
-  // Fetch driver's routes
-  const { data: routes = [], isLoading: routesLoading } = useQuery({
+  // Fetch driver's routes with detailed school and student information
+  const { data: routes = [], isLoading: routesLoading, refetch: refetchRoutes } = useQuery({
     queryKey: ['/api/drivers', user.id, 'routes'],
   });
 
   // Fetch today's sessions
-  const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
+  const { data: sessions = [], isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
     queryKey: ['/api/drivers', user.id, 'sessions', 'today'],
   });
 
-  // Fetch route details if there's an active route
-  const { data: routeDetails } = useQuery({
-    queryKey: ['/api/routes', routes[0]?.id, 'details'],
-    enabled: routes.length > 0,
-  });
+  // Get the current active route (first route assigned to driver)
+  const currentRoute = routes.length > 0 ? routes[0] : null;
 
   const handleStartRoute = async () => {
-    if (!routes[0]) return;
+    if (!currentRoute) return;
 
     try {
-      const response = await apiRequest("POST", "/api/pickup-sessions", {
-        routeId: routes[0].id,
-        driverId: user.id,
-        date: new Date().toISOString().split('T')[0],
-        status: "in_progress",
+      const session = await apiRequest(`/api/pickup-sessions`, {
+        method: "POST",
+        body: JSON.stringify({
+          routeId: currentRoute.id,
+          driverId: user.id,
+          date: new Date().toISOString().split('T')[0],
+          status: "in_progress",
+        }),
       });
 
-      const session = await response.json();
       setActiveSession(session);
       startTracking();
-
+      refetchSessions();
+      
       toast({
         title: "Route Started",
-        description: "Your pickup route has begun. Stay safe!",
+        description: "You can now begin picking up students.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to start route",
+        description: "Failed to start route. Please try again.",
         variant: "destructive",
       });
     }
@@ -81,51 +81,61 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     if (!activeSession) return;
 
     try {
-      await apiRequest("PATCH", `/api/pickup-sessions/${activeSession.id}`, {
-        status: "completed",
-        completedTime: new Date().toISOString(),
+      await apiRequest(`/api/pickup-sessions/${activeSession.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "completed",
+          completedTime: new Date().toISOString(),
+        }),
       });
 
       setActiveSession(null);
       stopTracking();
-
+      refetchSessions();
+      
       toast({
         title: "Route Completed",
-        description: "Great job! All pickups have been completed.",
+        description: "All pickups have been completed successfully.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to complete route",
+        description: "Failed to complete route. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const handleEmergency = () => {
-    toast({
-      title: "Emergency Alert Sent",
-      description: "Leadership has been notified of the emergency",
-      variant: "destructive",
-    });
-  };
+  const handleMarkStudentPickedUp = async (studentId: number) => {
+    if (!activeSession) return;
 
-  const handleReportDelay = () => {
-    toast({
-      title: "Delay Reported",
-      description: "Leadership has been notified of the delay",
-    });
-  };
+    try {
+      // Find the student pickup record and update it
+      const studentPickups = await apiRequest(`/api/student-pickups?sessionId=${activeSession.id}`);
+      const pickup = studentPickups.find((p: any) => p.studentId === studentId);
+      
+      if (pickup) {
+        await apiRequest(`/api/student-pickups/${pickup.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            status: "picked_up",
+            pickedUpAt: new Date().toISOString(),
+          }),
+        });
 
-  const openNavigation = () => {
-    if (!routeDetails?.schools?.length) return;
-
-    const nextSchool = routeDetails.schools.find((s: any) => !s.completed);
-    if (!nextSchool?.school) return;
-
-    const destination = encodeURIComponent(nextSchool.school.address);
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-    window.open(url, '_blank');
+        refetchSessions();
+        toast({
+          title: "Student Picked Up",
+          description: "Student has been marked as picked up.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update pickup status.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (routesLoading || sessionsLoading) {
@@ -136,10 +146,28 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     );
   }
 
-  const currentRoute = routes[0];
-  const totalStudents = routeDetails?.totalStudents || 0;
-  const completedPickups = 8; // This would come from pickup status
-  const nextSchool = routeDetails?.schools?.find((s: any) => !s.completed);
+  const totalStudents = currentRoute?.totalStudents || 0;
+  const hasActiveSession = activeSession || (sessions.length > 0 && sessions[0].status === "in_progress");
+
+  if (!currentRoute) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation user={user} onLogout={onLogout} role="driver" />
+        
+        <div className="max-w-md mx-auto pt-20 p-4">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No Route Assigned</h3>
+              <p className="text-gray-600">
+                You don't have any routes assigned yet. Please contact your administrator.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,64 +180,90 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       <div className="pb-20">
         {activeTab === "routes" && (
           <div className="p-4 space-y-4">
-            {/* Current Route Status */}
-            {currentRoute && (
-              <RouteCard
-                route={currentRoute}
-                totalStudents={totalStudents}
-                completedPickups={completedPickups}
-                nextSchool={nextSchool?.school}
-                isActive={!!activeSession}
-                onStart={handleStartRoute}
-                onComplete={handleCompleteRoute}
-              />
-            )}
-
-            {/* Navigation Button */}
-            {nextSchool && (
-              <Button
-                onClick={openNavigation}
-                className="w-full bg-primary text-white py-3 flex items-center justify-center space-x-2"
-              >
-                <NavigationIcon className="h-5 w-5" />
-                <span>Navigate to {nextSchool.school?.name}</span>
-              </Button>
-            )}
-
-            {/* Schools List */}
-            {routeDetails?.schools?.map((schoolData: any, index: number) => (
-              <SchoolCard
-                key={schoolData.id}
-                school={schoolData.school}
-                students={schoolData.students}
-                estimatedTime={schoolData.estimatedArrivalTime}
-                status={index === 0 ? "completed" : index === 1 ? "next" : "pending"}
-                sessionId={activeSession?.id}
-              />
-            ))}
-
-            {/* Emergency Actions */}
-            <Card className="border-red-200 bg-red-50">
+            <Card>
               <CardContent className="p-4">
-                <h3 className="text-sm font-medium text-red-800 mb-3">Emergency Actions</h3>
-                <div className="space-y-2">
-                  <Button
-                    onClick={handleEmergency}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white"
-                    size="sm"
-                  >
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Report Emergency
-                  </Button>
-                  <Button
-                    onClick={handleReportDelay}
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                    size="sm"
-                  >
-                    <Clock className="h-4 w-4 mr-2" />
-                    Report Delay
-                  </Button>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{currentRoute.name}</h3>
+                    <p className="text-sm text-gray-600">
+                      {currentRoute.schools?.length || 0} schools • {currentRoute.totalStudents || 0} students
+                    </p>
+                  </div>
+                  {!hasActiveSession ? (
+                    <Button onClick={handleStartRoute} className="bg-green-600 hover:bg-green-700">
+                      Start Route
+                    </Button>
+                  ) : (
+                    <Button onClick={handleCompleteRoute} variant="outline">
+                      Complete Route
+                    </Button>
+                  )}
                 </div>
+
+                {currentRoute.schools && currentRoute.schools.length > 0 && (
+                  <div className="space-y-3">
+                    {currentRoute.schools.map((schoolData: any, index: number) => (
+                      <div key={schoolData.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full text-sm font-medium">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <h4 className="font-medium">{schoolData.school?.name}</h4>
+                              <div className="flex items-center space-x-1 text-sm text-gray-600">
+                                <MapPin className="h-3 w-3" />
+                                <span>{schoolData.school?.address}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center space-x-1 text-sm text-gray-600">
+                              <Clock className="h-3 w-3" />
+                              <span>Dismissal: {schoolData.school?.dismissalTime}</span>
+                            </div>
+                            <div className="flex items-center space-x-1 text-sm text-gray-600 mt-1">
+                              <Users className="h-3 w-3" />
+                              <span>{schoolData.students?.length || 0} students</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {schoolData.students && schoolData.students.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-sm font-medium text-gray-700">Students to pick up:</h5>
+                            <div className="grid gap-2">
+                              {schoolData.students.map((student: any) => (
+                                <div key={student.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                  <div>
+                                    <span className="font-medium">{student.firstName} {student.lastName}</span>
+                                    <span className="text-sm text-gray-600 ml-2">Grade {student.grade}</span>
+                                  </div>
+                                  {hasActiveSession && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleMarkStudentPickedUp(student.id)}
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      Pick Up
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(!currentRoute.schools || currentRoute.schools.length === 0) && (
+                  <div className="text-center py-8 text-gray-500">
+                    <RouteIcon className="h-12 w-12 mx-auto mb-2" />
+                    <p>No schools assigned to this route yet.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -219,18 +273,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
           <div className="p-4">
             <Card>
               <CardContent className="p-6 text-center">
-                <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Map View</h3>
+                <NavigationIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Navigation</h3>
                 <p className="text-gray-600">
-                  Integration with mapping service would be displayed here
+                  Map integration for route navigation will be available here.
                 </p>
-                {location && (
-                  <div className="mt-4 text-sm text-gray-500">
-                    <p>Current Location:</p>
-                    <p>Lat: {location.latitude.toFixed(6)}</p>
-                    <p>Lng: {location.longitude.toFixed(6)}</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -241,9 +288,9 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
             <Card>
               <CardContent className="p-6 text-center">
                 <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">All Students</h3>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Student List</h3>
                 <p className="text-gray-600">
-                  Complete student roster for your routes
+                  Complete student roster and pickup history.
                 </p>
               </CardContent>
             </Card>
@@ -253,24 +300,12 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
         {activeTab === "profile" && (
           <div className="p-4">
             <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-800 mb-4">Profile</h3>
-                    <div className="space-y-2">
-                      <p><span className="font-medium">Name:</span> {user.firstName} {user.lastName}</p>
-                      <p><span className="font-medium">Username:</span> {user.username}</p>
-                      <p><span className="font-medium">Role:</span> {user.role}</p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={onLogout}
-                    variant="destructive"
-                    className="w-full"
-                  >
-                    Sign Out
-                  </Button>
-                </div>
+              <CardContent className="p-6 text-center">
+                <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Profile Settings</h3>
+                <p className="text-gray-600">
+                  Manage your driver profile and preferences.
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -278,46 +313,46 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       </div>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
-        <div className="flex justify-around py-2">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
+        <div className="flex justify-around">
           <button
             onClick={() => setActiveTab("routes")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "routes" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg ${
+              activeTab === "routes" ? "bg-blue-100 text-blue-600" : "text-gray-600"
             }`}
           >
-            <RouteIcon className="h-6 w-6 mb-1" />
+            <RouteIcon className="h-5 w-5" />
             <span className="text-xs">Routes</span>
           </button>
           <button
             onClick={() => setActiveTab("map")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "map" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg ${
+              activeTab === "map" ? "bg-blue-100 text-blue-600" : "text-gray-600"
             }`}
           >
-            <MapPin className="h-6 w-6 mb-1" />
+            <NavigationIcon className="h-5 w-5" />
             <span className="text-xs">Map</span>
           </button>
           <button
             onClick={() => setActiveTab("students")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "students" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg ${
+              activeTab === "students" ? "bg-blue-100 text-blue-600" : "text-gray-600"
             }`}
           >
-            <Users className="h-6 w-6 mb-1" />
+            <Users className="h-5 w-5" />
             <span className="text-xs">Students</span>
           </button>
           <button
             onClick={() => setActiveTab("profile")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "profile" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg ${
+              activeTab === "profile" ? "bg-blue-100 text-blue-600" : "text-gray-600"
             }`}
           >
-            <MapPin className="h-6 w-6 mb-1" />
+            <UserIcon className="h-5 w-5" />
             <span className="text-xs">Profile</span>
           </button>
         </div>
-      </nav>
+      </div>
     </div>
   );
 }
