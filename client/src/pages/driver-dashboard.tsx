@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/lib/types";
 import Navigation from "@/components/shared/navigation";
+import StudentList from "@/components/driver/student-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -224,24 +225,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                         {schoolData.students && schoolData.students.length > 0 && (
                           <div className="space-y-2">
                             <h5 className="text-sm font-medium text-gray-700">Students to pick up:</h5>
-                            <div className="grid gap-2">
-                              {schoolData.students.map((student: any) => (
-                                <div key={student.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                  <div>
-                                    <span className="font-medium">{student.firstName} {student.lastName}</span>
-                                    <span className="text-sm text-gray-600 ml-2">Grade {student.grade}</span>
-                                  </div>
-                                  {hasActiveSession && (
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleMarkStudentPickedUp(student.id)}
-                                      className="bg-green-600 hover:bg-green-700"
-                                    >
-                                      Pick Up
-                                    </Button>
-                                  )}
-                                </div>
-                              ))}
+                            <StudentList
+                              students={schoolData.students}
+                              isActive={hasActiveSession}
+                              sessionId={activeSession?.id || (sessions.length > 0 ? sessions[0].id : undefined)}
+                            />
                             </div>
                           </div>
                         )}
