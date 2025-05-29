@@ -50,14 +50,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     if (!currentRoute) return;
 
     try {
-      const session = await apiRequest(`/api/pickup-sessions`, {
-        method: "POST",
-        body: JSON.stringify({
-          routeId: currentRoute.id,
-          driverId: user.id,
-          date: new Date().toISOString().split('T')[0],
-          status: "in_progress",
-        }),
+      const session = await apiRequest("POST", `/api/pickup-sessions`, {
+        routeId: currentRoute.id,
+        driverId: user.id,
+        date: new Date().toISOString().split('T')[0],
+        status: "in_progress",
       });
 
       setActiveSession(session);
@@ -81,12 +78,9 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     if (!activeSession) return;
 
     try {
-      await apiRequest(`/api/pickup-sessions/${activeSession.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          status: "completed",
-          completedTime: new Date().toISOString(),
-        }),
+      await apiRequest("PATCH", `/api/pickup-sessions/${activeSession.id}`, {
+        status: "completed",
+        completedTime: new Date().toISOString(),
       });
 
       setActiveSession(null);
@@ -111,16 +105,13 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
     try {
       // Find the student pickup record and update it
-      const studentPickups = await apiRequest(`/api/student-pickups?sessionId=${activeSession.id}`);
+      const studentPickups = await apiRequest("GET", `/api/student-pickups?sessionId=${activeSession.id}`);
       const pickup = studentPickups.find((p: any) => p.studentId === studentId);
       
       if (pickup) {
-        await apiRequest(`/api/student-pickups/${pickup.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            status: "picked_up",
-            pickedUpAt: new Date().toISOString(),
-          }),
+        await apiRequest("PATCH", `/api/student-pickups/${pickup.id}`, {
+          status: "picked_up",
+          pickedUpAt: new Date().toISOString(),
         });
 
         refetchSessions();
