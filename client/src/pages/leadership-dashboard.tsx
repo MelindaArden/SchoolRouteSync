@@ -329,7 +329,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
             {routesView === "schools" && <SchoolsList />}
 
-            {routesView === "routes" && (
+            {routesView === "routes" && !editingRoute && (
               <Card>
                 <CardHeader>
                   <CardTitle>Current Routes ({routeCount})</CardTitle>
@@ -346,9 +346,18 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                               Driver: {driver ? `${driver.firstName} ${driver.lastName}` : 'Unassigned'}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-600">Active: {route.isActive ? 'Yes' : 'No'}</p>
-                            <p className="text-sm text-gray-600">Created: {new Date(route.createdAt).toLocaleDateString()}</p>
+                          <div className="flex items-center space-x-2">
+                            <div className="text-right text-sm text-gray-600">
+                              <p>Active: {route.isActive ? 'Yes' : 'No'}</p>
+                              <p>Created: {new Date(route.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingRoute(route)}
+                            >
+                              Edit
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -358,6 +367,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {editingRoute && (
+              <RouteEditForm
+                route={editingRoute}
+                onClose={() => setEditingRoute(null)}
+              />
             )}
           </div>
         )}
