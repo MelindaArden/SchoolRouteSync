@@ -77,10 +77,10 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   };
 
   const handleCompleteRoute = async () => {
-    if (!activeSession) return;
+    if (!currentActiveSession) return;
 
     try {
-      await apiRequest("PATCH", `/api/pickup-sessions/${activeSession.id}`, {
+      await apiRequest("PATCH", `/api/pickup-sessions/${currentActiveSession.id}`, {
         status: "completed",
         completedTime: new Date().toISOString(),
       });
@@ -141,7 +141,8 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   }
 
   const totalStudents = currentRoute?.totalStudents || 0;
-  const hasActiveSession = activeSession || (sessions.length > 0 && sessions[0].status === "in_progress");
+  const currentActiveSession = activeSession || (sessions.length > 0 && sessions[0].status === "in_progress" ? sessions[0] : null);
+  const hasActiveSession = !!currentActiveSession;
 
   if (!currentRoute) {
     return (
@@ -229,7 +230,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                             <StudentList
                               students={schoolData.students}
                               isActive={hasActiveSession}
-                              sessionId={activeSession?.id || (sessions.length > 0 ? sessions[0].id : undefined)}
+                              sessionId={currentActiveSession?.id}
                             />
                           </div>
                         )}
