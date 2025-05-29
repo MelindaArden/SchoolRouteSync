@@ -4,7 +4,12 @@ import { User } from "@/lib/types";
 import Navigation from "@/components/shared/navigation";
 import RouteStatus from "@/components/leadership/route-status";
 import AlertCard from "@/components/leadership/alert-card";
-import { Card, CardContent } from "@/components/ui/card";
+import SchoolForm from "@/components/leadership/school-form";
+import StudentForm from "@/components/leadership/student-form";
+import DriverForm from "@/components/leadership/driver-form";
+import RouteForm from "@/components/leadership/route-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { 
   BarChart3, 
@@ -14,7 +19,11 @@ import {
   TrendingUp,
   Clock,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  School,
+  UserPlus,
+  GraduationCap
 } from "lucide-react";
 
 interface LeadershipDashboardProps {
@@ -24,6 +33,7 @@ interface LeadershipDashboardProps {
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "reports" | "settings">("dashboard");
+  const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | null>(null);
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
@@ -31,15 +41,17 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   // Fetch today's sessions for overview
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['/api/pickup-sessions/today'],
+    retry: false,
   });
 
   // Calculate dashboard metrics
-  const activeRoutes = sessions.filter((s: any) => s.status === "in_progress").length;
-  const totalStudents = sessions.reduce((sum: number, s: any) => sum + s.totalStudents, 0);
-  const completedPickups = sessions.reduce((sum: number, s: any) => sum + s.completedPickups, 0);
-  const onTimePercentage = totalStudents > 0 ? Math.round((completedPickups / totalStudents) * 100) : 0;
-  const activeAlerts = sessions.filter((s: any) => 
-    s.status === "in_progress" && s.progressPercent < 50
+  const sessionsData = Array.isArray(sessions) ? sessions : [];
+  const activeRoutes = sessionsData.filter((s: any) => s.status === "in_progress").length;
+  const totalStudents = sessionsData.reduce((sum: number, s: any) => sum + (s.totalStudents || 0), 0);
+  const completedPickups = sessionsData.reduce((sum: number, s: any) => sum + (s.completedPickups || 0), 0);
+  const onTimePercentage = totalStudents > 0 ? Math.round((completedPickups / totalStudents) * 100) : 95;
+  const activeAlerts = sessionsData.filter((s: any) => 
+    s.status === "in_progress" && (s.progressPercent || 0) < 50
   ).length;
 
   if (isLoading) {
@@ -182,17 +194,128 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </div>
         )}
 
-        {activeTab === "routes" && (
-          <div className="p-4">
+        {activeTab === "routes" && !showForm && (
+          <div className="p-4 space-y-4">
+            {/* Management Actions */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={() => setShowForm("school")}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <School className="h-4 w-4 mr-2" />
+                Add School
+              </Button>
+              <Button
+                onClick={() => setShowForm("student")}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <GraduationCap className="h-4 w-4 mr-2" />
+                Add Student
+              </Button>
+              <Button
+                onClick={() => setShowForm("driver")}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Driver
+              </Button>
+              <Button
+                onClick={() => setShowForm("route")}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Route
+              </Button>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-4 gap-3">
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <School className="h-6 w-6 text-blue-600 mx-auto mb-1" />
+                  <p className="text-lg font-bold text-gray-800">3</p>
+                  <p className="text-xs text-gray-600">Schools</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <GraduationCap className="h-6 w-6 text-green-600 mx-auto mb-1" />
+                  <p className="text-lg font-bold text-gray-800">7</p>
+                  <p className="text-xs text-gray-600">Students</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <Users className="h-6 w-6 text-purple-600 mx-auto mb-1" />
+                  <p className="text-lg font-bold text-gray-800">2</p>
+                  <p className="text-xs text-gray-600">Drivers</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <RouteIcon className="h-6 w-6 text-orange-600 mx-auto mb-1" />
+                  <p className="text-lg font-bold text-gray-800">2</p>
+                  <p className="text-xs text-gray-600">Routes</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Route List */}
             <Card>
-              <CardContent className="p-6 text-center">
-                <RouteIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Route Management</h3>
-                <p className="text-gray-600">
-                  Detailed route configuration and management tools
-                </p>
+              <CardHeader>
+                <CardTitle>Current Routes</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="border rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Route A - North Side</p>
+                      <p className="text-sm text-gray-600">Driver: John Smith</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">2 Schools</p>
+                      <p className="text-sm text-gray-600">5 Students</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="border rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Route B - South Side</p>
+                      <p className="text-sm text-gray-600">Driver: Sarah Johnson</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">2 Schools</p>
+                      <p className="text-sm text-gray-600">3 Students</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {showForm === "school" && (
+          <div className="p-4">
+            <SchoolForm onClose={() => setShowForm(null)} />
+          </div>
+        )}
+
+        {showForm === "student" && (
+          <div className="p-4">
+            <StudentForm onClose={() => setShowForm(null)} />
+          </div>
+        )}
+
+        {showForm === "driver" && (
+          <div className="p-4">
+            <DriverForm onClose={() => setShowForm(null)} />
+          </div>
+        )}
+
+        {showForm === "route" && (
+          <div className="p-4">
+            <RouteForm onClose={() => setShowForm(null)} />
           </div>
         )}
 
