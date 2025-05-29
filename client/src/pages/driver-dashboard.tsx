@@ -15,9 +15,9 @@ import {
   Clock,
   MapPin,
   Users,
-  Route as RouteIcon,
-  Home,
-  User as UserIcon
+  Car,
+  CheckCircle,
+  Route as RouteIcon
 } from "lucide-react";
 
 interface DriverDashboardProps {
@@ -26,8 +26,9 @@ interface DriverDashboardProps {
 }
 
 export default function DriverDashboard({ user, onLogout }: DriverDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"routes" | "map" | "students" | "profile">("routes");
+  const [activeTab, setActiveTab] = useState("routes");
   const [activeSession, setActiveSession] = useState<any>(null);
+  const [isTracking, setIsTracking] = useState(false);
   const { toast } = useToast();
   const { location, startTracking, stopTracking } = useGeolocation();
 
@@ -61,15 +62,15 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       setActiveSession(session);
       startTracking();
       refetchSessions();
-      
+
       toast({
         title: "Route Started",
-        description: "You can now begin picking up students.",
+        description: "You've started the pickup session. Stay safe!",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to start route. Please try again.",
+        description: "Failed to start route",
         variant: "destructive",
       });
     }
@@ -87,15 +88,15 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       setActiveSession(null);
       stopTracking();
       refetchSessions();
-      
+
       toast({
         title: "Route Completed",
-        description: "All pickups have been completed successfully.",
+        description: "Great job! Your route has been completed.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to complete route. Please try again.",
+        description: "Failed to complete route",
         variant: "destructive",
       });
     }
@@ -125,7 +126,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update pickup status.",
+        description: "Failed to mark student as picked up",
         variant: "destructive",
       });
     }
@@ -230,7 +231,6 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                               isActive={hasActiveSession}
                               sessionId={activeSession?.id || (sessions.length > 0 ? sessions[0].id : undefined)}
                             />
-                            </div>
                           </div>
                         )}
                       </div>
@@ -252,40 +252,56 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
         {activeTab === "map" && (
           <div className="p-4">
             <Card>
-              <CardContent className="p-6 text-center">
-                <NavigationIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Navigation</h3>
-                <p className="text-gray-600">
-                  Map integration for route navigation will be available here.
-                </p>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <NavigationIcon className="h-5 w-5 text-blue-600" />
+                  <h3 className="text-lg font-semibold">Route Navigation</h3>
+                </div>
+                
+                <div className="text-center py-8 text-gray-500">
+                  <MapPin className="h-12 w-12 mx-auto mb-2" />
+                  <p>Map view coming soon...</p>
+                  <p className="text-sm mt-2">Use your preferred navigation app for now</p>
+                </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {activeTab === "students" && (
+        {activeTab === "session" && (
           <div className="p-4">
             <Card>
-              <CardContent className="p-6 text-center">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Student List</h3>
-                <p className="text-gray-600">
-                  Complete student roster and pickup history.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "profile" && (
-          <div className="p-4">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Profile Settings</h3>
-                <p className="text-gray-600">
-                  Manage your driver profile and preferences.
-                </p>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Car className="h-5 w-5 text-green-600" />
+                  <h3 className="text-lg font-semibold">Current Session</h3>
+                </div>
+                
+                {hasActiveSession ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2 text-green-600">
+                      <CheckCircle className="h-5 w-5" />
+                      <span className="font-medium">Session Active</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-gray-50 rounded">
+                        <div className="text-2xl font-bold text-gray-800">{totalStudents}</div>
+                        <div className="text-sm text-gray-600">Total Students</div>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded">
+                        <div className="text-2xl font-bold text-green-600">0</div>
+                        <div className="text-sm text-gray-600">Picked Up</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Car className="h-12 w-12 mx-auto mb-2" />
+                    <p>No active session</p>
+                    <p className="text-sm">Start your route to begin tracking</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -293,43 +309,34 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
-        <div className="flex justify-around">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div className="grid grid-cols-3 gap-1">
           <button
             onClick={() => setActiveTab("routes")}
-            className={`flex flex-col items-center space-y-1 p-2 rounded-lg ${
-              activeTab === "routes" ? "bg-blue-100 text-blue-600" : "text-gray-600"
+            className={`flex flex-col items-center py-3 px-2 text-xs ${
+              activeTab === "routes" ? "text-blue-600 bg-blue-50" : "text-gray-600"
             }`}
           >
-            <RouteIcon className="h-5 w-5" />
-            <span className="text-xs">Routes</span>
+            <RouteIcon className="h-5 w-5 mb-1" />
+            Route
           </button>
           <button
             onClick={() => setActiveTab("map")}
-            className={`flex flex-col items-center space-y-1 p-2 rounded-lg ${
-              activeTab === "map" ? "bg-blue-100 text-blue-600" : "text-gray-600"
+            className={`flex flex-col items-center py-3 px-2 text-xs ${
+              activeTab === "map" ? "text-blue-600 bg-blue-50" : "text-gray-600"
             }`}
           >
-            <NavigationIcon className="h-5 w-5" />
-            <span className="text-xs">Map</span>
+            <NavigationIcon className="h-5 w-5 mb-1" />
+            Navigate
           </button>
           <button
-            onClick={() => setActiveTab("students")}
-            className={`flex flex-col items-center space-y-1 p-2 rounded-lg ${
-              activeTab === "students" ? "bg-blue-100 text-blue-600" : "text-gray-600"
+            onClick={() => setActiveTab("session")}
+            className={`flex flex-col items-center py-3 px-2 text-xs ${
+              activeTab === "session" ? "text-blue-600 bg-blue-50" : "text-gray-600"
             }`}
           >
-            <Users className="h-5 w-5" />
-            <span className="text-xs">Students</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("profile")}
-            className={`flex flex-col items-center space-y-1 p-2 rounded-lg ${
-              activeTab === "profile" ? "bg-blue-100 text-blue-600" : "text-gray-600"
-            }`}
-          >
-            <UserIcon className="h-5 w-5" />
-            <span className="text-xs">Profile</span>
+            <Car className="h-5 w-5 mb-1" />
+            Session
           </button>
         </div>
       </div>

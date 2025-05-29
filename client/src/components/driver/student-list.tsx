@@ -23,12 +23,14 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
 
   // Update pickup states when student pickups data changes
   useEffect(() => {
-    const newStates: Record<number, boolean> = {};
-    studentPickups.forEach((pickup: any) => {
-      newStates[pickup.studentId] = pickup.status === "picked_up";
-    });
-    setPickupStates(newStates);
-  }, [studentPickups]);
+    if (studentPickups && studentPickups.length > 0) {
+      const newStates: Record<number, boolean> = {};
+      studentPickups.forEach((pickup: any) => {
+        newStates[pickup.studentId] = pickup.status === "picked_up";
+      });
+      setPickupStates(newStates);
+    }
+  }, [studentPickups, sessionId]);
 
   const handleTogglePickup = async (student: any) => {
     if (!isActive || !sessionId) return;
