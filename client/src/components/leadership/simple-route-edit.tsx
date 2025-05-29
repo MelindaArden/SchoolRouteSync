@@ -57,7 +57,7 @@ export default function SimpleRouteEdit({ route, onClose }: SimpleRouteEditProps
         for (let i = 0; i < selectedSchools.length; i++) {
           await apiRequest("POST", `/api/routes/${route.id}/schools`, {
             schoolId: selectedSchools[i],
-            order: i + 1,
+            orderIndex: i + 1,
             estimatedArrivalTime: "15:30",
           });
         }
