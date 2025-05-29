@@ -2,7 +2,17 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertPickupSessionSchema, insertStudentPickupSchema, insertDriverLocationSchema } from "@shared/schema";
+import { 
+  insertPickupSessionSchema, 
+  insertStudentPickupSchema, 
+  insertDriverLocationSchema,
+  insertSchoolSchema,
+  insertStudentSchema,
+  insertUserSchema,
+  insertRouteSchema,
+  insertRouteSchoolSchema,
+  insertRouteAssignmentSchema
+} from "@shared/schema";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -48,13 +58,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     ws.on('close', () => {
       // Remove connection from map
-      for (const [userId, connection] of connections.entries()) {
+      connections.forEach((connection, userId) => {
         if (connection === ws) {
           connections.delete(userId);
           console.log(`User ${userId} disconnected from WebSocket`);
-          break;
         }
-      }
+      });
     });
   });
 
@@ -207,13 +216,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/pickup-sessions/:sessionId", async (req, res) => {
     try {
       const sessionId = parseInt(req.params.sessionId);
-      const session = await storage.updatePickupSession(sessionId, {});
+      const session = await storage.getPickupSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
       const pickups = await storage.getStudentPickups(sessionId);
       
       // Get detailed pickup info with student and school data
       const detailedPickups = await Promise.all(
         pickups.map(async (pickup) => {
-          const student = await storage.getUser(pickup.studentId);
+          const student = await storage.getStudentById(pickup.studentId);
           const school = await storage.getSchool(pickup.schoolId);
           return {
             ...pickup,
@@ -340,6 +353,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(schools);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create school
+  app.post("/api/schools", async (req, res) => {
+    try {
+      const schoolData = insertSchoolSchema.parse(req.body);
+      const school = await storage.createSchool(schoolData);
+      res.json(school);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid school data" });
+    }
+  });
+
+  // Get all students
+  app.get("/api/students", async (req, res) => {
+    try {
+      const students = await storage.getStudents();
+      res.json(students);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create student
+  app.post("/api/students", async (req, res) => {
+    try {
+      const studentData = insertStudentSchema.parse(req.body);
+      const student = await storage.createStudent(studentData);
+      res.json(student);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid student data" });
+    }
+  });
+
+  // Get all users (drivers and leadership)
+  app.get("/api/users", async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      // Remove passwords from response
+      const safeUsers = users.map(({ password, ...user }) => user);
+      res.json(safeUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create user (driver or leadership)
+  app.post("/api/users", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      // Remove password from response
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid user data" });
+    }
+  });
+
+  // Get all routes
+  app.get("/api/routes", async (req, res) => {
+    try {
+      const routes = await storage.getRoutes();
+      res.json(routes);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create route
+  app.post("/api/routes", async (req, res) => {
+    try {
+      const routeData = insertRouteSchema.parse(req.body);
+      const route = await storage.createRoute(routeData);
+      res.json(route);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid route data" });
+    }
+  });
+
+  // Add school to route
+  app.post("/api/routes/:routeId/schools", async (req, res) => {
+    try {
+      const routeId = parseInt(req.params.routeId);
+      const routeSchoolData = insertRouteSchoolSchema.parse({
+        routeId,
+        ...req.body
+      });
+      const routeSchool = await storage.createRouteSchool(routeSchoolData);
+      res.json(routeSchool);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid route school data" });
+    }
+  });
+
+  // Assign student to route
+  app.post("/api/routes/:routeId/students", async (req, res) => {
+    try {
+      const routeId = parseInt(req.params.routeId);
+      const assignmentData = insertRouteAssignmentSchema.parse({
+        routeId,
+        ...req.body
+      });
+      const assignment = await storage.createRouteAssignment(assignmentData);
+      res.json(assignment);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid route assignment data" });
     }
   });
 

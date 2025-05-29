@@ -14,6 +14,7 @@ export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   
   // Schools
@@ -35,6 +36,7 @@ export interface IStorage {
   getStudents(): Promise<Student[]>;
   getStudentsBySchool(schoolId: number): Promise<Student[]>;
   getStudentsByRoute(routeId: number): Promise<Student[]>;
+  getStudentById(id: number): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
   
   // Route Assignments
@@ -44,6 +46,7 @@ export interface IStorage {
   // Pickup Sessions
   getTodaysSessions(): Promise<PickupSession[]>;
   getSessionsByDriver(driverId: number, date: string): Promise<PickupSession[]>;
+  getPickupSession(id: number): Promise<PickupSession | undefined>;
   createPickupSession(session: InsertPickupSession): Promise<PickupSession>;
   updatePickupSession(id: number, updates: Partial<PickupSession>): Promise<PickupSession>;
   
@@ -72,6 +75,11 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user || undefined;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.isActive, true))
+      .orderBy(asc(users.lastName), asc(users.firstName));
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -163,6 +171,11 @@ export class DatabaseStorage implements IStorage {
     .orderBy(asc(students.lastName), asc(students.firstName));
   }
 
+  async getStudentById(id: number): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student || undefined;
+  }
+
   async createStudent(insertStudent: InsertStudent): Promise<Student> {
     const [student] = await db.insert(students).values(insertStudent).returning();
     return student;
@@ -191,6 +204,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(pickupSessions)
       .where(and(eq(pickupSessions.driverId, driverId), eq(pickupSessions.date, date)))
       .orderBy(desc(pickupSessions.startTime));
+  }
+
+  async getPickupSession(id: number): Promise<PickupSession | undefined> {
+    const [session] = await db.select().from(pickupSessions).where(eq(pickupSessions.id, id));
+    return session || undefined;
   }
 
   async createPickupSession(insertSession: InsertPickupSession): Promise<PickupSession> {
