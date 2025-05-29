@@ -8,6 +8,7 @@ import SchoolForm from "@/components/leadership/school-form";
 import StudentForm from "@/components/leadership/student-form";
 import DriverForm from "@/components/leadership/driver-form";
 import RouteForm from "@/components/leadership/route-form";
+import SchoolsList from "@/components/leadership/schools-list";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -34,9 +35,27 @@ interface LeadershipDashboardProps {
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "reports" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | null>(null);
+  const [routesView, setRoutesView] = useState<"management" | "schools" | "routes">("management");
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
+
+  // Fetch data for dynamic counts
+  const { data: schools = [] } = useQuery({
+    queryKey: ['/api/schools'],
+  });
+
+  const { data: students = [] } = useQuery({
+    queryKey: ['/api/students'],
+  });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/users'],
+  });
+
+  const { data: routes = [] } = useQuery({
+    queryKey: ['/api/routes'],
+  });
 
   // Fetch today's sessions for overview
   const { data: sessions = [], isLoading } = useQuery({
@@ -44,7 +63,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     retry: false,
   });
 
-  // Calculate dashboard metrics
+  // Calculate dashboard metrics with real data
   const sessionsData = Array.isArray(sessions) ? sessions : [];
   const activeRoutes = sessionsData.filter((s: any) => s.status === "in_progress").length;
   const totalStudents = sessionsData.reduce((sum: number, s: any) => sum + (s.totalStudents || 0), 0);
@@ -53,6 +72,12 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   const activeAlerts = sessionsData.filter((s: any) => 
     s.status === "in_progress" && (s.progressPercent || 0) < 50
   ).length;
+
+  // Real counts from database
+  const schoolCount = Array.isArray(schools) ? schools.length : 0;
+  const studentCount = Array.isArray(students) ? students.length : 0;
+  const driverCount = Array.isArray(users) ? users.filter((u: any) => u.role === 'driver').length : 0;
+  const routeCount = Array.isArray(routes) ? routes.length : 0;
 
   if (isLoading) {
     return (
@@ -228,70 +253,110 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
               </Button>
             </div>
 
-            {/* Quick Stats */}
+            {/* Quick Stats - Dynamic counts */}
             <div className="grid grid-cols-4 gap-3">
-              <Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setRoutesView("schools")}>
                 <CardContent className="p-3 text-center">
                   <School className="h-6 w-6 text-blue-600 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-800">3</p>
+                  <p className="text-lg font-bold text-gray-800">{schoolCount}</p>
                   <p className="text-xs text-gray-600">Schools</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3 text-center">
                   <GraduationCap className="h-6 w-6 text-green-600 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-800">7</p>
+                  <p className="text-lg font-bold text-gray-800">{studentCount}</p>
                   <p className="text-xs text-gray-600">Students</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3 text-center">
                   <Users className="h-6 w-6 text-purple-600 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-800">2</p>
+                  <p className="text-lg font-bold text-gray-800">{driverCount}</p>
                   <p className="text-xs text-gray-600">Drivers</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setRoutesView("routes")}>
                 <CardContent className="p-3 text-center">
                   <RouteIcon className="h-6 w-6 text-orange-600 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-800">2</p>
+                  <p className="text-lg font-bold text-gray-800">{routeCount}</p>
                   <p className="text-xs text-gray-600">Routes</p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Route List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Current Routes</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="border rounded-lg p-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Route A - North Side</p>
-                      <p className="text-sm text-gray-600">Driver: John Smith</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">2 Schools</p>
-                      <p className="text-sm text-gray-600">5 Students</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="border rounded-lg p-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Route B - South Side</p>
-                      <p className="text-sm text-gray-600">Driver: Sarah Johnson</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">2 Schools</p>
-                      <p className="text-sm text-gray-600">3 Students</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Navigation buttons */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant={routesView === "management" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoutesView("management")}
+                className="flex-1"
+              >
+                Management
+              </Button>
+              <Button
+                variant={routesView === "schools" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoutesView("schools")}
+                className="flex-1"
+              >
+                Schools
+              </Button>
+              <Button
+                variant={routesView === "routes" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoutesView("routes")}
+                className="flex-1"
+              >
+                Routes
+              </Button>
+            </div>
+
+            {/* Conditional content based on view */}
+            {routesView === "management" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-gray-600 text-sm">Use the buttons above to add schools, students, drivers, or create routes.</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {routesView === "schools" && <SchoolsList />}
+
+            {routesView === "routes" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Current Routes ({routeCount})</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {Array.isArray(routes) && routes.length > 0 ? routes.map((route: any) => {
+                    const driver = Array.isArray(users) ? users.find((u: any) => u.id === route.driverId) : null;
+                    return (
+                      <div key={route.id} className="border rounded-lg p-3">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{route.name}</p>
+                            <p className="text-sm text-gray-600">
+                              Driver: {driver ? `${driver.firstName} ${driver.lastName}` : 'Unassigned'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">Active: {route.isActive ? 'Yes' : 'No'}</p>
+                            <p className="text-sm text-gray-600">Created: {new Date(route.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }) : (
+                    <p className="text-gray-500 text-center py-4">No routes created yet</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 
