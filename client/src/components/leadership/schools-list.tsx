@@ -14,6 +14,11 @@ export default function SchoolsList() {
     queryKey: ['/api/students'],
   });
 
+  // Fetch routes to show which route each school is assigned to
+  const { data: routes = [] } = useQuery({
+    queryKey: ['/api/routes'],
+  });
+
   if (schoolsLoading || studentsLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -24,7 +29,13 @@ export default function SchoolsList() {
 
   const schoolsWithStudentCount = schools.map((school: any) => {
     const studentCount = students.filter((student: any) => student.schoolId === school.id).length;
-    return { ...school, studentCount };
+    
+    // Find which route this school is assigned to
+    const assignedRoute = routes.find((route: any) => 
+      route.schools && route.schools.some((rs: any) => rs.schoolId === school.id)
+    );
+    
+    return { ...school, studentCount, assignedRoute };
   });
 
   return (
@@ -52,6 +63,16 @@ export default function SchoolsList() {
                         <MapPin className="h-3 w-3" />
                         <span>{school.address}</span>
                       </div>
+                      {school.assignedRoute && (
+                        <div className="flex items-center space-x-1 text-sm text-blue-600 mt-1">
+                          <span className="font-medium">Route: {school.assignedRoute.name}</span>
+                        </div>
+                      )}
+                      {!school.assignedRoute && (
+                        <div className="flex items-center space-x-1 text-sm text-gray-500 mt-1">
+                          <span>Not assigned to any route</span>
+                        </div>
+                      )}
                     </div>
                     <Badge 
                       variant={school.isActive ? "default" : "secondary"}

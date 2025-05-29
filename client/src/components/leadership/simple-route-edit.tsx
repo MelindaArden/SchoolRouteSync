@@ -48,14 +48,14 @@ export default function SimpleRouteEdit({ route, onClose }: SimpleRouteEditProps
         isActive,
       };
 
-      await apiRequest(`/api/routes/${route.id}`, "PATCH", routeData);
+      await apiRequest("PATCH", `/api/routes/${route.id}`, routeData);
 
       // Update schools if changed
       if (JSON.stringify(selectedSchools.sort()) !== JSON.stringify((route?.schools?.map((s: any) => s.schoolId) || []).sort())) {
-        await apiRequest(`/api/routes/${route.id}/schools`, "DELETE");
+        await apiRequest("DELETE", `/api/routes/${route.id}/schools`);
 
         for (let i = 0; i < selectedSchools.length; i++) {
-          await apiRequest(`/api/routes/${route.id}/schools`, "POST", {
+          await apiRequest("POST", `/api/routes/${route.id}/schools`, {
             schoolId: selectedSchools[i],
             order: i + 1,
             estimatedArrivalTime: "15:30",
@@ -84,7 +84,7 @@ export default function SimpleRouteEdit({ route, onClose }: SimpleRouteEditProps
   // Delete route mutation
   const deleteRouteMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/routes/${route.id}`, "DELETE");
+      return apiRequest("DELETE", `/api/routes/${route.id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/routes'] });
