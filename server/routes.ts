@@ -280,6 +280,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get student pickups for a session
+  app.get("/api/student-pickups", async (req, res) => {
+    try {
+      const sessionId = req.query.sessionId ? parseInt(req.query.sessionId as string) : undefined;
+      
+      if (sessionId) {
+        const pickups = await storage.getStudentPickups(sessionId);
+        res.json(pickups);
+      } else {
+        res.status(400).json({ message: "sessionId query parameter required" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Update student pickup status
   app.patch("/api/student-pickups/:id", async (req, res) => {
     try {
