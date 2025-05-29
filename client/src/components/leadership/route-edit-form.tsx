@@ -47,9 +47,9 @@ export default function RouteEditForm({ route, onClose }: RouteEditFormProps) {
   const form = useForm({
     resolver: zodResolver(routeEditSchema),
     defaultValues: {
-      name: route.name || "",
-      driverId: route.driverId || undefined,
-      isActive: route.isActive ?? true,
+      name: route?.name || "",
+      driverId: route?.driverId || undefined,
+      isActive: route?.isActive ?? true,
     },
   });
 
@@ -191,7 +191,7 @@ export default function RouteEditForm({ route, onClose }: RouteEditFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No driver assigned</SelectItem>
+                      <SelectItem value="0">No driver assigned</SelectItem>
                       {drivers.map((driver: any) => (
                         <SelectItem key={driver.id} value={driver.id.toString()}>
                           {driver.firstName} {driver.lastName} ({driver.username})

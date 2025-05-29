@@ -8,7 +8,7 @@ import SchoolForm from "@/components/leadership/school-form";
 import StudentForm from "@/components/leadership/student-form";
 import DriverForm from "@/components/leadership/driver-form";
 import RouteForm from "@/components/leadership/route-form";
-import RouteEditForm from "@/components/leadership/route-edit-form";
+import SimpleRouteEdit from "@/components/leadership/simple-route-edit";
 import SchoolsList from "@/components/leadership/schools-list";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -370,7 +370,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             )}
 
             {editingRoute && (
-              <RouteEditForm
+              <SimpleRouteEdit
                 route={editingRoute}
                 onClose={() => setEditingRoute(null)}
               />
