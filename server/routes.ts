@@ -472,6 +472,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update route
+  app.patch("/api/routes/:id", async (req, res) => {
+    try {
+      const routeId = parseInt(req.params.id);
+      const updates = req.body;
+      const route = await storage.updateRoute(routeId, updates);
+      res.json(route);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update route" });
+    }
+  });
+
+  // Delete route
+  app.delete("/api/routes/:id", async (req, res) => {
+    try {
+      const routeId = parseInt(req.params.id);
+      await storage.deleteRoute(routeId);
+      res.json({ message: "Route deleted successfully" });
+    } catch (error) {
+      res.status(400).json({ message: "Failed to delete route" });
+    }
+  });
+
+  // Delete route schools
+  app.delete("/api/routes/:routeId/schools", async (req, res) => {
+    try {
+      const routeId = parseInt(req.params.routeId);
+      await storage.deleteRouteSchools(routeId);
+      res.json({ message: "Route schools deleted successfully" });
+    } catch (error) {
+      res.status(400).json({ message: "Failed to delete route schools" });
+    }
+  });
+
   // Add school to route
   app.post("/api/routes/:routeId/schools", async (req, res) => {
     try {

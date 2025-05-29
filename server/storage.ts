@@ -27,10 +27,13 @@ export interface IStorage {
   getRoute(id: number): Promise<Route | undefined>;
   getRoutesByDriver(driverId: number): Promise<Route[]>;
   createRoute(route: InsertRoute): Promise<Route>;
+  updateRoute(id: number, updates: Partial<Route>): Promise<Route>;
+  deleteRoute(id: number): Promise<void>;
   
   // Route Schools
   getRouteSchools(routeId: number): Promise<RouteSchool[]>;
   createRouteSchool(routeSchool: InsertRouteSchool): Promise<RouteSchool>;
+  deleteRouteSchools(routeId: number): Promise<void>;
   
   // Students
   getStudents(): Promise<Student[]>;
@@ -123,6 +126,19 @@ export class DatabaseStorage implements IStorage {
     return route;
   }
 
+  async updateRoute(id: number, updates: Partial<Route>): Promise<Route> {
+    const [route] = await db
+      .update(routes)
+      .set(updates)
+      .where(eq(routes.id, id))
+      .returning();
+    return route;
+  }
+
+  async deleteRoute(id: number): Promise<void> {
+    await db.delete(routes).where(eq(routes.id, id));
+  }
+
   // Route Schools
   async getRouteSchools(routeId: number): Promise<RouteSchool[]> {
     return await db.select().from(routeSchools)
@@ -133,6 +149,10 @@ export class DatabaseStorage implements IStorage {
   async createRouteSchool(insertRouteSchool: InsertRouteSchool): Promise<RouteSchool> {
     const [routeSchool] = await db.insert(routeSchools).values(insertRouteSchool).returning();
     return routeSchool;
+  }
+
+  async deleteRouteSchools(routeId: number): Promise<void> {
+    await db.delete(routeSchools).where(eq(routeSchools.routeId, routeId));
   }
 
   // Students

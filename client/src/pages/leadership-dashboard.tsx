@@ -8,6 +8,7 @@ import SchoolForm from "@/components/leadership/school-form";
 import StudentForm from "@/components/leadership/student-form";
 import DriverForm from "@/components/leadership/driver-form";
 import RouteForm from "@/components/leadership/route-form";
+import RouteEditForm from "@/components/leadership/route-edit-form";
 import SchoolsList from "@/components/leadership/schools-list";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "reports" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "routes">("management");
+  const [editingRoute, setEditingRoute] = useState<any>(null);
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
