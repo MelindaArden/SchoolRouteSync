@@ -8,6 +8,7 @@ import { User } from "./lib/types";
 import Login from "@/pages/login";
 import DriverDashboard from "@/pages/driver-dashboard";
 import LeadershipDashboard from "@/pages/leadership-dashboard";
+import RouteSummary from "@/pages/route-summary";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -63,6 +64,11 @@ function Router() {
       </Route>
       <Route path="/leadership">
         <LeadershipDashboard user={user} onLogout={handleLogout} />
+      </Route>
+      <Route path="/route-summary/:sessionId">
+        {(params) => (
+          <RouteSummary user={user} onLogout={handleLogout} sessionId={params.sessionId} />
+        )}
       </Route>
       <Route component={NotFound} />
     </Switch>

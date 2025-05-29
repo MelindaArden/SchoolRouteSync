@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { User } from "@/lib/types";
 import Navigation from "@/components/shared/navigation";
 import StudentList from "@/components/driver/student-list";
@@ -29,6 +30,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const [activeTab, setActiveTab] = useState("routes");
   const [activeSession, setActiveSession] = useState<any>(null);
   const [isTracking, setIsTracking] = useState(false);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { location, startTracking, stopTracking } = useGeolocation();
 
@@ -57,6 +59,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
         driverId: user.id,
         date: new Date().toISOString().split('T')[0],
         status: "in_progress",
+        startTime: new Date().toISOString(),
       });
 
       setActiveSession(session);
@@ -88,6 +91,9 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       setActiveSession(null);
       stopTracking();
       refetchSessions();
+
+      // Redirect to route summary page
+      setLocation(`/route-summary/${currentActiveSession.id}`);
 
       toast({
         title: "Route Completed",
