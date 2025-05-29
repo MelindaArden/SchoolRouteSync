@@ -35,12 +35,12 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
   // Fetch driver's routes with detailed school and student information
   const { data: routes = [], isLoading: routesLoading, refetch: refetchRoutes } = useQuery({
-    queryKey: ['/api/drivers', user.id, 'routes'],
+    queryKey: [`/api/drivers/${user.id}/routes`],
   });
 
   // Fetch today's sessions
   const { data: sessions = [], isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
-    queryKey: ['/api/drivers', user.id, 'sessions', 'today'],
+    queryKey: [`/api/drivers/${user.id}/sessions/today`],
   });
 
   // Get the current active route (first route assigned to driver)
