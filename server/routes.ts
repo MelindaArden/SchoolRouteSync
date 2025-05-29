@@ -21,9 +21,9 @@ const loginSchema = z.object({
 });
 
 const updatePickupSchema = z.object({
-  studentPickupId: z.number(),
   status: z.enum(["pending", "picked_up", "absent", "no_show"]),
   driverNotes: z.string().optional(),
+  pickedUpAt: z.string().optional(),
 });
 
 const locationUpdateSchema = z.object({
@@ -300,10 +300,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/student-pickups/:id", async (req, res) => {
     try {
       const pickupId = parseInt(req.params.id);
-      const { status, driverNotes } = updatePickupSchema.parse(req.body);
+      const { status, driverNotes, pickedUpAt } = updatePickupSchema.parse(req.body);
       
       const updates: any = { status, driverNotes };
-      if (status === "picked_up") {
+      if (status === "picked_up" && pickedUpAt) {
+        updates.pickedUpAt = new Date(pickedUpAt);
+      } else if (status === "picked_up") {
         updates.pickedUpAt = new Date();
       }
 
