@@ -105,7 +105,8 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
     try {
       // Find the student pickup record and update it
-      const studentPickups = await apiRequest("GET", `/api/student-pickups?sessionId=${activeSession.id}`);
+      const response = await fetch(`/api/student-pickups?sessionId=${activeSession.id}`);
+      const studentPickups = await response.json();
       const pickup = studentPickups.find((p: any) => p.studentId === studentId);
       
       if (pickup) {

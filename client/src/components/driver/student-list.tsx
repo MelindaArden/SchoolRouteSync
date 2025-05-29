@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Plus, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 interface StudentListProps {
   students: any[];
@@ -14,6 +15,21 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
   const [pickupStates, setPickupStates] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
+  // Fetch student pickups for this session
+  const { data: studentPickups = [] } = useQuery({
+    queryKey: [`/api/student-pickups?sessionId=${sessionId}`],
+    enabled: !!sessionId,
+  });
+
+  // Update pickup states when student pickups data changes
+  useEffect(() => {
+    const newStates: Record<number, boolean> = {};
+    studentPickups.forEach((pickup: any) => {
+      newStates[pickup.studentId] = pickup.status === "picked_up";
+    });
+    setPickupStates(newStates);
+  }, [studentPickups]);
+
   const handleTogglePickup = async (student: any) => {
     if (!isActive || !sessionId) return;
 
@@ -21,25 +37,29 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
     const newStatus = isPickedUp ? "pending" : "picked_up";
 
     try {
-      // This would need the actual pickup record ID
-      // For now, we'll simulate the API call
-      await apiRequest("PATCH", `/api/student-pickups/${student.id}`, {
-        status: newStatus,
-        driverNotes: newStatus === "picked_up" ? "Student picked up successfully" : "",
-      });
+      // Find the pickup record for this student and session
+      const pickup = studentPickups.find((p: any) => p.studentId === student.id && p.sessionId === sessionId);
+      
+      if (pickup) {
+        await apiRequest("PATCH", `/api/student-pickups/${pickup.id}`, {
+          status: newStatus,
+          pickedUpAt: newStatus === "picked_up" ? new Date().toISOString() : null,
+          driverNotes: newStatus === "picked_up" ? "Student picked up successfully" : "",
+        });
 
-      setPickupStates(prev => ({
-        ...prev,
-        [student.id]: !isPickedUp
-      }));
+        setPickupStates(prev => ({
+          ...prev,
+          [student.id]: !isPickedUp
+        }));
 
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/pickup-sessions'] });
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: [`/api/student-pickups?sessionId=${sessionId}`] });
 
-      toast({
-        title: isPickedUp ? "Student marked as not picked up" : "Student picked up",
-        description: `${student.firstName} ${student.lastName}`,
-      });
+        toast({
+          title: isPickedUp ? "Student marked as not picked up" : "Student picked up",
+          description: `${student.firstName} ${student.lastName}`,
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
