@@ -355,15 +355,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get detailed session info
       const detailedSessions = await Promise.all(
         sessions.map(async (session) => {
-          const driver = await storage.getUser(session.driverId);
-          const route = await storage.getRoute(session.routeId);
-          const pickups = await storage.getStudentPickups(session.id);
+          const [driver, route, pickups] = await Promise.all([
+            storage.getUser(session.driverId),
+            storage.getRoute(session.routeId),
+            storage.getStudentPickups(session.id)
+          ]);
+          
+          // Get route schools if route exists
+          let routeWithSchools = route;
+          if (route) {
+            const routeSchools = await storage.getRouteSchools(route.id);
+            const schoolsWithDetails = await Promise.all(
+              routeSchools.map(async (rs) => ({
+                ...rs,
+                school: await storage.getSchool(rs.schoolId)
+              }))
+            );
+            routeWithSchools = { ...route, schools: schoolsWithDetails };
+          }
+          
           const completedPickups = pickups.filter(p => p.status === "picked_up").length;
           
           return {
             ...session,
             driver,
-            route,
+            route: routeWithSchools,
+            pickups,
             totalStudents: pickups.length,
             completedPickups,
             progressPercent: pickups.length > 0 ? (completedPickups / pickups.length) * 100 : 0,
@@ -372,6 +389,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       res.json(detailedSessions);
+    } catch (error) {
+      console.error("Error fetching today's sessions:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get driver locations
+  app.get("/api/driver-locations", async (req, res) => {
+    try {
+      // Get all current driver locations
+      const sessions = await storage.getTodaysSessions();
+      const activeDriverIds = sessions
+        .filter(s => s.status === "in_progress")
+        .map(s => s.driverId);
+      
+      const locations = await Promise.all(
+        activeDriverIds.map(async (driverId) => {
+          return await storage.getDriverLocation(driverId);
+        })
+      );
+      
+      res.json(locations.filter(Boolean));
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
