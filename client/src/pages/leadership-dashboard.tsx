@@ -35,7 +35,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "reports" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "reports" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "routes">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
@@ -403,6 +403,12 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </div>
         )}
 
+        {activeTab === "tracking" && (
+          <div className="p-4">
+            <DriverTracking />
+          </div>
+        )}
+
         {activeTab === "reports" && (
           <div className="p-4">
             <Card>
@@ -463,6 +469,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           >
             <RouteIcon className="h-6 w-6 mb-1" />
             <span className="text-xs">Routes</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("tracking")}
+            className={`flex flex-col items-center py-2 px-4 ${
+              activeTab === "tracking" ? "text-primary" : "text-gray-500"
+            }`}
+          >
+            <TrendingUp className="h-6 w-6 mb-1" />
+            <span className="text-xs">Tracking</span>
           </button>
           <button
             onClick={() => setActiveTab("reports")}
