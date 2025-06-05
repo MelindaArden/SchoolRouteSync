@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -107,12 +107,27 @@ export const driverLocations = pgTable("driver_locations", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 });
 
+export const issues = pgTable("issues", {
+  id: serial("id").primaryKey(),
+  driverId: integer("driver_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // 'issue' or 'maintenance'
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  priority: text("priority").default("medium"), // 'low', 'medium', 'high', 'urgent'
+  status: text("status").default("open"), // 'open', 'in_progress', 'resolved', 'closed'
+  reportedAt: timestamp("reported_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  notes: text("notes"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   routes: many(routes),
   pickupSessions: many(pickupSessions),
   notifications: many(notifications),
   locations: many(driverLocations),
+  issues: many(issues),
 }));
 
 export const schoolsRelations = relations(schools, ({ many }) => ({
