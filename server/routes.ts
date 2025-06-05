@@ -11,7 +11,8 @@ import {
   insertUserSchema,
   insertRouteSchema,
   insertRouteSchoolSchema,
-  insertRouteAssignmentSchema
+  insertRouteAssignmentSchema,
+  insertIssueSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -435,6 +436,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Issues routes
+  app.get("/api/issues", async (req, res) => {
+    try {
+      const issues = await storage.getIssues();
+      
+      // Enrich with driver information
+      const enrichedIssues = await Promise.all(
+        issues.map(async (issue) => {
+          const driver = await storage.getUser(issue.driverId);
+          return {
+            ...issue,
+            driver,
+          };
+        })
+      );
+      
+      res.json(enrichedIssues);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/drivers/:driverId/issues", async (req, res) => {
+    try {
+      const driverId = parseInt(req.params.driverId);
+      const issues = await storage.getIssuesByDriver(driverId);
+      res.json(issues);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/issues", async (req, res) => {
+    try {
+      const issueData = insertIssueSchema.parse(req.body);
+      const issue = await storage.createIssue(issueData);
+
+      // Create notifications for all admin users
+      const users = await storage.getUsers();
+      const adminUsers = users.filter(u => u.role === "leadership");
+      
+      for (const admin of adminUsers) {
+        await storage.createNotification({
+          type: issueData.type === "maintenance" ? "van_maintenance" : "driver_issue",
+          title: issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report",
+          message: `${issueData.title} - Priority: ${issueData.priority}`,
+          recipientId: admin.id,
+        });
+      }
+
+      // Broadcast to connected admin clients
+      broadcast({
+        type: 'issue_created',
+        issue: {
+          ...issue,
+          driver: await storage.getUser(issue.driverId),
+        },
+      });
+
+      res.json(issue);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid issue data" });
+    }
+  });
+
+  app.patch("/api/issues/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const issue = await storage.updateIssue(id, updates);
+      
+      broadcast({
+        type: 'issue_updated',
+        issue,
+      });
+
+      res.json(issue);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid issue update data" });
     }
   });
 

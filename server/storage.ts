@@ -67,6 +67,13 @@ export interface IStorage {
   // Driver Locations
   updateDriverLocation(location: InsertDriverLocation): Promise<DriverLocation>;
   getDriverLocation(driverId: number): Promise<DriverLocation | undefined>;
+  
+  // Issues
+  getIssues(): Promise<Issue[]>;
+  getIssue(id: number): Promise<Issue | undefined>;
+  getIssuesByDriver(driverId: number): Promise<Issue[]>;
+  createIssue(issue: InsertIssue): Promise<Issue>;
+  updateIssue(id: number, updates: Partial<Issue>): Promise<Issue>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -295,6 +302,30 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(driverLocations.timestamp))
       .limit(1);
     return location || undefined;
+  }
+
+  // Issues
+  async getIssues(): Promise<Issue[]> {
+    return await db.select().from(issues).orderBy(desc(issues.reportedAt));
+  }
+
+  async getIssue(id: number): Promise<Issue | undefined> {
+    const [issue] = await db.select().from(issues).where(eq(issues.id, id));
+    return issue || undefined;
+  }
+
+  async getIssuesByDriver(driverId: number): Promise<Issue[]> {
+    return await db.select().from(issues).where(eq(issues.driverId, driverId)).orderBy(desc(issues.reportedAt));
+  }
+
+  async createIssue(insertIssue: InsertIssue): Promise<Issue> {
+    const [issue] = await db.insert(issues).values(insertIssue).returning();
+    return issue;
+  }
+
+  async updateIssue(id: number, updates: Partial<Issue>): Promise<Issue> {
+    const [issue] = await db.update(issues).set(updates).where(eq(issues.id, id)).returning();
+    return issue;
   }
 }
 
