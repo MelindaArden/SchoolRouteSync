@@ -103,9 +103,10 @@ export const driverLocations = pgTable("driver_locations", {
   id: serial("id").primaryKey(),
   driverId: integer("driver_id").notNull().references(() => users.id),
   sessionId: integer("session_id").references(() => pickupSessions.id),
-  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
-  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  latitude: text("latitude").notNull(),
+  longitude: text("longitude").notNull(),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const issues = pgTable("issues", {

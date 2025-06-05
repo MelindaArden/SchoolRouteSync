@@ -315,6 +315,10 @@ export class DatabaseStorage implements IStorage {
     return location || undefined;
   }
 
+  async getDriverLocations(): Promise<DriverLocation[]> {
+    return await db.select().from(driverLocations).orderBy(desc(driverLocations.timestamp));
+  }
+
   // Issues
   async getIssues(): Promise<Issue[]> {
     return await db.select().from(issues).orderBy(desc(issues.reportedAt));

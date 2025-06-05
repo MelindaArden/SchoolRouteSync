@@ -12,6 +12,7 @@ import SimpleRouteEdit from "@/components/leadership/simple-route-edit";
 import SchoolsList from "@/components/leadership/schools-list";
 import DriverTracking from "@/components/leadership/driver-tracking";
 import ProfileSettings from "@/components/leadership/profile-settings";
+import DriverLocationMap from "@/components/leadership/driver-location-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -27,7 +28,8 @@ import {
   Plus,
   School,
   UserPlus,
-  GraduationCap
+  GraduationCap,
+  MapPin
 } from "lucide-react";
 
 interface LeadershipDashboardProps {
@@ -36,7 +38,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "reports" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "gps" | "reports" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "routes">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
@@ -410,6 +412,12 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </div>
         )}
 
+        {activeTab === "gps" && (
+          <div className="p-4">
+            <DriverLocationMap />
+          </div>
+        )}
+
         {activeTab === "reports" && (
           <div className="p-4">
             <Card>
@@ -460,6 +468,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           >
             <TrendingUp className="h-6 w-6 mb-1" />
             <span className="text-xs">Tracking</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("gps")}
+            className={`flex flex-col items-center py-2 px-4 ${
+              activeTab === "gps" ? "text-primary" : "text-gray-500"
+            }`}
+          >
+            <MapPin className="h-6 w-6 mb-1" />
+            <span className="text-xs">GPS</span>
           </button>
           <button
             onClick={() => setActiveTab("reports")}
