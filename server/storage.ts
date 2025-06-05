@@ -68,6 +68,7 @@ export interface IStorage {
   // Driver Locations
   updateDriverLocation(location: InsertDriverLocation): Promise<DriverLocation>;
   getDriverLocation(driverId: number): Promise<DriverLocation | undefined>;
+  getDriverLocations(): Promise<DriverLocation[]>;
   
   // Issues
   getIssues(): Promise<Issue[]>;

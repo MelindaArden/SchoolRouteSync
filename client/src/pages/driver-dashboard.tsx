@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { useLocationTracking } from "@/hooks/use-location-tracking";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Navigation as NavigationIcon, 
@@ -36,6 +37,14 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { location, startTracking, stopTracking } = useGeolocation();
+  
+  // GPS tracking for active sessions
+  useLocationTracking({
+    userId: user.id,
+    sessionId: activeSession?.id,
+    enabled: isTracking && activeSession !== null,
+    updateInterval: 30000, // Update every 30 seconds
+  });
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);

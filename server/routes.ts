@@ -362,6 +362,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all driver locations
+  app.get("/api/driver-locations", async (req, res) => {
+    try {
+      const locations = await storage.getDriverLocations();
+      
+      // Enrich with driver and session information
+      const enrichedLocations = await Promise.all(
+        locations.map(async (location) => {
+          const driver = await storage.getUser(location.driverId);
+          let session = null;
+          
+          if (location.sessionId) {
+            session = await storage.getPickupSession(location.sessionId);
+            if (session) {
+              const route = await storage.getRoute(session.routeId);
+              session = { ...session, route };
+            }
+          }
+          
+          return {
+            ...location,
+            driver,
+            session,
+          };
+        })
+      );
+      
+      res.json(enrichedLocations);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get specific driver location
+  app.get("/api/drivers/:driverId/location", async (req, res) => {
+    try {
+      const driverId = parseInt(req.params.driverId);
+      const location = await storage.getDriverLocation(driverId);
+      
+      if (!location) {
+        return res.status(404).json({ message: "Driver location not found" });
+      }
+      
+      res.json(location);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get all active sessions (for leadership dashboard)
   app.get("/api/pickup-sessions/today", async (req, res) => {
     try {

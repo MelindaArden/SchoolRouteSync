@@ -46,9 +46,6 @@ export function useGeolocation() {
         };
         
         setLocation(newLocation);
-        
-        // Update server with new location (you would need userId and sessionId)
-        // updateLocationOnServer(newLocation);
       },
       (error) => {
         let message = "Unknown location error";
