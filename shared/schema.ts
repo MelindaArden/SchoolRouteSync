@@ -238,6 +238,17 @@ export const driverLocationsRelations = relations(driverLocations, ({ one }) => 
   }),
 }));
 
+export const issuesRelations = relations(issues, ({ one }) => ({
+  driver: one(users, {
+    fields: [issues.driverId],
+    references: [users.id],
+  }),
+  assignedUser: one(users, {
+    fields: [issues.assignedTo],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -286,6 +297,11 @@ export const insertDriverLocationSchema = createInsertSchema(driverLocations).om
   timestamp: true,
 });
 
+export const insertIssueSchema = createInsertSchema(issues).omit({
+  id: true,
+  reportedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -307,3 +323,5 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type DriverLocation = typeof driverLocations.$inferSelect;
 export type InsertDriverLocation = z.infer<typeof insertDriverLocationSchema>;
+export type Issue = typeof issues.$inferSelect;
+export type InsertIssue = z.infer<typeof insertIssueSchema>;

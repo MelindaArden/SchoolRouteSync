@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { User } from "@/lib/types";
 import Navigation from "@/components/shared/navigation";
 import StudentList from "@/components/driver/student-list";
+import IssueForm from "@/components/driver/issue-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
