@@ -118,6 +118,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user profile
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const updates = req.body;
+      const updatedUser = await storage.updateUser(userId, updates);
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid user update data" });
+    }
+  });
+
   // Get driver routes
   app.get("/api/drivers/:driverId/routes", async (req, res) => {
     try {
