@@ -11,6 +11,7 @@ import RouteForm from "@/components/leadership/route-form";
 import SimpleRouteEdit from "@/components/leadership/simple-route-edit";
 import SchoolsList from "@/components/leadership/schools-list";
 import DriverTracking from "@/components/leadership/driver-tracking";
+import ProfileSettings from "@/components/leadership/profile-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -425,26 +426,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
         {activeTab === "settings" && (
           <div className="p-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-800 mb-4">Account Settings</h3>
-                    <div className="space-y-2">
-                      <p><span className="font-medium">Name:</span> {user.firstName} {user.lastName}</p>
-                      <p><span className="font-medium">Username:</span> {user.username}</p>
-                      <p><span className="font-medium">Role:</span> {user.role}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={onLogout}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white rounded-lg py-2 font-medium"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+            <ProfileSettings user={user} />
           </div>
         )}
       </div>
