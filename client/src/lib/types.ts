@@ -4,6 +4,11 @@ export interface User {
   role: string;
   firstName: string;
   lastName: string;
+  email?: string;
+  phone?: string;
+  mobileNumber?: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface School {

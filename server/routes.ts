@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { sendSMSToAdmins } from "./sms";
 import { 
   insertPickupSessionSchema, 
   insertStudentPickupSchema, 
@@ -476,6 +477,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const issueData = insertIssueSchema.parse(req.body);
       const issue = await storage.createIssue(issueData);
 
+      // Get driver information for the notification
+      const driver = await storage.getUser(issue.driverId);
+
       // Create notifications for all admin users
       const users = await storage.getUsers();
       const adminUsers = users.filter(u => u.role === "leadership");
@@ -489,12 +493,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Send SMS notifications to admin mobile numbers
+      const adminMobileNumbers = adminUsers
+        .filter(admin => admin.mobileNumber)
+        .map(admin => admin.mobileNumber!);
+
+      if (adminMobileNumbers.length > 0) {
+        const smsMessage = `🚨 ${issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report"}
+Driver: ${driver?.firstName} ${driver?.lastName}
+Issue: ${issueData.title}
+Priority: ${issueData.priority.toUpperCase()}
+Description: ${issueData.description}
+
+Please check the admin dashboard for details.`;
+
+        await sendSMSToAdmins(adminMobileNumbers, smsMessage);
+      }
+
       // Broadcast to connected admin clients
       broadcast({
         type: 'issue_created',
         issue: {
           ...issue,
-          driver: await storage.getUser(issue.driverId),
+          driver,
         },
       });
 
