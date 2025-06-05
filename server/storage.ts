@@ -1,11 +1,12 @@
 import {
   users, schools, routes, routeSchools, students, routeAssignments,
-  pickupSessions, studentPickups, notifications, driverLocations,
+  pickupSessions, studentPickups, notifications, driverLocations, issues,
   type User, type InsertUser, type School, type InsertSchool,
   type Route, type InsertRoute, type RouteSchool, type InsertRouteSchool,
   type Student, type InsertStudent, type RouteAssignment, type InsertRouteAssignment,
   type PickupSession, type InsertPickupSession, type StudentPickup, type InsertStudentPickup,
-  type Notification, type InsertNotification, type DriverLocation, type InsertDriverLocation
+  type Notification, type InsertNotification, type DriverLocation, type InsertDriverLocation,
+  type Issue, type InsertIssue
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";

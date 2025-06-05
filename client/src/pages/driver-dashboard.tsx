@@ -19,7 +19,8 @@ import {
   Users,
   Car,
   CheckCircle,
-  Route as RouteIcon
+  Route as RouteIcon,
+  Wrench
 } from "lucide-react";
 
 interface DriverDashboardProps {
@@ -31,6 +32,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const [activeTab, setActiveTab] = useState("routes");
   const [activeSession, setActiveSession] = useState<any>(null);
   const [isTracking, setIsTracking] = useState(false);
+  const [showIssueForm, setShowIssueForm] = useState<"issue" | "maintenance" | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { location, startTracking, stopTracking } = useGeolocation();
@@ -316,9 +318,67 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
         )}
       </div>
 
+        {activeTab === "profile" && (
+          <div className="p-4 space-y-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-4">Driver Profile</h3>
+                    <div className="space-y-2">
+                      <p><span className="font-medium">Name:</span> {user.firstName} {user.lastName}</p>
+                      <p><span className="font-medium">Username:</span> {user.username}</p>
+                      <p><span className="font-medium">Role:</span> {user.role}</p>
+                    </div>
+                  </div>
+
+                  {/* Issue Reporting Section */}
+                  <div className="pt-4 border-t">
+                    <h4 className="text-md font-medium text-gray-800 mb-3">Report Issues</h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      <Button
+                        onClick={() => setShowIssueForm("issue")}
+                        className="bg-red-600 hover:bg-red-700 text-white flex items-center justify-center space-x-2"
+                      >
+                        <AlertTriangle className="h-4 w-4" />
+                        <span>Report Issue</span>
+                      </Button>
+                      <Button
+                        onClick={() => setShowIssueForm("maintenance")}
+                        className="bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center space-x-2"
+                      >
+                        <Wrench className="h-4 w-4" />
+                        <span>Van Maintenance</span>
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 border-t">
+                    <button
+                      onClick={onLogout}
+                      className="w-full bg-gray-600 hover:bg-gray-700 text-white rounded-lg py-2 font-medium"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+      {/* Issue Form Modal */}
+      {showIssueForm && showIssueForm !== null && (
+        <IssueForm
+          driverId={user.id}
+          issueType={showIssueForm}
+          onClose={() => setShowIssueForm(null)}
+        />
+      )}
+
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           <button
             onClick={() => setActiveTab("routes")}
             className={`flex flex-col items-center py-3 px-2 text-xs ${
@@ -345,6 +405,15 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
           >
             <Car className="h-5 w-5 mb-1" />
             Session
+          </button>
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`flex flex-col items-center py-3 px-2 text-xs ${
+              activeTab === "profile" ? "text-blue-600 bg-blue-50" : "text-gray-600"
+            }`}
+          >
+            <Users className="h-5 w-5 mb-1" />
+            Profile
           </button>
         </div>
       </div>
