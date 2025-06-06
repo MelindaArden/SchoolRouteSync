@@ -698,6 +698,20 @@ Please check the admin dashboard for details.`;
     }
   });
 
+  // Update user
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const user = await storage.updateUser(id, updates);
+      // Remove password from response
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid user update data" });
+    }
+  });
+
   // Get all routes
   app.get("/api/routes", async (req, res) => {
     try {

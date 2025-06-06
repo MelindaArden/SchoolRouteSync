@@ -10,6 +10,8 @@ import DriverForm from "@/components/leadership/driver-form";
 import RouteForm from "@/components/leadership/route-form";
 import SimpleRouteEdit from "@/components/leadership/simple-route-edit";
 import SchoolsList from "@/components/leadership/schools-list";
+import UsersList from "@/components/leadership/users-list";
+import UserForm from "@/components/leadership/user-form";
 import DriverTracking from "@/components/leadership/driver-tracking";
 import ProfileSettings from "@/components/leadership/profile-settings";
 import DriverLocationMap from "@/components/leadership/driver-location-map";
@@ -38,8 +40,8 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "gps" | "reports" | "settings">("dashboard");
-  const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | null>(null);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "gps" | "users" | "reports" | "settings">("dashboard");
+  const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "routes">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
 
