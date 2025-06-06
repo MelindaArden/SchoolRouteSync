@@ -333,7 +333,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
               </Card>
             )}
 
-            {routesView === "schools" && <SchoolsList />}
+            {routesView === "schools" && <SchoolsList onAddSchool={() => setShowForm("school")} />}
 
             {routesView === "routes" && !editingRoute && (
               <Card>
@@ -405,6 +405,18 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         {showForm === "route" && (
           <div className="p-4">
             <RouteForm onClose={() => setShowForm(null)} />
+          </div>
+        )}
+
+        {showForm === "user" && (
+          <div className="p-4">
+            <UserForm onClose={() => setShowForm(null)} />
+          </div>
+        )}
+
+        {activeTab === "users" && (
+          <div className="p-4">
+            <UsersList onAddUser={() => setShowForm("user")} />
           </div>
         )}
 
@@ -481,13 +493,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <span className="text-xs">GPS</span>
           </button>
           <button
-            onClick={() => setActiveTab("reports")}
+            onClick={() => setActiveTab("users")}
             className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "reports" ? "text-primary" : "text-gray-500"
+              activeTab === "users" ? "text-primary" : "text-gray-500"
             }`}
           >
-            <FileText className="h-6 w-6 mb-1" />
-            <span className="text-xs">Reports</span>
+            <Users className="h-6 w-6 mb-1" />
+            <span className="text-xs">Users</span>
           </button>
           <button
             onClick={() => setActiveTab("settings")}
