@@ -12,6 +12,7 @@ import SimpleRouteEdit from "@/components/leadership/simple-route-edit";
 import SchoolsList from "@/components/leadership/schools-list";
 import UsersList from "@/components/leadership/users-list";
 import UserForm from "@/components/leadership/user-form";
+import ExpandableRouteCard from "@/components/leadership/expandable-route-card";
 import DriverTracking from "@/components/leadership/driver-tracking";
 import ProfileSettings from "@/components/leadership/profile-settings";
 import DriverLocationMap from "@/components/leadership/driver-location-map";
@@ -344,29 +345,12 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                   {Array.isArray(routes) && routes.length > 0 ? routes.map((route: any) => {
                     const driver = Array.isArray(users) ? users.find((u: any) => u.id === route.driverId) : null;
                     return (
-                      <div key={route.id} className="border rounded-lg p-3">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">{route.name}</p>
-                            <p className="text-sm text-gray-600">
-                              Driver: {driver ? `${driver.firstName} ${driver.lastName}` : 'Unassigned'}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="text-right text-sm text-gray-600">
-                              <p>Active: {route.isActive ? 'Yes' : 'No'}</p>
-                              <p>Created: {new Date(route.createdAt).toLocaleDateString()}</p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditingRoute(route)}
-                            >
-                              Edit
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
+                      <ExpandableRouteCard
+                        key={route.id}
+                        route={route}
+                        driver={driver}
+                        onEdit={() => setEditingRoute(route)}
+                      />
                     );
                   }) : (
                     <p className="text-gray-500 text-center py-4">No routes created yet</p>

@@ -722,6 +722,28 @@ Please check the admin dashboard for details.`;
     }
   });
 
+  // Get routes with assigned schools
+  app.get("/api/routes/with-schools", async (req, res) => {
+    try {
+      const routes = await storage.getRoutes();
+      const routesWithSchools = await Promise.all(
+        routes.map(async (route) => {
+          const routeSchools = await storage.getRouteSchools(route.id);
+          const schoolsWithDetails = await Promise.all(
+            routeSchools.map(async (rs) => ({
+              ...rs,
+              school: await storage.getSchool(rs.schoolId)
+            }))
+          );
+          return { ...route, schools: schoolsWithDetails };
+        })
+      );
+      res.json(routesWithSchools);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create route
   app.post("/api/routes", async (req, res) => {
     try {
