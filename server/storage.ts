@@ -44,6 +44,7 @@ export interface IStorage {
   getStudentsByRoute(routeId: number): Promise<Student[]>;
   getStudentById(id: number): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
+  updateStudent(id: number, updates: Partial<Student>): Promise<Student>;
   
   // Route Assignments
   getRouteAssignments(routeId: number): Promise<RouteAssignment[]>;
@@ -227,6 +228,15 @@ export class DatabaseStorage implements IStorage {
 
   async createStudent(insertStudent: InsertStudent): Promise<Student> {
     const [student] = await db.insert(students).values(insertStudent).returning();
+    return student;
+  }
+
+  async updateStudent(id: number, updates: Partial<Student>): Promise<Student> {
+    const [student] = await db
+      .update(students)
+      .set(updates)
+      .where(eq(students.id, id))
+      .returning();
     return student;
   }
 
