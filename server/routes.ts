@@ -625,6 +625,18 @@ Please check the admin dashboard for details.`;
     }
   });
 
+  // Update school
+  app.patch("/api/schools/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const school = await storage.updateSchool(id, updates);
+      res.json(school);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid school update data" });
+    }
+  });
+
   // Get all students
   app.get("/api/students", async (req, res) => {
     try {
@@ -643,6 +655,18 @@ Please check the admin dashboard for details.`;
       res.json(student);
     } catch (error) {
       res.status(400).json({ message: "Invalid student data" });
+    }
+  });
+
+  // Update student
+  app.patch("/api/students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const student = await storage.updateStudent(id, updates);
+      res.json(student);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid student update data" });
     }
   });
 

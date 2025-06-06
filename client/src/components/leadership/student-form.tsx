@@ -1,198 +1,287 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { X } from "lucide-react";
+
+const studentSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  grade: z.string().min(1, "Grade is required"),
+  schoolId: z.number().min(1, "School is required"),
+  parentName: z.string().min(1, "Parent name is required"),
+  parentPhone: z.string().min(1, "Parent phone is required"),
+  parentEmail: z.string().email("Invalid email").optional().or(z.literal("")),
+  emergencyContact: z.string().optional(),
+  emergencyPhone: z.string().optional(),
+});
+
+type StudentFormData = z.infer<typeof studentSchema>;
 
 interface StudentFormProps {
   onClose: () => void;
+  student?: any;
 }
 
-export default function StudentForm({ onClose }: StudentFormProps) {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    grade: "",
-    schoolId: "",
-    parentName: "",
-    parentPhone: "",
-    parentEmail: "",
-    emergencyContact: "",
-    emergencyPhone: "",
-  });
-  const [loading, setLoading] = useState(false);
+export default function StudentForm({ onClose, student }: StudentFormProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const isEditing = !!student;
 
-  // Fetch schools for dropdown
   const { data: schools = [] } = useQuery({
     queryKey: ['/api/schools'],
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const form = useForm<StudentFormData>({
+    resolver: zodResolver(studentSchema),
+    defaultValues: {
+      firstName: student?.firstName || "",
+      lastName: student?.lastName || "",
+      grade: student?.grade || "",
+      schoolId: student?.schoolId || 0,
+      parentName: student?.parentName || "",
+      parentPhone: student?.parentPhone || "",
+      parentEmail: student?.parentEmail || "",
+      emergencyContact: student?.emergencyContact || "",
+      emergencyPhone: student?.emergencyPhone || "",
+    },
+  });
 
-    try {
-      const studentData = {
-        ...formData,
-        schoolId: parseInt(formData.schoolId),
-      };
-
-      await apiRequest("POST", "/api/students", studentData);
-      
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
-      
+  const createStudentMutation = useMutation({
+    mutationFn: async (data: StudentFormData) => {
+      return apiRequest("POST", "/api/students", data);
+    },
+    onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Student created successfully",
+        title: "Student Created",
+        description: "Student has been added successfully.",
       });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
       onClose();
-    } catch (error) {
+    },
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create student",
+        description: "Failed to create student. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  const updateStudentMutation = useMutation({
+    mutationFn: async (data: StudentFormData) => {
+      return apiRequest("PATCH", `/api/students/${student.id}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Student Updated",
+        description: "Student has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      onClose();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update student. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: StudentFormData) => {
+    if (isEditing) {
+      updateStudentMutation.mutate(data);
+    } else {
+      createStudentMutation.mutate(data);
     }
   };
 
+  const isPending = createStudentMutation.isPending || updateStudentMutation.isPending;
+
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Add New Student</CardTitle>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>{isEditing ? "Edit Student" : "Add New Student"}</CardTitle>
+            <CardDescription>
+              {isEditing ? "Update student information" : "Enter details for the new student"}
+            </CardDescription>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                placeholder="Emma"
-                required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="John" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Doe" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                placeholder="Smith"
-                required
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="grade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Grade</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="3rd Grade" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="schoolId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>School</FormLabel>
+                    <Select 
+                      onValueChange={(value) => field.onChange(parseInt(value))} 
+                      value={field.value.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a school" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {schools.map((school: any) => (
+                          <SelectItem key={school.id} value={school.id.toString()}>
+                            {school.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-2">
-              <Label htmlFor="grade">Grade</Label>
-              <Select value={formData.grade} onValueChange={(value) => setFormData({ ...formData, grade: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select grade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="K">Kindergarten</SelectItem>
-                  <SelectItem value="1st">1st Grade</SelectItem>
-                  <SelectItem value="2nd">2nd Grade</SelectItem>
-                  <SelectItem value="3rd">3rd Grade</SelectItem>
-                  <SelectItem value="4th">4th Grade</SelectItem>
-                  <SelectItem value="5th">5th Grade</SelectItem>
-                </SelectContent>
-              </Select>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="parentName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parent Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Jane Doe" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="parentPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parent Phone</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="(555) 123-4567" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="school">School</Label>
-              <Select value={formData.schoolId} onValueChange={(value) => setFormData({ ...formData, schoolId: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select school" />
-                </SelectTrigger>
-                <SelectContent>
-                  {schools.map((school: any) => (
-                    <SelectItem key={school.id} value={school.id.toString()}>
-                      {school.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="parentName">Parent Name</Label>
-            <Input
-              id="parentName"
-              value={formData.parentName}
-              onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
-              placeholder="Jennifer Smith"
-              required
+            
+            <FormField
+              control={form.control}
+              name="parentEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Parent Email (Optional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="email" placeholder="parent@email.com" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-2">
-              <Label htmlFor="parentPhone">Parent Phone</Label>
-              <Input
-                id="parentPhone"
-                type="tel"
-                value={formData.parentPhone}
-                onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
-                placeholder="(555) 123-4567"
-                required
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="emergencyContact"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Emergency Contact (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Grandparent/Guardian" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="emergencyPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Emergency Phone (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="(555) 987-6543" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="parentEmail">Parent Email</Label>
-              <Input
-                id="parentEmail"
-                type="email"
-                value={formData.parentEmail}
-                onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })}
-                placeholder="parent@email.com"
-              />
+            
+            <div className="flex gap-2 pt-4">
+              <Button type="submit" disabled={isPending} className="flex-1">
+                {isPending ? "Saving..." : isEditing ? "Update Student" : "Add Student"}
+              </Button>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-2">
-              <Label htmlFor="emergencyContact">Emergency Contact</Label>
-              <Input
-                id="emergencyContact"
-                value={formData.emergencyContact}
-                onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
-                placeholder="Mark Smith"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="emergencyPhone">Emergency Phone</Label>
-              <Input
-                id="emergencyPhone"
-                type="tel"
-                value={formData.emergencyPhone}
-                onChange={(e) => setFormData({ ...formData, emergencyPhone: e.target.value })}
-                placeholder="(555) 987-6543"
-              />
-            </div>
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Creating..." : "Create Student"}
-            </Button>
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-          </div>
-        </form>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

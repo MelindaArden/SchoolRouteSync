@@ -53,10 +53,10 @@ function Router() {
   return (
     <Switch>
       <Route path="/">
-        {user.role === "driver" ? (
-          <DriverDashboard user={user} onLogout={handleLogout} />
-        ) : (
+        {user.role === "leadership" ? (
           <LeadershipDashboard user={user} onLogout={handleLogout} />
+        ) : (
+          <DriverDashboard user={user} onLogout={handleLogout} />
         )}
       </Route>
       <Route path="/driver">
