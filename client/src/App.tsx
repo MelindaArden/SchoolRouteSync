@@ -20,8 +20,11 @@ function Router() {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        console.log("Loaded stored user:", userData, "Role:", userData.role);
+        setUser(userData);
       } catch (error) {
+        console.log("Error parsing stored user:", error);
         localStorage.removeItem("user");
       }
     }
@@ -29,6 +32,7 @@ function Router() {
   }, []);
 
   const handleLogin = (userData: User) => {
+    console.log("Login user data:", userData, "Role:", userData.role);
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
   };
@@ -53,11 +57,16 @@ function Router() {
   return (
     <Switch>
       <Route path="/">
-        {user.role === "leadership" ? (
-          <LeadershipDashboard user={user} onLogout={handleLogout} />
-        ) : (
-          <DriverDashboard user={user} onLogout={handleLogout} />
-        )}
+        {(() => {
+          console.log("Routing decision - User:", user.username, "Role:", user.role);
+          if (user.role === "leadership") {
+            console.log("Routing to LeadershipDashboard");
+            return <LeadershipDashboard user={user} onLogout={handleLogout} />;
+          } else {
+            console.log("Routing to DriverDashboard");
+            return <DriverDashboard user={user} onLogout={handleLogout} />;
+          }
+        })()}
       </Route>
       <Route path="/driver">
         <DriverDashboard user={user} onLogout={handleLogout} />
