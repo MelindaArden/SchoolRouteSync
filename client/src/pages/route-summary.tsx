@@ -47,7 +47,7 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
               <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-800 mb-2">Session Not Found</h3>
               <p className="text-gray-600 mb-4">Could not load route summary.</p>
-              <Button onClick={() => setLocation("/driver")}>
+              <Button onClick={() => setLocation("/")}>
                 Return to Dashboard
               </Button>
             </CardContent>
@@ -57,15 +57,15 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
     );
   }
 
-  const pickedUpStudents = sessionDetails.pickups?.filter((p: any) => p.status === "picked_up") || [];
-  const absentStudents = sessionDetails.pickups?.filter((p: any) => p.status === "absent" || p.status === "no_show") || [];
-  const pendingStudents = sessionDetails.pickups?.filter((p: any) => p.status === "pending") || [];
+  const pickedUpStudents = sessionDetails?.pickups?.filter((p: any) => p.status === "picked_up") || [];
+  const absentStudents = sessionDetails?.pickups?.filter((p: any) => p.status === "absent" || p.status === "no_show") || [];
+  const pendingStudents = sessionDetails?.pickups?.filter((p: any) => p.status === "pending") || [];
   
-  const totalStudents = sessionDetails.pickups?.length || 0;
+  const totalStudents = sessionDetails?.pickups?.length || 0;
   const completionRate = totalStudents > 0 ? Math.round((pickedUpStudents.length / totalStudents) * 100) : 100;
 
-  const startTime = sessionDetails.startTime ? new Date(sessionDetails.startTime) : null;
-  const completedTime = sessionDetails.completedTime ? new Date(sessionDetails.completedTime) : null;
+  const startTime = sessionDetails?.startTime ? new Date(sessionDetails.startTime) : null;
+  const completedTime = sessionDetails?.completedTime ? new Date(sessionDetails.completedTime) : null;
   const routeDuration = startTime && completedTime ? 
     Math.round((completedTime.getTime() - startTime.getTime()) / (1000 * 60)) : null;
 
@@ -124,12 +124,12 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Date:</span>
               <span className="font-medium">
-                {new Date(sessionDetails.date).toLocaleDateString('en-US', {
+                {sessionDetails?.date ? new Date(sessionDetails.date).toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
-                })}
+                }) : '--'}
               </span>
             </div>
             
@@ -250,7 +250,7 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
         {/* Actions */}
         <div className="flex space-x-4">
           <Button 
-            onClick={() => setLocation("/driver")} 
+            onClick={() => setLocation("/")} 
             className="flex-1"
             variant="outline"
           >
