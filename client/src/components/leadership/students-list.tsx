@@ -70,8 +70,8 @@ export default function StudentsList({ onAddStudent }: StudentsListProps) {
   if (editingStudent) {
     return (
       <StudentForm
-        onCancel={() => setEditingStudent(null)}
-        initialData={editingStudent}
+        onClose={() => setEditingStudent(null)}
+        student={editingStudent}
       />
     );
   }

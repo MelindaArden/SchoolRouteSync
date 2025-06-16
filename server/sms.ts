@@ -16,16 +16,26 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
     return false;
   }
 
+  // Format phone number to ensure it has country code
+  let formattedNumber = to.trim();
+  if (!formattedNumber.startsWith('+')) {
+    formattedNumber = '+1' + formattedNumber.replace(/\D/g, '');
+  }
+
   try {
-    await client.messages.create({
+    const result = await client.messages.create({
       body: message,
       from: twilioPhoneNumber,
-      to: to,
+      to: formattedNumber,
     });
-    console.log(`SMS sent successfully to ${to}`);
+    console.log(`SMS sent successfully to ${formattedNumber}, SID: ${result.sid}, Status: ${result.status}`);
     return true;
   } catch (error) {
-    console.error('Failed to send SMS:', error);
+    console.error('Failed to send SMS:', {
+      to: formattedNumber,
+      from: twilioPhoneNumber,
+      error: error instanceof Error ? error.message : error
+    });
     return false;
   }
 }

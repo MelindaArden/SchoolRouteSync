@@ -10,6 +10,7 @@ import DriverForm from "@/components/leadership/driver-form";
 import RouteForm from "@/components/leadership/route-form";
 import SimpleRouteEdit from "@/components/leadership/simple-route-edit";
 import SchoolsList from "@/components/leadership/schools-list";
+import StudentsList from "@/components/leadership/students-list";
 import UsersList from "@/components/leadership/users-list";
 import UserForm from "@/components/leadership/user-form";
 import ExpandableRouteCard from "@/components/leadership/expandable-route-card";
@@ -43,7 +44,7 @@ interface LeadershipDashboardProps {
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "gps" | "users" | "reports" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
-  const [routesView, setRoutesView] = useState<"management" | "schools" | "routes">("management");
+  const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
 
   // WebSocket connection for real-time updates
@@ -271,7 +272,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                   <p className="text-xs text-gray-600">Schools</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setRoutesView("students")}>
                 <CardContent className="p-3 text-center">
                   <GraduationCap className="h-6 w-6 text-green-600 mx-auto mb-1" />
                   <p className="text-lg font-bold text-gray-800">{studentCount}</p>
@@ -311,6 +312,14 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 className="flex-1"
               >
                 Schools
+              </Button>
+              <Button
+                variant={routesView === "students" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoutesView("students")}
+                className="flex-1"
+              >
+                Students
               </Button>
               <Button
                 variant={routesView === "routes" ? "default" : "outline"}
