@@ -35,7 +35,8 @@ export async function sendDirectSMS(to: string, message: string): Promise<boolea
 
 export async function notifyAdminsDirectly(title: string, message: string, priority: string = 'medium'): Promise<void> {
   // Hardcoded admin numbers for reliable delivery
-  const adminNumbers = ['+18593142300'];
+  // Update this with your verified phone number
+  const adminNumbers = ['+18593142300']; // Change this to your verified number
   
   const priorityEmoji = priority === 'urgent' ? '🚨🚨' : priority === 'high' ? '🚨' : '⚠️';
   const smsText = `${priorityEmoji} ${title}
