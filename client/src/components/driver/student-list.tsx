@@ -33,7 +33,10 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
   }, [studentPickups, sessionId]);
 
   const handleTogglePickup = async (student: any) => {
-    if (!isActive || !sessionId) return;
+    if (!isActive || !sessionId) {
+      console.log('Cannot toggle pickup - not active or no session ID', { isActive, sessionId });
+      return;
+    }
 
     const isPickedUp = pickupStates[student.id];
     const newStatus = isPickedUp ? "pending" : "picked_up";
@@ -41,6 +44,7 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
     try {
       // Find the pickup record for this student and session
       const pickup = studentPickups.find((p: any) => p.studentId === student.id && p.sessionId === sessionId);
+      console.log('Looking for pickup record:', { studentId: student.id, sessionId, pickup, studentPickups });
       
       if (pickup) {
         await apiRequest("PATCH", `/api/student-pickups/${pickup.id}`, {

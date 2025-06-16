@@ -123,6 +123,14 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Enhanced leadership dashboard with dedicated history tab for viewing all completed routes
 - Fixed route completion flow to properly save student pickup times and driver notes to permanent history
 
+### June 16, 2025 - Driver Dashboard Student Display Fix
+- Fixed critical issue where drivers couldn't see students assigned to each school in their routes
+- Enhanced driver routes endpoint to properly load and group students by school assignment
+- Fixed data inconsistency between route schools and student assignments
+- Implemented comprehensive notification system with multiple delivery channels for SMS failures
+- Added backup notification methods including email-to-SMS gateways and webhook logging
+- Drivers now see complete student lists with names, grades, and contact information for each school
+
 ### Initial Setup
 - June 16, 2025. Initial setup
 
