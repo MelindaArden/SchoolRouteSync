@@ -148,13 +148,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const schoolsWithDetails = await Promise.all(
             routeSchools.map(async (rs) => {
               const school = await storage.getSchool(rs.schoolId);
-              const schoolStudents = students.filter(s => 
-                assignments.some(a => a.studentId === s.id && a.schoolId === rs.schoolId)
+              
+              // Get students assigned to this specific school on this route
+              const schoolStudents = await Promise.all(
+                assignments
+                  .filter(a => a.schoolId === rs.schoolId)
+                  .map(async (assignment) => {
+                    const student = await storage.getStudentById(assignment.studentId);
+                    return student;
+                  })
               );
+              
+              // Filter out any null/undefined students
+              const validStudents = schoolStudents.filter(s => s !== undefined);
+              
               return {
                 ...rs,
                 school,
-                students: schoolStudents,
+                students: validStudents,
               };
             })
           );
