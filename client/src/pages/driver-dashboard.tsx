@@ -159,8 +159,20 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   }
 
   const totalStudents = currentRoute?.totalStudents || 0;
-  const currentActiveSession = activeSession || (sessions.length > 0 && (sessions as any[])[0].status === "in_progress" ? (sessions as any[])[0] : null);
+  // Find the most recent active session
+  const activeSessionFromList = (sessions as any[]).find(s => s.status === "in_progress");
+  const currentActiveSession = activeSession || activeSessionFromList;
   const hasActiveSession = !!currentActiveSession;
+  
+  // Debug logging
+  console.log('Session debug:', { 
+    sessions, 
+    activeSession, 
+    activeSessionFromList, 
+    currentActiveSession, 
+    hasActiveSession,
+    sessionId: currentActiveSession?.id 
+  });
 
   if (!currentRoute) {
     return (

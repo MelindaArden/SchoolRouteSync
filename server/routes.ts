@@ -791,15 +791,15 @@ Driver may be late for pickup.`;
         });
       }
 
-      // Send comprehensive notifications to admins
-      const { sendAdminNotifications } = await import('./notification-service');
-      await sendAdminNotifications({
-        type: issueData.type === "maintenance" ? "maintenance" : "issue",
-        title: issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report",
-        message: `Driver: ${driver?.firstName} ${driver?.lastName} - ${issueData.title} (Priority: ${issueData.priority})`,
-        driverId: issueData.driverId,
-        priority: issueData.priority as "low" | "medium" | "high" | "urgent"
-      });
+      // Send direct SMS notifications to admins
+      const { notifyAdminsDirectly } = await import('./direct-sms');
+      const notificationTitle = issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report";
+      const notificationMessage = `Driver: ${driver?.firstName} ${driver?.lastName}
+Issue: ${issueData.title}
+Priority: ${issueData.priority?.toUpperCase()}
+Description: ${issueData.description}`;
+      
+      await notifyAdminsDirectly(notificationTitle, notificationMessage, (issueData.priority as string) || 'medium');
 
       // Broadcast to connected admin clients
       broadcast({
