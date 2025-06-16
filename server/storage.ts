@@ -279,10 +279,20 @@ export class DatabaseStorage implements IStorage {
 
   // Pickup Sessions
   async getTodaysSessions(): Promise<PickupSession[]> {
-    const today = new Date().toISOString().split('T')[0];
-    return await db.select().from(pickupSessions)
-      .where(eq(pickupSessions.date, today))
-      .orderBy(desc(pickupSessions.id)); // Use id instead of startTime since startTime can be null
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      console.log('Fetching sessions for date:', today);
+      
+      const result = await db.select().from(pickupSessions)
+        .where(eq(pickupSessions.date, today))
+        .orderBy(desc(pickupSessions.id));
+      
+      console.log('Database query result:', result);
+      return result;
+    } catch (error) {
+      console.error('Database error in getTodaysSessions:', error);
+      throw error;
+    }
   }
 
   async getSessionsByDriver(driverId: number, date: string): Promise<PickupSession[]> {

@@ -663,80 +663,34 @@ Driver may be late for pickup.`;
   // Get all active sessions (for leadership dashboard)
   app.get("/api/pickup-sessions/today", async (req, res) => {
     try {
-      const sessions = await storage.getTodaysSessions();
+      console.log("Attempting to fetch today's sessions...");
+      const today = new Date().toISOString().split('T')[0];
+      console.log("Today's date:", today);
       
-      // Get detailed session info
-      const detailedSessions = await Promise.all(
-        sessions.map(async (session) => {
-          try {
-            const [driver, route, pickups] = await Promise.all([
-              storage.getUser(session.driverId),
-              storage.getRoute(session.routeId),
-              storage.getStudentPickups(session.id)
-            ]);
-            
-            // Get route schools if route exists
-            let routeWithSchools = route;
-            if (route) {
-              try {
-                const routeSchools = await storage.getRouteSchools(route.id);
-                const schoolsWithDetails = await Promise.all(
-                  routeSchools.map(async (rs) => {
-                    try {
-                      const school = await storage.getSchool(rs.schoolId);
-                      return {
-                        ...rs,
-                        school
-                      };
-                    } catch (err) {
-                      console.error(`Error fetching school ${rs.schoolId}:`, err);
-                      return {
-                        ...rs,
-                        school: null
-                      };
-                    }
-                  })
-                );
-                routeWithSchools = { 
-                  ...route, 
-                  schools: schoolsWithDetails 
-                } as typeof route & { schools: typeof schoolsWithDetails };
-              } catch (err) {
-                console.error(`Error fetching route schools for route ${route.id}:`, err);
-              }
-            }
-            
-            const completedPickups = pickups ? pickups.filter(p => p.status === "picked_up").length : 0;
-            const totalPickups = pickups ? pickups.length : 0;
-            
-            return {
-              ...session,
-              driver,
-              route: routeWithSchools,
-              pickups: pickups || [],
-              totalStudents: totalPickups,
-              completedPickups,
-              progressPercent: totalPickups > 0 ? (completedPickups / totalPickups) * 100 : 0,
-            };
-          } catch (sessionError) {
-            console.error(`Error processing session ${session.id}:`, sessionError);
-            return {
-              ...session,
-              driver: null,
-              route: null,
-              pickups: [],
-              totalStudents: 0,
-              completedPickups: 0,
-              progressPercent: 0,
-            };
-          }
-        })
-      );
+      const sessions = await storage.getTodaysSessions();
+      console.log("Raw sessions:", sessions);
+      
+      if (!sessions || sessions.length === 0) {
+        return res.json([]);
+      }
 
-      res.json(detailedSessions);
+      // Return basic session data first
+      const basicSessions = sessions.map(session => ({
+        ...session,
+        totalStudents: 0,
+        completedPickups: 0,
+        progressPercent: 0,
+      }));
+
+      console.log("Processed sessions:", basicSessions.length);
+      res.json(basicSessions);
     } catch (error) {
       console.error("Error fetching today's sessions:", error);
-      console.error("Stack trace:", error instanceof Error ? error.stack : error);
+      console.error("Error type:", typeof error);
+      console.error("Error details:", error);
+      if (error instanceof Error) {
+        console.error("Stack trace:", error.stack);
+      }
       res.status(500).json({ message: "Internal server error", details: error instanceof Error ? error.message : String(error) });
     }
   });
