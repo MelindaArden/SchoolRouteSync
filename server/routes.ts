@@ -337,6 +337,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Complete route and save to history
+  app.post("/api/pickup-sessions/:id/complete", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getPickupSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Get pickup details for history
+      const pickups = await storage.getStudentPickups(sessionId);
+      const pickedUpCount = pickups.filter(p => p.status === "picked_up").length;
+      
+      // Update session to completed
+      await storage.updatePickupSession(sessionId, {
+        status: "completed",
+        completedTime: new Date()
+      });
+
+      // Save to pickup history
+      await storage.createPickupHistory({
+        sessionId,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        date: session.date,
+        completedAt: new Date(),
+        totalStudents: pickups.length,
+        studentsPickedUp: pickedUpCount,
+        pickupDetails: JSON.stringify(pickups),
+        notes: req.body.notes || null
+      });
+
+      // Broadcast completion
+      broadcast({
+        type: 'route_completed',
+        sessionId,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        completedAt: new Date().toISOString()
+      });
+
+      res.json({ message: "Route completed and saved to history" });
+    } catch (error) {
+      console.error('Error completing route:', error);
+      res.status(500).json({ message: "Failed to complete route" });
+    }
+  });
+
+  // Get pickup history for admin dashboard
+  app.get("/api/pickup-history", async (req, res) => {
+    try {
+      const history = await storage.getPickupHistory();
+      
+      // Get detailed history with driver, route, and pickup details
+      const detailedHistory = await Promise.all(
+        history.map(async (record) => {
+          const [driver, route] = await Promise.all([
+            storage.getUser(record.driverId),
+            storage.getRoute(record.routeId)
+          ]);
+          
+          let pickupDetails = [];
+          if (record.pickupDetails) {
+            try {
+              pickupDetails = JSON.parse(record.pickupDetails);
+            } catch (e) {
+              console.error('Error parsing pickup details:', e);
+            }
+          }
+          
+          return {
+            ...record,
+            driver,
+            route,
+            pickupDetails
+          };
+        })
+      );
+      
+      res.json(detailedHistory);
+    } catch (error) {
+      console.error('Error fetching pickup history:', error);
+      res.status(500).json({ message: "Failed to fetch pickup history" });
+    }
+  });
+
+  // Get pickup history for specific driver
+  app.get("/api/drivers/:driverId/pickup-history", async (req, res) => {
+    try {
+      const driverId = parseInt(req.params.driverId);
+      const history = await storage.getPickupHistoryByDriver(driverId);
+      
+      const detailedHistory = await Promise.all(
+        history.map(async (record) => {
+          const route = await storage.getRoute(record.routeId);
+          
+          let pickupDetails = [];
+          if (record.pickupDetails) {
+            try {
+              pickupDetails = JSON.parse(record.pickupDetails);
+            } catch (e) {
+              console.error('Error parsing pickup details:', e);
+            }
+          }
+          
+          return {
+            ...record,
+            route,
+            pickupDetails
+          };
+        })
+      );
+      
+      res.json(detailedHistory);
+    } catch (error) {
+      console.error('Error fetching driver pickup history:', error);
+      res.status(500).json({ message: "Failed to fetch driver pickup history" });
+    }
+  });
+
   // Helper function to calculate distance between two points
   function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 3959; // Earth's radius in miles

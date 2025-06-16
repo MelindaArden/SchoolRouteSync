@@ -1,12 +1,12 @@
 import {
   users, schools, routes, routeSchools, students, routeAssignments,
-  pickupSessions, studentPickups, notifications, driverLocations, issues,
+  pickupSessions, studentPickups, notifications, driverLocations, issues, pickupHistory,
   type User, type InsertUser, type School, type InsertSchool,
   type Route, type InsertRoute, type RouteSchool, type InsertRouteSchool,
   type Student, type InsertStudent, type RouteAssignment, type InsertRouteAssignment,
   type PickupSession, type InsertPickupSession, type StudentPickup, type InsertStudentPickup,
   type Notification, type InsertNotification, type DriverLocation, type InsertDriverLocation,
-  type Issue, type InsertIssue
+  type Issue, type InsertIssue, type PickupHistory, type InsertPickupHistory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -387,6 +387,28 @@ export class DatabaseStorage implements IStorage {
   async updateIssue(id: number, updates: Partial<Issue>): Promise<Issue> {
     const [issue] = await db.update(issues).set(updates).where(eq(issues.id, id)).returning();
     return issue;
+  }
+
+  // Pickup History
+  async getPickupHistory(): Promise<PickupHistory[]> {
+    return await db.select().from(pickupHistory).orderBy(desc(pickupHistory.completedAt));
+  }
+
+  async getPickupHistoryByDriver(driverId: number): Promise<PickupHistory[]> {
+    return await db.select().from(pickupHistory)
+      .where(eq(pickupHistory.driverId, driverId))
+      .orderBy(desc(pickupHistory.completedAt));
+  }
+
+  async getPickupHistoryByRoute(routeId: number): Promise<PickupHistory[]> {
+    return await db.select().from(pickupHistory)
+      .where(eq(pickupHistory.routeId, routeId))
+      .orderBy(desc(pickupHistory.completedAt));
+  }
+
+  async createPickupHistory(insertHistory: InsertPickupHistory): Promise<PickupHistory> {
+    const [history] = await db.insert(pickupHistory).values(insertHistory).returning();
+    return history;
   }
 }
 
