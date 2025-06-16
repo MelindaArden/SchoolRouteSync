@@ -2,208 +2,293 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { 
   MapPin, 
+  Navigation, 
   Clock, 
-  Users, 
-  Navigation,
-  Phone,
+  Users,
   AlertTriangle,
-  CheckCircle
+  CheckCircle 
 } from "lucide-react";
+import { useState } from "react";
+
+interface DriverLocation {
+  id: number;
+  driverId: number;
+  latitude: string;
+  longitude: string;
+  sessionId?: number;
+  updatedAt: string;
+}
+
+interface ActiveSession {
+  id: number;
+  driverId: number;
+  routeId: number;
+  status: string;
+  startTime: string;
+  driver: {
+    id: number;
+    firstName: string;
+    lastName: string;
+  };
+  route: {
+    id: number;
+    name: string;
+    schools: Array<{
+      id: number;
+      schoolId: number;
+      orderIndex: number;
+      estimatedArrivalTime: string;
+      school: {
+        id: number;
+        name: string;
+        address: string;
+        dismissalTime: string;
+        latitude?: string;
+        longitude?: string;
+      };
+    }>;
+  };
+  totalStudents: number;
+  completedPickups: number;
+  progressPercent: number;
+}
 
 export default function DriverTracking() {
-  // Fetch all active pickup sessions
-  const { data: activeSessions = [], isLoading } = useQuery({
+  const [selectedDriver, setSelectedDriver] = useState<number | null>(null);
+
+  // Fetch active sessions
+  const { data: activeSessions = [], refetch: refetchSessions } = useQuery({
     queryKey: ['/api/pickup-sessions/today'],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Fetch driver locations
-  const { data: driverLocations = [] } = useQuery({
+  const { data: driverLocations = [], refetch: refetchLocations } = useQuery({
     queryKey: ['/api/driver-locations'],
-    refetchInterval: 30000,
+    refetchInterval: 15000, // Refresh every 15 seconds
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  const inProgressSessions = activeSessions.filter((session: any) => 
+  const inProgressSessions = (activeSessions as ActiveSession[]).filter((session: ActiveSession) => 
     session.status === "in_progress"
   );
 
-  const getDriverLocation = (driverId: number) => {
-    return driverLocations.find((loc: any) => loc.driverId === driverId);
+  const getDriverLocation = (driverId: number): DriverLocation | null => {
+    return (driverLocations as DriverLocation[]).find((loc: DriverLocation) => loc.driverId === driverId) || null;
   };
 
-  const calculateProgress = (session: any) => {
-    if (!session.pickups || session.pickups.length === 0) return 0;
-    const pickedUp = session.pickups.filter((p: any) => p.status === "picked_up").length;
-    return Math.round((pickedUp / session.pickups.length) * 100);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "in_progress": return "bg-blue-500";
-      case "completed": return "bg-green-500";
-      case "pending": return "bg-gray-500";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const formatTime = (timeString: string) => {
-    return new Date(timeString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const getRouteETA = (session: any) => {
-    if (!session.startTime) return "N/A";
-    const start = new Date(session.startTime);
+  const getNextSchool = (session: ActiveSession) => {
+    if (!session.route?.schools) return null;
+    // Find next school based on estimated arrival times and current time
     const now = new Date();
-    const elapsed = Math.round((now.getTime() - start.getTime()) / (1000 * 60));
+    const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
     
-    // Estimate 45 minutes total route time
-    const estimatedTotal = 45;
-    const remaining = Math.max(0, estimatedTotal - elapsed);
-    
-    if (remaining === 0) return "Overdue";
-    return `${remaining}m remaining`;
+    return session.route.schools
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .find(rs => rs.estimatedArrivalTime > currentTime) || session.route.schools[0];
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const checkProximityAlert = (session: ActiveSession, location: DriverLocation) => {
+    const nextSchool = getNextSchool(session);
+    if (!nextSchool?.school?.latitude || !nextSchool?.school?.longitude) return null;
+
+    const schoolLat = parseFloat(nextSchool.school.latitude);
+    const schoolLon = parseFloat(nextSchool.school.longitude);
+    const driverLat = parseFloat(location.latitude);
+    const driverLon = parseFloat(location.longitude);
+
+    const distance = calculateDistance(driverLat, driverLon, schoolLat, schoolLon);
+    const dismissalTime = new Date(`1970-01-01T${nextSchool.school.dismissalTime}:00`);
+    const now = new Date();
+    const currentTime = new Date(`1970-01-01T${now.toTimeString().slice(0, 8)}`);
+    const timeUntilDismissal = (dismissalTime.getTime() - currentTime.getTime()) / (1000 * 60); // minutes
+
+    // Alert if driver is more than 2 miles away and less than 10 minutes until dismissal
+    if (distance > 2 && timeUntilDismissal <= 10 && timeUntilDismissal > 0) {
+      return {
+        type: 'proximity_warning',
+        message: `Driver ${session.driver.firstName} ${session.driver.lastName} is ${distance.toFixed(1)} miles from ${nextSchool.school.name}`,
+        timeUntilDismissal: Math.round(timeUntilDismissal),
+        distance: distance.toFixed(1)
+      };
+    }
+
+    return null;
+  };
+
+  const openGoogleMaps = (latitude: string, longitude: string) => {
+    const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    window.open(url, '_blank');
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Active Driver Tracking</h2>
-        <Badge variant="outline">
-          {inProgressSessions.length} Active Routes
-        </Badge>
+        <h3 className="text-lg font-semibold">Active Driver Tracking</h3>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              refetchSessions();
+              refetchLocations();
+            }}
+          >
+            <Navigation className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {inProgressSessions.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center">
-            <Navigation className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <CardContent className="p-6 text-center">
+            <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-800 mb-2">No Active Routes</h3>
-            <p className="text-gray-600">All drivers are currently off duty or have completed their routes.</p>
+            <p className="text-gray-600">No drivers are currently on pickup routes.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
-          {inProgressSessions.map((session: any) => {
+          {inProgressSessions.map((session: ActiveSession) => {
             const location = getDriverLocation(session.driverId);
-            const progress = calculateProgress(session);
-            const pickedUpCount = session.pickups?.filter((p: any) => p.status === "picked_up").length || 0;
-            const totalStudents = session.pickups?.length || 0;
-            
+            const nextSchool = getNextSchool(session);
+            const proximityAlert = location ? checkProximityAlert(session, location) : null;
+
             return (
-              <Card key={session.id} className="border-l-4 border-l-blue-500">
+              <Card key={session.id} className="relative">
+                {proximityAlert && (
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="destructive" className="animate-pulse">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Alert
+                    </Badge>
+                  </div>
+                )}
+                
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">
-                        {session.driver?.firstName} {session.driver?.lastName}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Route: {session.route?.name}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <Badge className={getStatusColor(session.status)}>
-                        {session.status.replace('_', ' ').toUpperCase()}
-                      </Badge>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Started: {session.startTime ? formatTime(session.startTime) : 'N/A'}
-                      </p>
-                    </div>
+                    <CardTitle className="text-base">
+                      {session.driver.firstName} {session.driver.lastName}
+                    </CardTitle>
+                    <Badge variant={location ? "default" : "secondary"}>
+                      {location ? "Tracking" : "No Signal"}
+                    </Badge>
                   </div>
+                  <p className="text-sm text-gray-600">{session.route.name}</p>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-4">
-                  {/* Progress Bar */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Pickup Progress</span>
-                      <span>{pickedUpCount}/{totalStudents} students</span>
+                  {/* Progress */}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      <span>{session.completedPickups}/{session.totalStudents} students</span>
                     </div>
-                    <Progress value={progress} className="w-full" />
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>{progress}% complete</span>
-                      <span>ETA: {getRouteETA(session)}</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${session.progressPercent}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {Math.round(session.progressPercent)}%
+                      </span>
                     </div>
                   </div>
 
-                  {/* Location Info */}
+                  {/* Location & Next School */}
                   {location && (
-                    <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
-                      <MapPin className="h-4 w-4 text-gray-600" />
-                      <div className="flex-1 text-sm">
-                        <span className="font-medium">Last Location: </span>
-                        <span className="text-gray-600">
-                          {location.latitude}, {location.longitude}
-                        </span>
-                        <span className="text-xs text-gray-500 ml-2">
-                          Updated: {formatTime(location.updatedAt)}
-                        </span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-1">
+                        <p className="font-medium text-gray-700">Current Location</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-2 text-left justify-start"
+                          onClick={() => openGoogleMaps(location.latitude, location.longitude)}
+                        >
+                          <MapPin className="h-3 w-3 mr-1 text-blue-600" />
+                          <span className="text-xs">
+                            {parseFloat(location.latitude).toFixed(4)}, {parseFloat(location.longitude).toFixed(4)}
+                          </span>
+                        </Button>
+                        <p className="text-xs text-gray-500">
+                          Updated: {new Date(location.updatedAt).toLocaleTimeString()}
+                        </p>
+                      </div>
+
+                      {nextSchool && (
+                        <div className="space-y-1">
+                          <p className="font-medium text-gray-700">Next School</p>
+                          <div className="flex items-start space-x-2">
+                            <Clock className="h-3 w-3 mt-0.5 text-orange-600" />
+                            <div>
+                              <p className="text-xs font-medium">{nextSchool.school.name}</p>
+                              <p className="text-xs text-gray-500">
+                                Dismissal: {nextSchool.school.dismissalTime}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Proximity Alert */}
+                  {proximityAlert && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="flex items-start space-x-2">
+                        <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-red-800">
+                            Proximity Warning
+                          </p>
+                          <p className="text-xs text-red-700 mt-1">
+                            {proximityAlert.message}. Dismissal in {proximityAlert.timeUntilDismissal} minutes.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Current School */}
-                  {session.route?.schools && session.route.schools.length > 0 && (
+                  {/* Schools List */}
+                  {session.route?.schools && (
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Schools on Route:</h4>
+                      <p className="text-sm font-medium text-gray-700">Route Schools</p>
                       <div className="space-y-1">
-                        {session.route.schools.map((schoolData: any, index: number) => {
-                          const schoolPickups = session.pickups?.filter((p: any) => 
-                            p.schoolId === schoolData.schoolId
-                          ) || [];
-                          const schoolCompleted = schoolPickups.every((p: any) => 
-                            p.status === "picked_up" || p.status === "absent"
-                          );
-                          
-                          return (
-                            <div key={schoolData.id} className="flex items-center justify-between p-2 border rounded">
+                        {session.route.schools
+                          .sort((a, b) => a.orderIndex - b.orderIndex)
+                          .map((routeSchool) => (
+                            <div key={routeSchool.id} className="flex items-center justify-between text-xs bg-gray-50 rounded p-2">
                               <div className="flex items-center space-x-2">
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                                  schoolCompleted ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
-                                }`}>
-                                  {schoolCompleted ? <CheckCircle className="h-3 w-3" /> : index + 1}
+                                <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-700">
+                                  {routeSchool.orderIndex}
                                 </div>
-                                <span className="text-sm font-medium">
-                                  {schoolData.school?.name}
-                                </span>
+                                <span className="font-medium">{routeSchool.school.name}</span>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                {schoolPickups.filter((p: any) => p.status === "picked_up").length}/
-                                {schoolPickups.length} students
+                              <div className="flex items-center space-x-2 text-gray-500">
+                                <Clock className="h-3 w-3" />
+                                <span>{routeSchool.school.dismissalTime}</span>
                               </div>
                             </div>
-                          );
-                        })}
+                          ))}
                       </div>
                     </div>
                   )}
-
-                  {/* Quick Actions */}
-                  <div className="flex space-x-2 pt-2 border-t">
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <Phone className="h-3 w-3 mr-1" />
-                      Call Driver
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      View Map
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             );

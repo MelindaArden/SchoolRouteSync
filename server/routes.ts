@@ -435,7 +435,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 school: await storage.getSchool(rs.schoolId)
               }))
             );
-            routeWithSchools = { ...route, schools: schoolsWithDetails };
+            routeWithSchools = { 
+              ...route, 
+              schools: schoolsWithDetails 
+            } as typeof route & { schools: typeof schoolsWithDetails };
           }
           
           const completedPickups = pickups.filter(p => p.status === "picked_up").length;
@@ -555,21 +558,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Send SMS notifications to admin mobile numbers
-      const adminMobileNumbers = adminUsers
+      // Send SMS notifications to admin mobile numbers (avoid duplicates)
+      const adminNumbers = adminUsers
         .filter(admin => admin.mobileNumber)
         .map(admin => admin.mobileNumber!);
+      const uniqueAdminNumbers = Array.from(new Set(adminNumbers));
 
-      if (adminMobileNumbers.length > 0) {
+      if (uniqueAdminNumbers.length > 0) {
+        const priority = issueData.priority || "medium";
         const smsMessage = `🚨 ${issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report"}
 Driver: ${driver?.firstName} ${driver?.lastName}
 Issue: ${issueData.title}
-Priority: ${issueData.priority.toUpperCase()}
+Priority: ${priority.toUpperCase()}
 Description: ${issueData.description}
 
 Please check the admin dashboard for details.`;
 
-        await sendSMSToAdmins(adminMobileNumbers, smsMessage);
+        await sendSMSToAdmins(uniqueAdminNumbers, smsMessage);
       }
 
       // Broadcast to connected admin clients
