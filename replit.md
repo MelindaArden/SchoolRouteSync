@@ -112,14 +112,16 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
-### June 16, 2025 - Enhanced Tracking & Notifications
-- Fixed SMS alert system for issue/maintenance reports (now sends to unique admin numbers with +1 country code)
-- Implemented real-time driver location tracking for leadership dashboard
-- Added proximity alert system - automatically notifies admins via SMS/app when drivers are >2 miles from school within 10 minutes of dismissal
-- Created comprehensive driver tracking interface with live GPS coordinates
-- Added GPS location map view with Google Maps integration and directions
-- Updated school database with GPS coordinates for proximity calculations
-- Enhanced WebSocket broadcasting for real-time location updates
+### June 16, 2025 - Route Completion History & Reset System
+- Implemented comprehensive pickup history tracking system with detailed records of completed routes
+- Added pickup history dashboard for admin viewing with student pickup details and completion times
+- Created route completion API endpoint that automatically saves detailed history when drivers mark routes complete
+- Added route reset functionality allowing drivers to immediately start new routes after completion
+- Enhanced route summary page with "Start New Route" button for seamless workflow continuation
+- Implemented pickup history storage with JSON pickup details and completion statistics
+- Added admin pickup history interface with search, filtering, and detailed pickup breakdowns
+- Enhanced leadership dashboard with dedicated history tab for viewing all completed routes
+- Fixed route completion flow to properly save student pickup times and driver notes to permanent history
 
 ### Initial Setup
 - June 16, 2025. Initial setup

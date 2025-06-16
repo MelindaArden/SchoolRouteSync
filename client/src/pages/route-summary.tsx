@@ -257,6 +257,13 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
             <Home className="h-4 w-4 mr-2" />
             Return to Dashboard
           </Button>
+          <Button 
+            onClick={() => setLocation("/")} 
+            className="flex-1"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Start New Route
+          </Button>
         </div>
       </div>
     </div>
