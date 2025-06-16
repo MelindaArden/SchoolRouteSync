@@ -19,11 +19,11 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
   const { data: studentPickups = [] } = useQuery({
     queryKey: [`/api/student-pickups?sessionId=${sessionId}`],
     enabled: !!sessionId,
-  });
+  }) as { data: any[] };
 
   // Update pickup states when student pickups data changes
   useEffect(() => {
-    if (studentPickups && studentPickups.length > 0) {
+    if (studentPickups && Array.isArray(studentPickups) && studentPickups.length > 0) {
       const newStates: Record<number, boolean> = {};
       studentPickups.forEach((pickup: any) => {
         newStates[pickup.studentId] = pickup.status === "picked_up";
@@ -43,7 +43,7 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
 
     try {
       // Find the pickup record for this student and session
-      const pickup = studentPickups.find((p: any) => p.studentId === student.id && p.sessionId === sessionId);
+      const pickup = (studentPickups as any[]).find((p: any) => p.studentId === student.id && p.sessionId === sessionId);
       console.log('Looking for pickup record:', { studentId: student.id, sessionId, pickup, studentPickups });
       
       if (pickup) {

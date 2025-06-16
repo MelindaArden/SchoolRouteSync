@@ -33,7 +33,7 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
     // Get admin mobile numbers for SMS
     const adminMobileNumbers = admins
       .map(admin => admin.mobileNumber || admin.phone)
-      .filter(number => number && number.trim().length > 0)
+      .filter((number): number is string => number !== null && number !== undefined && number.trim().length > 0)
       .map(number => {
         // Ensure proper formatting with +1 country code
         let formatted = number.trim().replace(/\D/g, '');
@@ -48,7 +48,7 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
       });
 
     // Remove duplicates
-    const uniqueNumbers = [...new Set(adminMobileNumbers)];
+    const uniqueNumbers = Array.from(new Set(adminMobileNumbers));
 
     // Try multiple SMS delivery methods
     if (uniqueNumbers.length > 0) {
