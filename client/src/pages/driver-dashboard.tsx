@@ -95,9 +95,9 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     if (!currentActiveSession) return;
 
     try {
-      await apiRequest("PATCH", `/api/pickup-sessions/${currentActiveSession.id}`, {
-        status: "completed",
-        completedTime: new Date().toISOString(),
+      // Use the new completion endpoint that saves to history
+      await apiRequest("POST", `/api/pickup-sessions/${currentActiveSession.id}/complete`, {
+        notes: "Route completed successfully"
       });
 
       setActiveSession(null);
@@ -109,7 +109,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
       toast({
         title: "Route Completed",
-        description: "Great job! Your route has been completed.",
+        description: "Great job! Your route has been completed and saved to history.",
       });
     } catch (error) {
       toast({

@@ -17,6 +17,7 @@ import ExpandableRouteCard from "@/components/leadership/expandable-route-card";
 import DriverTracking from "@/components/leadership/driver-tracking";
 import ProfileSettings from "@/components/leadership/profile-settings";
 import DriverLocationMap from "@/components/leadership/driver-location-map";
+import PickupHistory from "@/components/leadership/pickup-history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -42,7 +43,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "gps" | "users" | "reports" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "gps" | "users" | "reports" | "history" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
@@ -441,6 +442,12 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </div>
         )}
 
+        {activeTab === "history" && (
+          <div className="p-4">
+            <PickupHistory />
+          </div>
+        )}
+
         {activeTab === "settings" && (
           <div className="p-4">
             <ProfileSettings user={user} />
@@ -497,13 +504,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <span className="text-xs">Users</span>
           </button>
           <button
-            onClick={() => setActiveTab("settings")}
+            onClick={() => setActiveTab("history")}
             className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "settings" ? "text-primary" : "text-gray-500"
+              activeTab === "history" ? "text-primary" : "text-gray-500"
             }`}
           >
-            <Settings className="h-6 w-6 mb-1" />
-            <span className="text-xs">Settings</span>
+            <FileText className="h-6 w-6 mb-1" />
+            <span className="text-xs">History</span>
           </button>
         </div>
       </nav>
