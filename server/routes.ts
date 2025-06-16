@@ -731,6 +731,27 @@ Please check the admin dashboard for details.`;
     }
   });
 
+  app.patch("/api/schools/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const school = await storage.updateSchool(id, updates);
+      res.json(school);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid school data" });
+    }
+  });
+
+  app.delete("/api/schools/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteSchool(id);
+      res.json({ message: "School deleted successfully" });
+    } catch (error) {
+      res.status(400).json({ message: "Failed to delete school" });
+    }
+  });
+
   // Update school
   app.patch("/api/schools/:id", async (req, res) => {
     try {
@@ -761,6 +782,27 @@ Please check the admin dashboard for details.`;
       res.json(student);
     } catch (error) {
       res.status(400).json({ message: "Invalid student data" });
+    }
+  });
+
+  app.patch("/api/students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const student = await storage.updateStudent(id, updates);
+      res.json(student);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid student data" });
+    }
+  });
+
+  app.delete("/api/students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteStudent(id);
+      res.json({ message: "Student deleted successfully" });
+    } catch (error) {
+      res.status(400).json({ message: "Failed to delete student" });
     }
   });
 

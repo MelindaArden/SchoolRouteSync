@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { School, MapPin, Phone, Clock, Edit, Plus, Search } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { School, MapPin, Phone, Clock, Edit, Plus, Search, Trash2 } from "lucide-react";
 import SchoolForm from "./school-form";
 
 interface SchoolsListProps {
@@ -14,6 +16,7 @@ interface SchoolsListProps {
 export default function SchoolsList({ onAddSchool }: SchoolsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingSchool, setEditingSchool] = useState<any>(null);
+  const { toast } = useToast();
 
   const { data: schools = [], isLoading } = useQuery({
     queryKey: ['/api/schools'],
@@ -23,13 +26,35 @@ export default function SchoolsList({ onAddSchool }: SchoolsListProps) {
     queryKey: ['/api/students'],
   });
 
-  const filteredSchools = schools.filter((school: any) =>
+  const filteredSchools = (schools as any[]).filter((school: any) =>
     school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     school.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStudentCount = (schoolId: number) => {
-    return students.filter((student: any) => student.schoolId === schoolId).length;
+    return (students as any[]).filter((student: any) => student.schoolId === schoolId).length;
+  };
+
+  const handleDeleteSchool = async (schoolId: number, schoolName: string) => {
+    if (!confirm(`Are you sure you want to delete ${schoolName}? This will also remove all students assigned to this school.`)) {
+      return;
+    }
+
+    try {
+      await apiRequest("DELETE", `/api/schools/${schoolId}`);
+      queryClient.invalidateQueries({ queryKey: ['/api/schools'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      toast({
+        title: "School Deleted",
+        description: `${schoolName} has been removed.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete school",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
@@ -110,6 +135,14 @@ export default function SchoolsList({ onAddSchool }: SchoolsListProps) {
                       onClick={() => setEditingSchool(school)}
                     >
                       <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteSchool(school.id, school.name)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
