@@ -288,7 +288,7 @@ export class DatabaseStorage implements IStorage {
   async getSessionsByDriver(driverId: number, date: string): Promise<PickupSession[]> {
     return await db.select().from(pickupSessions)
       .where(and(eq(pickupSessions.driverId, driverId), eq(pickupSessions.date, date)))
-      .orderBy(desc(pickupSessions.startTime));
+      .orderBy(desc(pickupSessions.id)); // Use id instead of startTime since startTime can be null
   }
 
   async getPickupSession(id: number): Promise<PickupSession | undefined> {

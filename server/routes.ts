@@ -736,6 +736,7 @@ Driver may be late for pickup.`;
       res.json(detailedSessions);
     } catch (error) {
       console.error("Error fetching today's sessions:", error);
+      console.error("Stack trace:", error instanceof Error ? error.stack : error);
       res.status(500).json({ message: "Internal server error", details: error instanceof Error ? error.message : String(error) });
     }
   });
