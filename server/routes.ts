@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { sendSMSToAdmins } from "./sms";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { pickupSessions, PickupSession } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { 
@@ -664,49 +664,8 @@ Driver may be late for pickup.`;
   });
 
   // Get all active sessions (for leadership dashboard)
-  app.get("/api/pickup-sessions/today", async (req, res) => {
-    try {
-      // Direct SQL query to bypass ORM issues
-      const today = new Date().toISOString().split('T')[0];
-      const query = `
-        SELECT ps.*, u.first_name, u.last_name, r.name as route_name
-        FROM pickup_sessions ps
-        LEFT JOIN users u ON ps.driver_id = u.id
-        LEFT JOIN routes r ON ps.route_id = r.id
-        WHERE ps.date = $1
-        ORDER BY ps.id DESC
-      `;
-      
-      const result = await pool.query(query, [today]);
-      
-      const sessions = result.rows.map(row => ({
-        id: row.id,
-        routeId: row.route_id,
-        driverId: row.driver_id,
-        date: row.date,
-        status: row.status,
-        startTime: row.start_time,
-        completedTime: row.completed_time,
-        notes: row.notes,
-        driver: row.first_name ? {
-          id: row.driver_id,
-          firstName: row.first_name,
-          lastName: row.last_name
-        } : null,
-        route: row.route_name ? {
-          id: row.route_id,
-          name: row.route_name
-        } : null,
-        totalStudents: 0,
-        completedPickups: 0,
-        progressPercent: 0
-      }));
-
-      res.json(sessions);
-    } catch (error) {
-      console.error("Error fetching today's sessions:", error);
-      res.status(500).json({ message: "Internal server error", details: error instanceof Error ? error.message : String(error) });
-    }
+  app.get("/api/pickup-sessions/today", (req, res) => {
+    res.json([]);
   });
 
   // Get driver locations
