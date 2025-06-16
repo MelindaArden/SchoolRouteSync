@@ -24,6 +24,7 @@ export interface IStorage {
   getSchool(id: number): Promise<School | undefined>;
   createSchool(school: InsertSchool): Promise<School>;
   updateSchool(id: number, updates: Partial<School>): Promise<School>;
+  deleteSchool(id: number): Promise<void>;
   
   // Routes
   getRoutes(): Promise<Route[]>;
@@ -45,6 +46,7 @@ export interface IStorage {
   getStudentById(id: number): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
   updateStudent(id: number, updates: Partial<Student>): Promise<Student>;
+  deleteStudent(id: number): Promise<void>;
   
   // Route Assignments
   getRouteAssignments(routeId: number): Promise<RouteAssignment[]>;
@@ -133,6 +135,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schools.id, id))
       .returning();
     return school;
+  }
+
+  async deleteSchool(id: number): Promise<void> {
+    // Delete students first due to foreign key constraint
+    await db.delete(students).where(eq(students.schoolId, id));
+    // Delete route schools
+    await db.delete(routeSchools).where(eq(routeSchools.schoolId, id));
+    // Delete the school
+    await db.delete(schools).where(eq(schools.id, id));
   }
 
   // Routes
@@ -238,6 +249,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(students.id, id))
       .returning();
     return student;
+  }
+
+  async deleteStudent(id: number): Promise<void> {
+    // Delete route assignments first
+    await db.delete(routeAssignments).where(eq(routeAssignments.studentId, id));
+    // Delete student pickups
+    await db.delete(studentPickups).where(eq(studentPickups.studentId, id));
+    // Delete the student
+    await db.delete(students).where(eq(students.id, id));
   }
 
   // Route Assignments
