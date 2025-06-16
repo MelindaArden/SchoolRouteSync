@@ -159,8 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
           );
           
-          // Sort schools by order
-          schoolsWithDetails.sort((a, b) => a.estimatedArrivalTime.localeCompare(b.estimatedArrivalTime));
+          // Sort schools by order index
+          schoolsWithDetails.sort((a, b) => a.orderIndex - b.orderIndex);
           
           return {
             ...route,
