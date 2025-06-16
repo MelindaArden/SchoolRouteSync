@@ -57,7 +57,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   // Fetch today's sessions
   const { data: sessions = [], isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
     queryKey: [`/api/drivers/${user.id}/sessions/today`],
-  });
+  }) as { data: any[], isLoading: boolean, refetch: () => void };
 
   // Get the current active route (first route assigned to driver)
   const currentRoute = routes.length > 0 ? routes[0] : null;
@@ -159,7 +159,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   }
 
   const totalStudents = currentRoute?.totalStudents || 0;
-  const currentActiveSession = activeSession || (sessions.length > 0 && sessions[0].status === "in_progress" ? sessions[0] : null);
+  const currentActiveSession = activeSession || (sessions.length > 0 && (sessions as any[])[0].status === "in_progress" ? (sessions as any[])[0] : null);
   const hasActiveSession = !!currentActiveSession;
 
   if (!currentRoute) {
