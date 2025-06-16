@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { sendSMSToAdmins } from "./sms";
+import { db } from "./db";
+import { pickupSessions, PickupSession } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 import { 
   insertPickupSessionSchema, 
   insertStudentPickupSchema, 
@@ -663,34 +666,10 @@ Driver may be late for pickup.`;
   // Get all active sessions (for leadership dashboard)
   app.get("/api/pickup-sessions/today", async (req, res) => {
     try {
-      console.log("Attempting to fetch today's sessions...");
-      const today = new Date().toISOString().split('T')[0];
-      console.log("Today's date:", today);
-      
       const sessions = await storage.getTodaysSessions();
-      console.log("Raw sessions:", sessions);
-      
-      if (!sessions || sessions.length === 0) {
-        return res.json([]);
-      }
-
-      // Return basic session data first
-      const basicSessions = sessions.map(session => ({
-        ...session,
-        totalStudents: 0,
-        completedPickups: 0,
-        progressPercent: 0,
-      }));
-
-      console.log("Processed sessions:", basicSessions.length);
-      res.json(basicSessions);
+      res.json(sessions);
     } catch (error) {
       console.error("Error fetching today's sessions:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error details:", error);
-      if (error instanceof Error) {
-        console.error("Stack trace:", error.stack);
-      }
       res.status(500).json({ message: "Internal server error", details: error instanceof Error ? error.message : String(error) });
     }
   });
