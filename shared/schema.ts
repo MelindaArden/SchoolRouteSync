@@ -123,6 +123,20 @@ export const issues = pgTable("issues", {
   notes: text("notes"),
 });
 
+export const pickupHistory = pgTable("pickup_history", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => pickupSessions.id).notNull(),
+  routeId: integer("route_id").references(() => routes.id).notNull(),
+  driverId: integer("driver_id").references(() => users.id).notNull(),
+  date: text("date").notNull(),
+  completedAt: timestamp("completed_at").notNull(),
+  totalStudents: integer("total_students").notNull().default(0),
+  studentsPickedUp: integer("students_picked_up").notNull().default(0),
+  pickupDetails: text("pickup_details"), // JSON string of pickup data
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   routes: many(routes),
@@ -251,6 +265,21 @@ export const issuesRelations = relations(issues, ({ one }) => ({
   }),
 }));
 
+export const pickupHistoryRelations = relations(pickupHistory, ({ one }) => ({
+  session: one(pickupSessions, {
+    fields: [pickupHistory.sessionId],
+    references: [pickupSessions.id],
+  }),
+  route: one(routes, {
+    fields: [pickupHistory.routeId],
+    references: [routes.id],
+  }),
+  driver: one(users, {
+    fields: [pickupHistory.driverId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -304,6 +333,11 @@ export const insertIssueSchema = createInsertSchema(issues).omit({
   reportedAt: true,
 });
 
+export const insertPickupHistorySchema = createInsertSchema(pickupHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -327,3 +361,5 @@ export type DriverLocation = typeof driverLocations.$inferSelect;
 export type InsertDriverLocation = z.infer<typeof insertDriverLocationSchema>;
 export type Issue = typeof issues.$inferSelect;
 export type InsertIssue = z.infer<typeof insertIssueSchema>;
+export type PickupHistory = typeof pickupHistory.$inferSelect;
+export type InsertPickupHistory = z.infer<typeof insertPickupHistorySchema>;

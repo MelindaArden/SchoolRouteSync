@@ -80,6 +80,12 @@ export interface IStorage {
   getIssuesByDriver(driverId: number): Promise<Issue[]>;
   createIssue(issue: InsertIssue): Promise<Issue>;
   updateIssue(id: number, updates: Partial<Issue>): Promise<Issue>;
+  
+  // Pickup History
+  getPickupHistory(): Promise<PickupHistory[]>;
+  getPickupHistoryByDriver(driverId: number): Promise<PickupHistory[]>;
+  getPickupHistoryByRoute(routeId: number): Promise<PickupHistory[]>;
+  createPickupHistory(history: InsertPickupHistory): Promise<PickupHistory>;
 }
 
 export class DatabaseStorage implements IStorage {
