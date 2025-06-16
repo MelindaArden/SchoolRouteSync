@@ -397,6 +397,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test SMS endpoint
+  app.post("/api/test-sms", async (req, res) => {
+    try {
+      const { notifyAdminsDirectly } = await import('./direct-sms');
+      await notifyAdminsDirectly(
+        "SMS Test", 
+        "This is a test message to verify SMS functionality is working properly.",
+        'medium'
+      );
+      res.json({ message: "Test SMS sent successfully" });
+    } catch (error) {
+      console.error("SMS test failed:", error);
+      res.status(500).json({ message: "SMS test failed", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   // Get pickup history for admin dashboard
   app.get("/api/pickup-history", async (req, res) => {
     try {
@@ -652,46 +668,75 @@ Driver may be late for pickup.`;
       // Get detailed session info
       const detailedSessions = await Promise.all(
         sessions.map(async (session) => {
-          const [driver, route, pickups] = await Promise.all([
-            storage.getUser(session.driverId),
-            storage.getRoute(session.routeId),
-            storage.getStudentPickups(session.id)
-          ]);
-          
-          // Get route schools if route exists
-          let routeWithSchools = route;
-          if (route) {
-            const routeSchools = await storage.getRouteSchools(route.id);
-            const schoolsWithDetails = await Promise.all(
-              routeSchools.map(async (rs) => ({
-                ...rs,
-                school: await storage.getSchool(rs.schoolId)
-              }))
-            );
-            routeWithSchools = { 
-              ...route, 
-              schools: schoolsWithDetails 
-            } as typeof route & { schools: typeof schoolsWithDetails };
+          try {
+            const [driver, route, pickups] = await Promise.all([
+              storage.getUser(session.driverId),
+              storage.getRoute(session.routeId),
+              storage.getStudentPickups(session.id)
+            ]);
+            
+            // Get route schools if route exists
+            let routeWithSchools = route;
+            if (route) {
+              try {
+                const routeSchools = await storage.getRouteSchools(route.id);
+                const schoolsWithDetails = await Promise.all(
+                  routeSchools.map(async (rs) => {
+                    try {
+                      const school = await storage.getSchool(rs.schoolId);
+                      return {
+                        ...rs,
+                        school
+                      };
+                    } catch (err) {
+                      console.error(`Error fetching school ${rs.schoolId}:`, err);
+                      return {
+                        ...rs,
+                        school: null
+                      };
+                    }
+                  })
+                );
+                routeWithSchools = { 
+                  ...route, 
+                  schools: schoolsWithDetails 
+                } as typeof route & { schools: typeof schoolsWithDetails };
+              } catch (err) {
+                console.error(`Error fetching route schools for route ${route.id}:`, err);
+              }
+            }
+            
+            const completedPickups = pickups ? pickups.filter(p => p.status === "picked_up").length : 0;
+            const totalPickups = pickups ? pickups.length : 0;
+            
+            return {
+              ...session,
+              driver,
+              route: routeWithSchools,
+              pickups: pickups || [],
+              totalStudents: totalPickups,
+              completedPickups,
+              progressPercent: totalPickups > 0 ? (completedPickups / totalPickups) * 100 : 0,
+            };
+          } catch (sessionError) {
+            console.error(`Error processing session ${session.id}:`, sessionError);
+            return {
+              ...session,
+              driver: null,
+              route: null,
+              pickups: [],
+              totalStudents: 0,
+              completedPickups: 0,
+              progressPercent: 0,
+            };
           }
-          
-          const completedPickups = pickups.filter(p => p.status === "picked_up").length;
-          
-          return {
-            ...session,
-            driver,
-            route: routeWithSchools,
-            pickups,
-            totalStudents: pickups.length,
-            completedPickups,
-            progressPercent: pickups.length > 0 ? (completedPickups / pickups.length) * 100 : 0,
-          };
         })
       );
 
       res.json(detailedSessions);
     } catch (error) {
       console.error("Error fetching today's sessions:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal server error", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
