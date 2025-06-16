@@ -112,7 +112,16 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
-Changelog:
+### June 16, 2025 - Enhanced Tracking & Notifications
+- Fixed SMS alert system for issue/maintenance reports (now sends to unique admin numbers with +1 country code)
+- Implemented real-time driver location tracking for leadership dashboard
+- Added proximity alert system - automatically notifies admins via SMS/app when drivers are >2 miles from school within 10 minutes of dismissal
+- Created comprehensive driver tracking interface with live GPS coordinates
+- Added GPS location map view with Google Maps integration and directions
+- Updated school database with GPS coordinates for proximity calculations
+- Enhanced WebSocket broadcasting for real-time location updates
+
+### Initial Setup
 - June 16, 2025. Initial setup
 
 ## User Preferences

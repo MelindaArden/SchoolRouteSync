@@ -337,6 +337,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to calculate distance between two points
+  function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  // Helper function to check proximity alerts
+  async function checkProximityAlerts(sessionId: number, driverLocation: any) {
+    try {
+      const session = await storage.getPickupSession(sessionId);
+      if (!session || session.status !== "in_progress") return;
+
+      const driver = await storage.getUser(session.driverId);
+      const route = await storage.getRoute(session.routeId);
+      if (!route) return;
+
+      const routeSchools = await storage.getRouteSchools(route.id);
+      const now = new Date();
+      const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+
+      for (const routeSchool of routeSchools) {
+        const school = await storage.getSchool(routeSchool.schoolId);
+        if (!school?.latitude || !school?.longitude) continue;
+
+        const schoolLat = parseFloat(school.latitude);
+        const schoolLon = parseFloat(school.longitude);
+        const driverLat = parseFloat(driverLocation.latitude);
+        const driverLon = parseFloat(driverLocation.longitude);
+
+        const distance = calculateDistance(driverLat, driverLon, schoolLat, schoolLon);
+        
+        // Parse dismissal time
+        const dismissalTime = new Date(`1970-01-01T${school.dismissalTime}:00`);
+        const currentTimeDate = new Date(`1970-01-01T${currentTime}:00`);
+        const timeUntilDismissal = (dismissalTime.getTime() - currentTimeDate.getTime()) / (1000 * 60); // minutes
+
+        // Send alert if driver is more than 2 miles away and less than 10 minutes until dismissal
+        if (distance > 2 && timeUntilDismissal <= 10 && timeUntilDismissal > 0) {
+          // Get admin users
+          const users = await storage.getUsers();
+          const adminUsers = users.filter(u => u.role === "leadership");
+          
+          // Create notifications for admins
+          for (const admin of adminUsers) {
+            await storage.createNotification({
+              type: "proximity_alert",
+              title: "Driver Proximity Warning",
+              message: `${driver?.firstName} ${driver?.lastName} is ${distance.toFixed(1)} miles from ${school.name}. Dismissal in ${Math.round(timeUntilDismissal)} minutes.`,
+              recipientId: admin.id,
+              sessionId: session.id,
+            });
+          }
+
+          // Send SMS alerts to admins
+          const adminNumbers = adminUsers
+            .filter(admin => admin.mobileNumber)
+            .map(admin => admin.mobileNumber!);
+          const uniqueAdminNumbers = Array.from(new Set(adminNumbers));
+
+          if (uniqueAdminNumbers.length > 0) {
+            const smsMessage = `🚨 Driver Proximity Alert
+Driver: ${driver?.firstName} ${driver?.lastName}
+School: ${school.name}
+Distance: ${distance.toFixed(1)} miles away
+Dismissal: ${school.dismissalTime} (${Math.round(timeUntilDismissal)} min)
+
+Driver may be late for pickup.`;
+
+            await sendSMSToAdmins(uniqueAdminNumbers, smsMessage);
+          }
+
+          // Broadcast proximity alert
+          broadcast({
+            type: 'proximity_alert',
+            alert: {
+              driverId: session.driverId,
+              sessionId: session.id,
+              schoolId: school.id,
+              distance: distance.toFixed(1),
+              timeUntilDismissal: Math.round(timeUntilDismissal),
+              message: `${driver?.firstName} ${driver?.lastName} is ${distance.toFixed(1)} miles from ${school.name}`
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking proximity alerts:', error);
+    }
+  }
+
   // Update driver location
   app.post("/api/drivers/:driverId/location", async (req, res) => {
     try {
@@ -349,6 +445,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         longitude,
         sessionId,
       });
+
+      // Check for proximity alerts if session is active
+      if (sessionId) {
+        await checkProximityAlerts(sessionId, location);
+      }
 
       broadcast({
         type: 'location_updated',

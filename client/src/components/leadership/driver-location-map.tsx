@@ -1,10 +1,15 @@
-import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation, Clock, User } from "lucide-react";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { 
+  MapPin, 
+  Navigation, 
+  Clock, 
+  Users,
+  ExternalLink,
+  RefreshCw
+} from "lucide-react";
 
 interface DriverLocation {
   id: number;
@@ -13,181 +18,253 @@ interface DriverLocation {
   longitude: string;
   sessionId?: number;
   updatedAt: string;
-  driver?: {
+}
+
+interface ActiveSession {
+  id: number;
+  driverId: number;
+  routeId: number;
+  status: string;
+  startTime: string;
+  driver: {
     id: number;
     firstName: string;
     lastName: string;
   };
-  session?: {
+  route: {
     id: number;
-    routeId: number;
-    status: string;
-    route?: {
-      name: string;
-    };
+    name: string;
   };
+  totalStudents: number;
+  completedPickups: number;
+  progressPercent: number;
 }
 
 export default function DriverLocationMap() {
-  const [selectedDriver, setSelectedDriver] = useState<number | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-
-  // Fetch driver locations
-  const { data: locations = [], refetch } = useQuery({
-    queryKey: ['/api/driver-locations'],
-    refetchInterval: autoRefresh ? 30000 : false, // Refresh every 30 seconds
+  // Fetch active sessions
+  const { data: activeSessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ['/api/pickup-sessions/today'],
+    refetchInterval: 30000,
   });
 
-  // WebSocket for real-time updates
-  useWebSocket(0); // Using 0 as placeholder for admin
+  // Fetch driver locations
+  const { data: driverLocations = [], refetch: refetchLocations } = useQuery({
+    queryKey: ['/api/driver-locations'],
+    refetchInterval: 15000,
+  });
 
-  useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(() => {
-        refetch();
-      }, 15000); // Refresh every 15 seconds for real-time tracking
-
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh, refetch]);
-
-  const activeLocations = locations.filter((loc: DriverLocation) => 
-    loc.session && loc.session.status === 'in_progress'
+  const inProgressSessions = (activeSessions as ActiveSession[]).filter((session: ActiveSession) => 
+    session.status === "in_progress"
   );
 
-  const getTimeSinceUpdate = (updatedAt: string) => {
-    const now = new Date().getTime();
-    const updated = new Date(updatedAt).getTime();
-    const diffMinutes = Math.floor((now - updated) / (1000 * 60));
+  const getDriverLocation = (driverId: number): DriverLocation | null => {
+    return (driverLocations as DriverLocation[]).find((loc: DriverLocation) => loc.driverId === driverId) || null;
+  };
+
+  const openGoogleMaps = (latitude: string, longitude: string, driverName: string) => {
+    const url = `https://www.google.com/maps?q=${latitude},${longitude}&z=15&t=m&hl=en`;
+    window.open(url, '_blank');
+  };
+
+  const openDirections = (fromLat: string, fromLon: string, toLat: string, toLon: string) => {
+    const url = `https://www.google.com/maps/dir/${fromLat},${fromLon}/${toLat},${toLon}`;
+    window.open(url, '_blank');
+  };
+
+  const formatLastUpdated = (updatedAt: string) => {
+    const now = new Date();
+    const updated = new Date(updatedAt);
+    const diffMinutes = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60));
     
     if (diffMinutes < 1) return "Just now";
     if (diffMinutes === 1) return "1 minute ago";
-    return `${diffMinutes} minutes ago`;
-  };
-
-  const openInMaps = (latitude: string, longitude: string) => {
-    const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
-    window.open(url, '_blank');
+    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+    
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours === 1) return "1 hour ago";
+    return `${diffHours} hours ago`;
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Live Driver Tracking</h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={autoRefresh ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAutoRefresh(!autoRefresh)}
-          >
-            {autoRefresh ? "Live" : "Paused"}
-          </Button>
-          <Badge variant="secondary">
-            {activeLocations.length} Active
-          </Badge>
+        <div>
+          <h3 className="text-lg font-semibold">Driver GPS Locations</h3>
+          <p className="text-sm text-gray-600">Real-time location tracking for active drivers</p>
         </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => {
+            refetchSessions();
+            refetchLocations();
+          }}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
-      {activeLocations.length === 0 ? (
+      {inProgressSessions.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center">
             <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-800 mb-2">No Active Drivers</h3>
-            <p className="text-gray-600">
-              No drivers are currently on active pickup routes
-            </p>
+            <p className="text-gray-600">No drivers are currently on pickup routes.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
-          {activeLocations.map((location: DriverLocation) => (
-            <Card key={location.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-full">
-                      <User className="h-4 w-4 text-blue-600" />
-                    </div>
+          {inProgressSessions.map((session: ActiveSession) => {
+            const location = getDriverLocation(session.driverId);
+
+            return (
+              <Card key={session.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg">
-                        {location.driver?.firstName} {location.driver?.lastName}
+                      <CardTitle className="text-base">
+                        {session.driver.firstName} {session.driver.lastName}
                       </CardTitle>
-                      <p className="text-sm text-gray-600">
-                        {location.session?.route?.name || 'Unknown Route'}
-                      </p>
+                      <p className="text-sm text-gray-600">{session.route.name}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={location ? "default" : "secondary"}>
+                        {location ? "GPS Active" : "No GPS Signal"}
+                      </Badge>
+                      <Badge variant="outline">
+                        {Math.round(session.progressPercent)}% Complete
+                      </Badge>
                     </div>
                   </div>
-                  <Badge 
-                    variant={location.session?.status === 'in_progress' ? 'default' : 'secondary'}
-                  >
-                    {location.session?.status === 'in_progress' ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock className="h-4 w-4" />
-                    Last updated: {getTimeSinceUpdate(location.updatedAt)}
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Users className="h-4 w-4 text-blue-600" />
+                        <span>{session.completedPickups}/{session.totalStudents} students picked up</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <span>Started: {new Date(session.startTime).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all" 
+                        style={{ width: `${session.progressPercent}%` }}
+                      />
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    Location: {parseFloat(location.latitude).toFixed(6)}, {parseFloat(location.longitude).toFixed(6)}
-                  </div>
-                  
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openInMaps(location.latitude, location.longitude)}
-                      className="flex items-center gap-2"
-                    >
-                      <Navigation className="h-4 w-4" />
-                      View on Map
-                    </Button>
-                    
-                    <Button
-                      size="sm"
-                      variant={selectedDriver === location.driverId ? "default" : "outline"}
-                      onClick={() => setSelectedDriver(
-                        selectedDriver === location.driverId ? null : location.driverId
-                      )}
-                    >
-                      {selectedDriver === location.driverId ? "Hide Details" : "Show Details"}
-                    </Button>
-                  </div>
-                  
-                  {selectedDriver === location.driverId && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <h4 className="font-medium mb-2">Location Details</h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="font-medium">Latitude:</span> {location.latitude}
+
+                  {/* Location Information */}
+                  {location ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">Current Location</p>
+                        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <p className="text-xs font-mono text-gray-600">
+                                {parseFloat(location.latitude).toFixed(6)}, {parseFloat(location.longitude).toFixed(6)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Updated: {formatLastUpdated(location.updatedAt)}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openGoogleMaps(
+                                location.latitude, 
+                                location.longitude, 
+                                `${session.driver.firstName} ${session.driver.lastName}`
+                              )}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <span className="font-medium">Longitude:</span> {location.longitude}
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">Quick Actions</p>
+                        <div className="space-y-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => openGoogleMaps(location.latitude, location.longitude, session.driver.firstName)}
+                          >
+                            <MapPin className="h-3 w-3 mr-2" />
+                            View on Map
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => {
+                              // Open directions from current location to driver
+                              if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition((position) => {
+                                  openDirections(
+                                    position.coords.latitude.toString(),
+                                    position.coords.longitude.toString(),
+                                    location.latitude,
+                                    location.longitude
+                                  );
+                                });
+                              } else {
+                                openGoogleMaps(location.latitude, location.longitude, session.driver.firstName);
+                              }
+                            }}
+                          >
+                            <Navigation className="h-3 w-3 mr-2" />
+                            Get Directions
+                          </Button>
                         </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4 text-yellow-600" />
                         <div>
-                          <span className="font-medium">Session ID:</span> {location.sessionId || 'N/A'}
-                        </div>
-                        <div>
-                          <span className="font-medium">Route:</span> {location.session?.route?.name || 'Unknown'}
+                          <p className="text-sm font-medium text-yellow-800">
+                            GPS Signal Lost
+                          </p>
+                          <p className="text-xs text-yellow-700">
+                            Driver's location is not currently available
+                          </p>
                         </div>
                       </div>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
-      
-      <div className="text-xs text-gray-500 text-center">
-        Locations update automatically every 30 seconds during active routes
-      </div>
+
+      {/* Map Integration Note */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-start space-x-3">
+            <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-medium text-gray-800">Location Tracking</h4>
+              <p className="text-xs text-gray-600 mt-1">
+                GPS locations are updated every 30 seconds while drivers are on active routes. 
+                Click "View on Map" to see precise locations in Google Maps.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
