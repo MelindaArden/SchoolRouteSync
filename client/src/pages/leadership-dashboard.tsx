@@ -74,7 +74,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   });
 
   // Calculate dashboard metrics with real data
-  const sessionsData = Array.isArray(sessions) ? sessions : [];
+  const sessionsData = Array.isArray(sessions) ? (sessions as any[]) : [];
   const activeRoutes = sessionsData.filter((s: any) => s.status === "in_progress").length;
   const totalStudents = sessionsData.reduce((sum: number, s: any) => sum + (s.totalStudents || 0), 0);
   const completedPickups = sessionsData.reduce((sum: number, s: any) => sum + (s.completedPickups || 0), 0);
@@ -163,7 +163,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <div>
               <h3 className="text-lg font-medium text-gray-800 mb-3">Active Alerts</h3>
               <div className="space-y-3">
-                {sessions
+                {sessionsData
                   .filter((session: any) => session.status === "in_progress" && session.progressPercent < 50)
                   .map((session: any) => (
                     <AlertCard
@@ -189,7 +189,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <div>
               <h3 className="text-lg font-medium text-gray-800 mb-3">Route Status</h3>
               <div className="space-y-3">
-                {sessions.map((session: any) => (
+                {sessionsData.map((session: any) => (
                   <RouteStatus
                     key={session.id}
                     routeName={session.route?.name || `Route ${session.id}`}
@@ -344,6 +344,8 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             )}
 
             {routesView === "schools" && <SchoolsList onAddSchool={() => setShowForm("school")} />}
+
+            {routesView === "students" && <StudentsList onAddStudent={() => setShowForm("student")} />}
 
             {routesView === "routes" && !editingRoute && (
               <Card>
