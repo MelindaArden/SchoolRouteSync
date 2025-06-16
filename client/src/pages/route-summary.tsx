@@ -15,6 +15,44 @@ import {
   MapPin
 } from "lucide-react";
 
+interface StudentPickup {
+  id: number;
+  status: "pending" | "picked_up" | "absent" | "no_show";
+  student: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    grade: string;
+  };
+  school: {
+    id: number;
+    name: string;
+  };
+  pickedUpAt?: string;
+  driverNotes?: string;
+}
+
+interface SessionDetails {
+  id: number;
+  routeId: number;
+  driverId: number;
+  date: string;
+  status: string;
+  startTime?: string;
+  completedTime?: string;
+  notes?: string;
+  pickups: StudentPickup[];
+  route: {
+    id: number;
+    name: string;
+  };
+  driver: {
+    id: number;
+    firstName: string;
+    lastName: string;
+  };
+}
+
 interface RouteSummaryProps {
   user: User;
   onLogout: () => void;
@@ -25,7 +63,7 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
   const [, setLocation] = useLocation();
 
   // Fetch session details with pickup information
-  const { data: sessionDetails, isLoading } = useQuery({
+  const { data: sessionDetails, isLoading } = useQuery<SessionDetails>({
     queryKey: [`/api/pickup-sessions/${sessionId}`],
   });
 
@@ -57,15 +95,29 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
     );
   }
 
-  const pickedUpStudents = sessionDetails?.pickups?.filter((p: any) => p.status === "picked_up") || [];
-  const absentStudents = sessionDetails?.pickups?.filter((p: any) => p.status === "absent" || p.status === "no_show") || [];
-  const pendingStudents = sessionDetails?.pickups?.filter((p: any) => p.status === "pending") || [];
+  // Return early if no session details
+  if (!sessionDetails) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Session not found</p>
+          <Button onClick={() => setLocation("/")} className="mt-4">
+            Return to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const pickedUpStudents = sessionDetails.pickups?.filter((p: StudentPickup) => p.status === "picked_up") || [];
+  const absentStudents = sessionDetails.pickups?.filter((p: StudentPickup) => p.status === "absent" || p.status === "no_show") || [];
+  const pendingStudents = sessionDetails.pickups?.filter((p: StudentPickup) => p.status === "pending") || [];
   
-  const totalStudents = sessionDetails?.pickups?.length || 0;
+  const totalStudents = sessionDetails.pickups?.length || 0;
   const completionRate = totalStudents > 0 ? Math.round((pickedUpStudents.length / totalStudents) * 100) : 100;
 
-  const startTime = sessionDetails?.startTime ? new Date(sessionDetails.startTime) : null;
-  const completedTime = sessionDetails?.completedTime ? new Date(sessionDetails.completedTime) : null;
+  const startTime = sessionDetails.startTime ? new Date(sessionDetails.startTime) : null;
+  const completedTime = sessionDetails.completedTime ? new Date(sessionDetails.completedTime) : null;
   const routeDuration = startTime && completedTime ? 
     Math.round((completedTime.getTime() - startTime.getTime()) / (1000 * 60)) : null;
 
@@ -124,7 +176,7 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Date:</span>
               <span className="font-medium">
-                {sessionDetails?.date ? new Date(sessionDetails.date).toLocaleDateString('en-US', {
+                {sessionDetails.date ? new Date(sessionDetails.date).toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',

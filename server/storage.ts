@@ -282,7 +282,7 @@ export class DatabaseStorage implements IStorage {
     const today = new Date().toISOString().split('T')[0];
     return await db.select().from(pickupSessions)
       .where(eq(pickupSessions.date, today))
-      .orderBy(desc(pickupSessions.startTime));
+      .orderBy(desc(pickupSessions.id)); // Use id instead of startTime since startTime can be null
   }
 
   async getSessionsByDriver(driverId: number, date: string): Promise<PickupSession[]> {
