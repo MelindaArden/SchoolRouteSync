@@ -400,18 +400,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test SMS endpoint
+  // Test SMS endpoint using GoHighLevel
   app.post("/api/test-sms", async (req, res) => {
     try {
-      const { notifyAdminsDirectly } = await import('./direct-sms');
-      await notifyAdminsDirectly(
+      const { notifyAdminsViaGHL } = await import('./ghl-sms');
+      await notifyAdminsViaGHL(
         "SMS Test", 
-        "This is a test message to verify SMS functionality is working properly.",
+        "This is a test message to verify GoHighLevel SMS functionality is working properly.",
         'medium'
       );
-      res.json({ message: "Test SMS sent successfully" });
+      res.json({ message: "Test SMS sent successfully via GoHighLevel" });
     } catch (error) {
-      console.error("SMS test failed:", error);
+      console.error("GoHighLevel SMS test failed:", error);
       res.status(500).json({ message: "SMS test failed", error: error instanceof Error ? error.message : String(error) });
     }
   });
@@ -764,15 +764,15 @@ Driver may be late for pickup.`;
         });
       }
 
-      // Send direct SMS notifications to admins
-      const { notifyAdminsDirectly } = await import('./direct-sms');
+      // Send SMS notifications to admins via GoHighLevel
+      const { notifyAdminsViaGHL } = await import('./ghl-sms');
       const notificationTitle = issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report";
       const notificationMessage = `Driver: ${driver?.firstName} ${driver?.lastName}
 Issue: ${issueData.title}
 Priority: ${issueData.priority?.toUpperCase()}
 Description: ${issueData.description}`;
       
-      await notifyAdminsDirectly(notificationTitle, notificationMessage, (issueData.priority as string) || 'medium');
+      await notifyAdminsViaGHL(notificationTitle, notificationMessage, (issueData.priority as string) || 'medium');
 
       // Broadcast to connected admin clients
       broadcast({
