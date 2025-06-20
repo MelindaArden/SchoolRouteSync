@@ -25,21 +25,43 @@ export async function sendGHLSMS(to: string, message: string): Promise<boolean> 
       formattedNumber = '1' + formattedNumber;
     }
 
-    // Try GoHighLevel API v2 endpoint for sending SMS
-    const smsResponse = await fetch(`https://services.leadconnectorhq.com/conversations/messages`, {
+    // Use the webhook/outbound SMS endpoint which is more direct
+    const smsResponse = await fetch(`https://services.leadconnectorhq.com/hooks/yCZdLLRmyGvISyq4qYgP/webhook-trigger/sms-outbound`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ghlApiKey}`,
-        'Content-Type': 'application/json',
-        'Version': '2021-07-28'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        type: 'SMS',
+        to: `+${formattedNumber}`,
         message: message,
-        phone: `+${formattedNumber}`,
         locationId: ghlLocationId
       })
     });
+
+    // If webhook fails, try the direct messaging API
+    if (!smsResponse.ok) {
+      console.log('Webhook approach failed, trying direct messaging API...');
+      
+      const directResponse = await fetch(`https://services.leadconnectorhq.com/messaging/send`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ghlApiKey}`,
+          'Content-Type': 'application/json',
+          'Version': '2021-07-28'
+        },
+        body: JSON.stringify({
+          type: 'sms',
+          contactPhone: `+${formattedNumber}`,
+          message: message,
+          locationId: ghlLocationId
+        })
+      });
+      
+      return directResponse;
+    }
+    
+    return smsResponse;
 
     if (smsResponse.ok) {
       const result = await smsResponse.json() as { id?: string };

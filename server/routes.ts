@@ -400,20 +400,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test SMS endpoint using the complete notification system
+  // Test SMS endpoint using GoHighLevel directly
   app.post("/api/test-sms", async (req, res) => {
     try {
-      const { sendAdminNotifications } = await import('./notification-service');
-      await sendAdminNotifications({
-        type: 'maintenance',
-        title: 'SMS Test', 
-        message: 'This is a test message to verify the notification system is working properly.',
-        driverId: 1,
-        priority: 'medium'
-      });
-      res.json({ message: "Test SMS sent successfully via notification system" });
+      const { sendGHLSMS } = await import('./ghl-sms');
+      const success = await sendGHLSMS(
+        '+18593142300',
+        'SMS Test: This is a test message to verify GoHighLevel SMS functionality is working properly.'
+      );
+      
+      if (success) {
+        res.json({ message: "Test SMS sent successfully via GoHighLevel" });
+      } else {
+        res.status(500).json({ message: "GoHighLevel SMS test failed" });
+      }
     } catch (error) {
-      console.error("SMS test failed:", error);
+      console.error("GoHighLevel SMS test failed:", error);
       res.status(500).json({ message: "SMS test failed", error: error instanceof Error ? error.message : String(error) });
     }
   });

@@ -52,32 +52,43 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
 
     // Try multiple SMS delivery methods
     if (uniqueNumbers.length > 0) {
-      // Method 1: Try Twilio first
+      // Method 1: Try GoHighLevel first
       try {
+        const { sendGHLSMS } = await import('./ghl-sms');
         const smsPromises = uniqueNumbers.map(async (number) => {
           try {
-            const success = await sendSMS(number, `${data.title}: ${data.message}`);
+            const success = await sendGHLSMS(number, `${data.title}: ${data.message}`);
             if (success) {
-              console.log(`SMS sent successfully to ${number} via Twilio`);
+              console.log(`SMS sent successfully to ${number} via GoHighLevel`);
             } else {
-              console.warn(`Failed to send SMS to ${number} via Twilio`);
+              console.warn(`Failed to send SMS to ${number} via GoHighLevel`);
             }
-            return { number, success, method: 'twilio' };
+            return { number, success, method: 'gohighlevel' };
           } catch (error) {
-            console.error(`Twilio SMS failed for ${number}:`, error);
-            return { number, success: false, method: 'twilio', error };
+            console.error(`GoHighLevel SMS failed for ${number}:`, error);
+            return { number, success: false, method: 'gohighlevel', error };
           }
         });
 
         const results = await Promise.all(smsPromises);
         const successCount = results.filter(r => r.success).length;
         
-        console.log(`SMS notification summary: ${successCount}/${uniqueNumbers.length} delivered via Twilio`);
+        console.log(`SMS notification summary: ${successCount}/${uniqueNumbers.length} delivered via GoHighLevel`);
         
-        // Method 2: If Twilio fails for some numbers, try backup email-to-SMS
+        // Method 2: If GoHighLevel fails for some numbers, try Twilio backup
         const failedNumbers = results.filter(r => !r.success).map(r => r.number);
         if (failedNumbers.length > 0) {
-          await sendEmailToSMSBackup(failedNumbers, data);
+          const { sendSMS } = await import('./sms');
+          for (const number of failedNumbers) {
+            try {
+              const success = await sendSMS(number, `${data.title}: ${data.message}`);
+              if (success) {
+                console.log(`Backup SMS sent successfully to ${number} via Twilio`);
+              }
+            } catch (error) {
+              console.error(`Backup Twilio SMS failed for ${number}:`, error);
+            }
+          }
         }
         
       } catch (error) {
