@@ -25,9 +25,8 @@ export async function sendGHLSMS(to: string, message: string): Promise<boolean> 
       formattedNumber = '1' + formattedNumber;
     }
 
-    // GoHighLevel uses different endpoints and auth methods
-    // First, let's try the messaging endpoint with proper headers
-    const response = await fetch('https://services.leadconnectorhq.com/conversations/messages', {
+    // Try GoHighLevel API v2 endpoint for sending SMS
+    const smsResponse = await fetch(`https://services.leadconnectorhq.com/conversations/messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ghlApiKey}`,
@@ -36,19 +35,19 @@ export async function sendGHLSMS(to: string, message: string): Promise<boolean> 
       },
       body: JSON.stringify({
         type: 'SMS',
-        locationId: ghlLocationId,
         message: message,
-        phone: `+${formattedNumber}`
+        phone: `+${formattedNumber}`,
+        locationId: ghlLocationId
       })
     });
 
-    if (response.ok) {
-      const result = await response.json() as { id?: string };
+    if (smsResponse.ok) {
+      const result = await smsResponse.json() as { id?: string };
       console.log(`GoHighLevel SMS sent successfully to ${to}, Message ID: ${result.id || 'unknown'}`);
       return true;
     } else {
-      const errorText = await response.text();
-      console.error(`GoHighLevel SMS failed for ${to}:`, response.status, errorText);
+      const errorText = await smsResponse.text();
+      console.error(`GoHighLevel SMS failed for ${to}:`, smsResponse.status, errorText);
       return false;
     }
   } catch (error) {
