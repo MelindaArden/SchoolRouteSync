@@ -1,4 +1,3 @@
-import { sendSMS } from './sms';
 import { storage } from './storage';
 
 interface NotificationData {
@@ -50,63 +49,36 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
     // Remove duplicates
     const uniqueNumbers = Array.from(new Set(adminMobileNumbers));
 
-    // Try multiple SMS delivery methods
+    // Send SMS notifications via GoHighLevel only
     if (uniqueNumbers.length > 0) {
       let successfulDeliveries = 0;
       
-      // Method 1: Try GoHighLevel first
-      const ghlResults = [];
       try {
         const { sendGHLSMS } = await import('./ghl-sms');
-        console.log('Attempting SMS delivery via GoHighLevel...');
+        console.log('Sending SMS notifications via GoHighLevel...');
         
         for (const number of uniqueNumbers) {
           try {
             const success = await sendGHLSMS(number, `${data.title}: ${data.message}`);
-            ghlResults.push({ number, success, method: 'gohighlevel' });
             if (success) {
               successfulDeliveries++;
               console.log(`SMS sent successfully to ${number} via GoHighLevel`);
+            } else {
+              console.warn(`Failed to send SMS to ${number} via GoHighLevel`);
             }
           } catch (error) {
-            console.log(`GoHighLevel failed for ${number}, will try Twilio backup`);
-            ghlResults.push({ number, success: false, method: 'gohighlevel', error });
+            console.error(`GoHighLevel SMS failed for ${number}:`, error);
           }
         }
       } catch (error) {
-        console.log('GoHighLevel service unavailable, using Twilio backup');
+        console.error('GoHighLevel SMS service error:', error);
       }
 
-      // Method 2: Use Twilio for failed GoHighLevel attempts
-      const failedNumbers = ghlResults.filter(r => !r.success).map(r => r.number);
-      const remainingNumbers = ghlResults.length === 0 ? uniqueNumbers : failedNumbers;
+      console.log(`SMS notification summary: ${successfulDeliveries}/${uniqueNumbers.length} delivered via GoHighLevel`);
       
-      if (remainingNumbers.length > 0) {
-        try {
-          const { sendSMS } = await import('./sms');
-          console.log(`Using Twilio backup for ${remainingNumbers.length} numbers...`);
-          
-          for (const number of remainingNumbers) {
-            try {
-              const success = await sendSMS(number, `${data.title}: ${data.message}`);
-              if (success) {
-                successfulDeliveries++;
-                console.log(`Backup SMS sent successfully to ${number} via Twilio`);
-              }
-            } catch (error) {
-              console.error(`Twilio backup failed for ${number}:`, error);
-            }
-          }
-        } catch (error) {
-          console.error('Twilio backup service error:', error);
-        }
-      }
-
-      console.log(`SMS notification summary: ${successfulDeliveries}/${uniqueNumbers.length} delivered successfully`);
-      
-      // Method 3: If all SMS methods fail, use webhook notification
+      // If SMS delivery fails, use webhook notification as backup
       if (successfulDeliveries === 0) {
-        console.log('All SMS methods failed, using webhook notification');
+        console.log('SMS delivery failed, using webhook notification backup');
         await sendWebhookNotification(data, uniqueNumbers);
       }
     }
@@ -120,20 +92,18 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
 
 async function sendEmailToSMSBackup(numbers: string[], data: NotificationData): Promise<void> {
   try {
-    // Use email-to-SMS gateways as backup
-    const carriers = [
-      '@vtext.com',      // Verizon
-      '@txt.att.net',    // AT&T
-      '@tmomail.net',    // T-Mobile
-      '@messaging.sprintpcs.com', // Sprint
-      '@sms.myboostmobile.com'    // Boost
-    ];
-
-    // This would require an email service setup
-    console.log('Email-to-SMS backup not configured, logging failed numbers:', numbers);
+    // Alternative notification methods when GoHighLevel fails
+    console.log('GoHighLevel SMS failed, logging notification details for manual follow-up:', {
+      numbers,
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      priority: data.priority,
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error) {
-    console.error('Email-to-SMS backup failed:', error);
+    console.error('Backup notification logging failed:', error);
   }
 }
 

@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { sendSMSToAdmins } from "./sms";
 import { db, pool } from "./db";
 import { pickupSessions, PickupSession } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
@@ -400,18 +399,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test SMS endpoint using the complete notification system (GoHighLevel first, Twilio backup)
+  // Test SMS endpoint using GoHighLevel notification system
   app.post("/api/test-sms", async (req, res) => {
     try {
       const { sendAdminNotifications } = await import('./notification-service');
       await sendAdminNotifications({
         type: 'maintenance',
         title: 'SMS Test', 
-        message: 'This is a test message to verify the notification system is working properly with GoHighLevel primary and Twilio backup.',
+        message: 'This is a test message to verify GoHighLevel SMS notifications are working properly.',
         driverId: 1,
         priority: 'medium'
       });
-      res.json({ message: "Test SMS sent successfully via notification system" });
+      res.json({ message: "Test SMS sent successfully via GoHighLevel" });
     } catch (error) {
       console.error("SMS test failed:", error);
       res.status(500).json({ message: "SMS test failed", error: error instanceof Error ? error.message : String(error) });
@@ -549,22 +548,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
-          // Send SMS alerts to admins
-          const adminNumbers = adminUsers
-            .filter(admin => admin.mobileNumber)
-            .map(admin => admin.mobileNumber!);
-          const uniqueAdminNumbers = Array.from(new Set(adminNumbers));
-
-          if (uniqueAdminNumbers.length > 0) {
-            const smsMessage = `🚨 Driver Proximity Alert
-Driver: ${driver?.firstName} ${driver?.lastName}
-School: ${school.name}
-Distance: ${distance.toFixed(1)} miles away
-Dismissal: ${school.dismissalTime} (${Math.round(timeUntilDismissal)} min)
-
-Driver may be late for pickup.`;
-
-            await sendSMSToAdmins(uniqueAdminNumbers, smsMessage);
+          // Send SMS alerts to admins via GoHighLevel
+          try {
+            const { sendAdminNotifications } = await import('./notification-service');
+            await sendAdminNotifications({
+              type: 'proximity',
+              title: 'Driver Proximity Alert',
+              message: `Driver ${driver?.firstName} ${driver?.lastName} is ${distance.toFixed(1)} miles from ${school.name}. Dismissal: ${school.dismissalTime} (${Math.round(timeUntilDismissal)} min). Driver may be late for pickup.`,
+              driverId: session.driverId,
+              sessionId: session.id,
+              priority: 'high'
+            });
+          } catch (error) {
+            console.error('Failed to send proximity alert notifications:', error);
           }
 
           // Broadcast proximity alert
