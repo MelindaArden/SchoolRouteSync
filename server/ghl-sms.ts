@@ -25,51 +25,29 @@ export async function sendGHLSMS(to: string, message: string): Promise<boolean> 
       formattedNumber = '1' + formattedNumber;
     }
 
-    // Use the webhook/outbound SMS endpoint which is more direct
-    const smsResponse = await fetch(`https://services.leadconnectorhq.com/hooks/yCZdLLRmyGvISyq4qYgP/webhook-trigger/sms-outbound`, {
+    // Use GoHighLevel conversations API directly
+    const response = await fetch(`https://services.leadconnectorhq.com/conversations/messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ghlApiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Version': '2021-07-28'
       },
       body: JSON.stringify({
-        to: `+${formattedNumber}`,
+        type: 'SMS',
         message: message,
+        phone: `+${formattedNumber}`,
         locationId: ghlLocationId
       })
     });
 
-    // If webhook fails, try the direct messaging API
-    if (!smsResponse.ok) {
-      console.log('Webhook approach failed, trying direct messaging API...');
-      
-      const directResponse = await fetch(`https://services.leadconnectorhq.com/messaging/send`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ghlApiKey}`,
-          'Content-Type': 'application/json',
-          'Version': '2021-07-28'
-        },
-        body: JSON.stringify({
-          type: 'sms',
-          contactPhone: `+${formattedNumber}`,
-          message: message,
-          locationId: ghlLocationId
-        })
-      });
-      
-      return directResponse;
-    }
-    
-    return smsResponse;
-
-    if (smsResponse.ok) {
-      const result = await smsResponse.json() as { id?: string };
+    if (response.ok) {
+      const result = await response.json() as { id?: string };
       console.log(`GoHighLevel SMS sent successfully to ${to}, Message ID: ${result.id || 'unknown'}`);
       return true;
     } else {
-      const errorText = await smsResponse.text();
-      console.error(`GoHighLevel SMS failed for ${to}:`, smsResponse.status, errorText);
+      const errorText = await response.text();
+      console.error(`GoHighLevel SMS failed for ${to}:`, response.status, errorText);
       return false;
     }
   } catch (error) {

@@ -52,48 +52,61 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
 
     // Try multiple SMS delivery methods
     if (uniqueNumbers.length > 0) {
+      let successfulDeliveries = 0;
+      
       // Method 1: Try GoHighLevel first
+      const ghlResults = [];
       try {
         const { sendGHLSMS } = await import('./ghl-sms');
-        const smsPromises = uniqueNumbers.map(async (number) => {
+        console.log('Attempting SMS delivery via GoHighLevel...');
+        
+        for (const number of uniqueNumbers) {
           try {
             const success = await sendGHLSMS(number, `${data.title}: ${data.message}`);
+            ghlResults.push({ number, success, method: 'gohighlevel' });
             if (success) {
+              successfulDeliveries++;
               console.log(`SMS sent successfully to ${number} via GoHighLevel`);
-            } else {
-              console.warn(`Failed to send SMS to ${number} via GoHighLevel`);
             }
-            return { number, success, method: 'gohighlevel' };
           } catch (error) {
-            console.error(`GoHighLevel SMS failed for ${number}:`, error);
-            return { number, success: false, method: 'gohighlevel', error };
+            console.log(`GoHighLevel failed for ${number}, will try Twilio backup`);
+            ghlResults.push({ number, success: false, method: 'gohighlevel', error });
           }
-        });
+        }
+      } catch (error) {
+        console.log('GoHighLevel service unavailable, using Twilio backup');
+      }
 
-        const results = await Promise.all(smsPromises);
-        const successCount = results.filter(r => r.success).length;
-        
-        console.log(`SMS notification summary: ${successCount}/${uniqueNumbers.length} delivered via GoHighLevel`);
-        
-        // Method 2: If GoHighLevel fails for some numbers, try Twilio backup
-        const failedNumbers = results.filter(r => !r.success).map(r => r.number);
-        if (failedNumbers.length > 0) {
+      // Method 2: Use Twilio for failed GoHighLevel attempts
+      const failedNumbers = ghlResults.filter(r => !r.success).map(r => r.number);
+      const remainingNumbers = ghlResults.length === 0 ? uniqueNumbers : failedNumbers;
+      
+      if (remainingNumbers.length > 0) {
+        try {
           const { sendSMS } = await import('./sms');
-          for (const number of failedNumbers) {
+          console.log(`Using Twilio backup for ${remainingNumbers.length} numbers...`);
+          
+          for (const number of remainingNumbers) {
             try {
               const success = await sendSMS(number, `${data.title}: ${data.message}`);
               if (success) {
+                successfulDeliveries++;
                 console.log(`Backup SMS sent successfully to ${number} via Twilio`);
               }
             } catch (error) {
-              console.error(`Backup Twilio SMS failed for ${number}:`, error);
+              console.error(`Twilio backup failed for ${number}:`, error);
             }
           }
+        } catch (error) {
+          console.error('Twilio backup service error:', error);
         }
-        
-      } catch (error) {
-        console.error('SMS notification system error:', error);
-        // Method 3: Fallback to webhook notification
+      }
+
+      console.log(`SMS notification summary: ${successfulDeliveries}/${uniqueNumbers.length} delivered successfully`);
+      
+      // Method 3: If all SMS methods fail, use webhook notification
+      if (successfulDeliveries === 0) {
+        console.log('All SMS methods failed, using webhook notification');
         await sendWebhookNotification(data, uniqueNumbers);
       }
     }
