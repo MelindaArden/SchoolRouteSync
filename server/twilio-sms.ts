@@ -43,8 +43,9 @@ export async function notifyAdminsViaTwilio(title: string, message: string, prio
   // Admin phone numbers - update with your verified numbers
   const adminNumbers = ['+18593142300']; 
   
-  const priorityText = priority === 'urgent' ? 'URGENT' : priority === 'high' ? 'HIGH' : 'ALERT';
-  const smsText = `${priorityText}: ${title} - ${message}`;
+  // T-Mobile friendly format - avoid spam trigger words
+  const priorityText = priority === 'urgent' ? 'Important' : priority === 'high' ? 'Priority' : 'Notice';
+  const smsText = `${priorityText} - ${title}: ${message}`;
 
   console.log('Sending Twilio SMS notifications to admins...');
   

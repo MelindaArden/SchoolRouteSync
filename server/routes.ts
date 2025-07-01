@@ -403,10 +403,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/test-sms", async (req, res) => {
     try {
       const { sendTwilioSMS } = await import('./twilio-sms');
-      const success = await sendTwilioSMS('+18593142300', 'Van Alert: Test message from upgraded Twilio account');
+      // Simple message for T-Mobile compatibility
+      const success = await sendTwilioSMS('+18593142300', 'AfterCare: Driver needs assistance');
       
       if (success) {
-        res.json({ message: "Direct Twilio SMS sent - check phone for delivery" });
+        res.json({ message: "T-Mobile friendly SMS sent - check phone for delivery" });
       } else {
         res.status(500).json({ error: "Twilio SMS send failed" });
       }
