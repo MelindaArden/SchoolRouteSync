@@ -108,7 +108,23 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
       await sendAdminEmailNotification(data.title, data.message, data.priority);
       console.log('Email notification sent to admin');
     } catch (error) {
-      console.error('Email notification failed:', error);
+      console.error('Email notification failed - SendGrid sender verification required:', error.message);
+      
+      // Enhanced console notification while email is being set up
+      console.log('\n' + '='.repeat(80));
+      console.log('🚨 ADMIN ALERT - EMAIL DELIVERY PENDING SETUP 🚨');
+      console.log('='.repeat(80));
+      console.log(`📧 TO: ma1313@yahoo.com`);
+      console.log(`📋 TYPE: ${data.type.toUpperCase()}`);
+      console.log(`📝 TITLE: ${data.title}`);
+      console.log(`💬 MESSAGE: ${data.message}`);
+      console.log(`⚠️  PRIORITY: ${data.priority.toUpperCase()}`);
+      console.log(`👤 DRIVER ID: ${data.driverId}`);
+      console.log(`🕐 TIME: ${new Date().toLocaleString()}`);
+      console.log('='.repeat(80));
+      console.log('📱 ACTION: Check leadership dashboard for full details');
+      console.log('⚙️  NEXT: Verify ma1313@yahoo.com in SendGrid console');
+      console.log('='.repeat(80) + '\n');
     }
 
     console.log(`Admin notifications sent: ${admins.length} in-app, ${uniqueNumbers.length} SMS attempts, 1 email attempt`);

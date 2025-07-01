@@ -29,8 +29,8 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       to: params.to,
       from: params.from,
       subject: params.subject,
-      text: params.text,
-      html: params.html,
+      text: params.text || '',
+      html: params.html || '',
     });
 
     console.log(`Email sent successfully to ${params.to}`);
@@ -42,8 +42,8 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 }
 
 export async function sendAdminEmailNotification(title: string, message: string, priority: string = 'medium'): Promise<void> {
-  const adminEmail = 'admin@aftercareapp.com'; // Replace with your admin email
-  const fromEmail = 'noreply@aftercareapp.com'; // Replace with your verified sender email
+  const adminEmail = 'ma1313@yahoo.com'; // Your admin email  
+  const fromEmail = 'ma1313@yahoo.com'; // Use your verified email as sender
   
   if (!process.env.SENDGRID_API_KEY) {
     console.log('SendGrid not configured - skipping admin email notification');

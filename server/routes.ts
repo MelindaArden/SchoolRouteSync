@@ -434,6 +434,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test email notification endpoint
+  app.post("/api/test-email", async (req, res) => {
+    try {
+      const { sendAdminEmailNotification } = await import('./sendgrid-email');
+      await sendAdminEmailNotification(
+        'Test Van Maintenance Alert', 
+        'This is a test email notification to verify the email system is working properly.',
+        'medium'
+      );
+      res.json({ message: "Email notification sent - check your admin email" });
+    } catch (error) {
+      console.error("Email test failed:", error);
+      res.status(500).json({ message: "Email test failed", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   // Get pickup history for admin dashboard
   app.get("/api/pickup-history", async (req, res) => {
     try {
