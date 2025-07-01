@@ -17,8 +17,10 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Fetch user notifications
-  const { data: notifications = [] } = useQuery({
+  const { data: notifications = [], refetch: refetchNotifications } = useQuery({
     queryKey: ['/api/users', user.id, 'notifications'],
+    refetchInterval: 5000, // Refetch every 5 seconds to keep notifications current
+    staleTime: 0, // Always consider data stale to force fresh fetches
   });
 
   // Delete notification mutation
