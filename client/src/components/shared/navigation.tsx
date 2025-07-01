@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { User } from "@/lib/types";
-import { Bus, Bell, Menu } from "lucide-react";
+import { Bus, Bell, Menu, X, Trash2 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface NavigationProps {
   user: User;
@@ -18,6 +19,24 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
   // Fetch user notifications
   const { data: notifications = [] } = useQuery({
     queryKey: ['/api/users', user.id, 'notifications'],
+  });
+
+  // Delete notification mutation
+  const deleteNotificationMutation = useMutation({
+    mutationFn: (notificationId: number) => 
+      fetch(`/api/notifications/${notificationId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users', user.id, 'notifications'] });
+    }
+  });
+
+  // Mark all as read mutation
+  const markAllReadMutation = useMutation({
+    mutationFn: () => 
+      fetch(`/api/users/${user.id}/notifications/mark-all-read`, { method: 'PATCH' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users', user.id, 'notifications'] });
+    }
   });
 
   const unreadCount = notifications.filter((n: any) => !n.isRead).length;
@@ -84,22 +103,56 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
               className="bg-white rounded-t-lg w-full max-w-md p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-medium text-gray-800 mb-4">Notifications</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-800">Notifications</h3>
+                {(notifications as any[]).length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => markAllReadMutation.mutate()}
+                    disabled={markAllReadMutation.isPending}
+                  >
+                    Mark All Read
+                  </Button>
+                )}
+              </div>
               
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {notifications.length === 0 ? (
+                {(notifications as any[]).length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Bell className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                     <p>No notifications</p>
                   </div>
                 ) : (
-                  notifications.map((notification: any) => (
-                    <div key={notification.id} className="bg-gray-50 border rounded-lg p-3">
-                      <p className="text-sm font-medium text-gray-800">{notification.title}</p>
-                      <p className="text-xs text-gray-600">{notification.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(notification.createdAt).toLocaleTimeString()}
-                      </p>
+                  (notifications as any[]).map((notification: any) => (
+                    <div key={notification.id} className={`border rounded-lg p-3 relative ${
+                      notification.isRead ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'
+                    }`}>
+                      <div className="pr-8">
+                        <p className="text-sm font-medium text-gray-800">{notification.title || 'System Alert'}</p>
+                        <p className="text-xs text-gray-600">{notification.message || 'No details available'}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(notification.createdAt).toLocaleString()}
+                        </p>
+                        {notification.type && (
+                          <span className={`inline-block text-xs px-2 py-1 rounded mt-1 ${
+                            notification.type === 'urgent' ? 'bg-red-100 text-red-800' :
+                            notification.type === 'maintenance' ? 'bg-orange-100 text-orange-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2 h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                        onClick={() => deleteNotificationMutation.mutate(notification.id)}
+                        disabled={deleteNotificationMutation.isPending}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
                     </div>
                   ))
                 )}

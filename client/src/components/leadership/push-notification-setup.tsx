@@ -18,9 +18,40 @@ export function PushNotificationSetup() {
   const handleEnableNotifications = async () => {
     setIsRequesting(true);
     try {
+      console.log('Attempting to enable notifications...');
+      
+      // Direct permission request without the hook for better debugging
+      if ('Notification' in window) {
+        console.log('Current permission:', Notification.permission);
+        
+        if (Notification.permission === 'default') {
+          console.log('Requesting permission...');
+          const permission = await Notification.requestPermission();
+          console.log('Permission result:', permission);
+          
+          if (permission === 'granted') {
+            console.log('Permission granted! Testing notification...');
+            // Test notification
+            new Notification('Test Notification', {
+              body: 'Push notifications are now enabled!',
+              icon: '/favicon.ico'
+            });
+          } else {
+            console.log('Permission denied or dismissed');
+          }
+        } else if (Notification.permission === 'granted') {
+          console.log('Permission already granted, testing notification...');
+          new Notification('Test Notification', {
+            body: 'Push notifications are working!',
+            icon: '/favicon.ico'
+          });
+        }
+      }
+      
+      // Also use the hook method as backup
       const granted = await requestPermission();
       if (granted) {
-        console.log('Push notifications enabled successfully');
+        console.log('Push notifications enabled successfully via hook');
       }
     } catch (error) {
       console.error('Failed to enable notifications:', error);
