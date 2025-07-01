@@ -123,7 +123,7 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-800">Notifications</h3>
-                {(notifications as any[]).length > 0 && (
+                {notifications.length > 0 && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -136,13 +136,13 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
               </div>
               
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {(notifications as any[]).length === 0 ? (
+                {notifications.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Bell className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                     <p>No notifications</p>
                   </div>
                 ) : (
-                  (notifications as any[]).map((notification: any) => (
+                  notifications.map((notification: Notification) => (
                     <div key={notification.id} className={`border rounded-lg p-3 relative ${
                       notification.isRead ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'
                     }`}>
