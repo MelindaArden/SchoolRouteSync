@@ -407,13 +407,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = await sendTwilioSMS('+18593142300', 'AfterCare: Driver needs assistance');
       
       if (success) {
-        res.json({ message: "T-Mobile friendly SMS sent - check phone for delivery" });
+        res.json({ message: "T-Mobile friendly SMS sent via Twilio - check phone for delivery" });
       } else {
         res.status(500).json({ error: "Twilio SMS send failed" });
       }
     } catch (error) {
       console.error("SMS test failed:", error);
       res.status(500).json({ message: "SMS test failed", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Test AWS SNS SMS endpoint  
+  app.post("/api/test-sns", async (req, res) => {
+    try {
+      const { sendSNSSMS } = await import('./aws-sns');
+      const success = await sendSNSSMS('+18593142300', 'AfterCare via AWS SNS: Driver needs assistance');
+      
+      if (success) {
+        res.json({ message: "SMS sent via AWS SNS - check phone for delivery" });
+      } else {
+        res.status(500).json({ error: "AWS SNS SMS send failed - check credentials" });
+      }
+    } catch (error) {
+      console.error("AWS SNS test failed:", error);
+      res.status(500).json({ message: "AWS SNS test failed", error: error instanceof Error ? error.message : String(error) });
     }
   });
 

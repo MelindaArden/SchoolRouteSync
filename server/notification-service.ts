@@ -76,15 +76,42 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
 
       console.log(`SMS notification summary: ${successfulDeliveries}/${uniqueNumbers.length} delivered via Twilio`);
       
-      // If SMS delivery fails, use webhook notification as backup
+      // If SMS delivery fails, try AWS SNS as alternative
       if (successfulDeliveries === 0) {
-        console.log('🚨 SMS delivery completely blocked by T-Mobile (Error 30032) - using backup notifications');
-        await sendWebhookNotification(data, uniqueNumbers);
-        await sendEmailToSMSBackup(uniqueNumbers, data);
+        console.log('🚨 Twilio SMS blocked by T-Mobile (Error 30032) - trying AWS SNS alternative');
+        
+        try {
+          const { sendSNSSMS } = await import('./aws-sns');
+          for (const number of uniqueNumbers) {
+            const snsSuccess = await sendSNSSMS(number, `${data.title}: ${data.message}`);
+            if (snsSuccess) {
+              successfulDeliveries++;
+              console.log(`SMS sent successfully to ${number} via AWS SNS`);
+            }
+          }
+        } catch (error) {
+          console.error('AWS SNS SMS also failed:', error);
+        }
+        
+        // If both Twilio and AWS SNS fail, use backup methods
+        if (successfulDeliveries === 0) {
+          console.log('All SMS services failed - using backup notifications');
+          await sendWebhookNotification(data, uniqueNumbers);
+          await sendEmailToSMSBackup(uniqueNumbers, data);
+        }
       }
     }
 
-    console.log(`Admin notifications sent: ${admins.length} in-app, ${uniqueNumbers.length} SMS attempts`);
+    // Send email notifications as primary method
+    try {
+      const { sendAdminEmailNotification } = await import('./sendgrid-email');
+      await sendAdminEmailNotification(data.title, data.message, data.priority);
+      console.log('Email notification sent to admin');
+    } catch (error) {
+      console.error('Email notification failed:', error);
+    }
+
+    console.log(`Admin notifications sent: ${admins.length} in-app, ${uniqueNumbers.length} SMS attempts, 1 email attempt`);
     
   } catch (error) {
     console.error('Failed to send admin notifications:', error);
