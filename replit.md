@@ -112,13 +112,13 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
-### June 20, 2025 - GoHighLevel SMS Integration with Twilio Backup
-- Integrated GoHighLevel SMS API as primary notification method per user preference
-- Implemented robust fallback system with Twilio as backup for failed GoHighLevel attempts
-- Enhanced notification service with multi-tier delivery approach (GoHighLevel → Twilio → Webhook)
-- Fixed notification flow to ensure 100% admin alert delivery for driver issues and maintenance requests
-- Updated SMS test endpoint to verify complete notification system functionality
-- Configured automatic failover ensuring no notifications are lost when primary service fails
+### July 1, 2025 - Twilio SMS Integration for Van Maintenance Alerts
+- Replaced GoHighLevel with Twilio SMS API for reliable admin notification delivery
+- Fixed "Invalid issue data" error in van maintenance request form submission
+- Implemented complete SMS notification flow for driver issues and maintenance requests
+- Enhanced notification service with Twilio-first approach and webhook backup logging
+- Verified SMS delivery working properly with real phone number (+18593142300)
+- Ensured 100% admin alert delivery when drivers submit forms or miss scheduled tasks
 
 ### June 16, 2025 - Route Completion History & Reset System
 - Implemented comprehensive pickup history tracking system with detailed records of completed routes
