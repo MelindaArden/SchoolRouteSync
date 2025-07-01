@@ -36,12 +36,24 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
   useEffect(() => {
     if (studentPickups && Array.isArray(studentPickups) && studentPickups.length > 0) {
       const newStates: Record<number, boolean> = {};
-      studentPickups.forEach((pickup: any) => {
+      studentPickups.forEach((pickup: StudentPickup) => {
         newStates[pickup.studentId] = pickup.status === "picked_up";
       });
       setPickupStates(newStates);
     }
   }, [studentPickups, sessionId]);
+
+  // Helper function to format pickup time
+  const formatPickupTime = (pickedUpAt: string | null) => {
+    if (!pickedUpAt) return null;
+    const date = new Date(pickedUpAt);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Get pickup data for a student
+  const getStudentPickup = (studentId: number): StudentPickup | undefined => {
+    return studentPickups.find(pickup => pickup.studentId === studentId);
+  };
 
   const handleTogglePickup = async (student: any) => {
     if (!isActive || !sessionId) {
@@ -54,7 +66,7 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
 
     try {
       // Find the pickup record for this student and session
-      const pickup = (studentPickups as any[]).find((p: any) => p.studentId === student.id && p.sessionId === sessionId);
+      const pickup = studentPickups.find((p: StudentPickup) => p.studentId === student.id && p.sessionId === sessionId);
       console.log('Looking for pickup record:', { studentId: student.id, sessionId, pickup, studentPickups });
       
       if (pickup) {
@@ -94,19 +106,27 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
     <div className="space-y-2">
       {students.map((student) => {
         const isPickedUp = pickupStates[student.id];
+        const pickup = getStudentPickup(student.id);
+        const pickupTime = pickup?.pickedUpAt ? formatPickupTime(pickup.pickedUpAt) : null;
+        
         return (
-          <div key={student.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-            <div className="flex items-center space-x-3">
+          <div key={student.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+            <div className="flex items-center space-x-3 flex-1">
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <span className="text-xs font-medium text-primary">
                   {getInitials(student.firstName, student.lastName)}
                 </span>
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="font-medium text-sm">
                   {student.firstName} {student.lastName}
                 </p>
                 <p className="text-xs text-gray-500">Grade {student.grade}</p>
+                {isPickedUp && pickupTime && (
+                  <p className="text-xs text-green-600 font-medium">
+                    Picked up at {pickupTime}
+                  </p>
+                )}
               </div>
             </div>
             <Button
@@ -114,16 +134,16 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
               variant="ghost"
               onClick={() => handleTogglePickup(student)}
               disabled={!isActive}
-              className={`w-6 h-6 rounded-full p-0 ${
+              className={`w-8 h-8 rounded-full p-0 ${
                 isPickedUp
                   ? "bg-green-600 text-white hover:bg-green-700"
                   : "border-2 border-gray-300 text-gray-400 hover:border-gray-400"
               }`}
             >
               {isPickedUp ? (
-                <Check className="h-3 w-3" />
+                <Check className="h-4 w-4" />
               ) : (
-                <Plus className="h-3 w-3" />
+                <Plus className="h-4 w-4" />
               )}
             </Button>
           </div>
