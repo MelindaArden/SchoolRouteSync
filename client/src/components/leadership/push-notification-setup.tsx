@@ -76,13 +76,21 @@ export function PushNotificationSetup() {
           {getInstructions()}
         </p>
         
+        {/* Debug info for development */}
+        <div className="text-xs text-gray-400 border-t pt-2">
+          Browser Support: {isSupported ? 'Yes' : 'No'} | 
+          Permission: {permission} | 
+          Can Notify: {canNotify ? 'Yes' : 'No'}
+        </div>
+        
         {isSupported && permission !== 'granted' && (
           <Button 
             onClick={handleEnableNotifications}
-            disabled={isRequesting || permission === 'denied'}
+            disabled={isRequesting}
             className="w-full"
           >
-            {isRequesting ? 'Requesting Permission...' : 'Enable Push Notifications'}
+            {isRequesting ? 'Requesting Permission...' : 
+             permission === 'denied' ? 'Try Enable Again' : 'Enable Push Notifications'}
           </Button>
         )}
 
