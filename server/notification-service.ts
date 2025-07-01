@@ -123,7 +123,9 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
       console.log(`🕐 TIME: ${new Date().toLocaleString()}`);
       console.log('='.repeat(80));
       console.log('📱 ACTION: Check leadership dashboard for full details');
-      console.log('⚙️  NEXT: Verify ma1313@yahoo.com in SendGrid console');
+      console.log('⚙️  EMAIL: Verify melinda@tntgym.org in SendGrid console');
+      console.log('📲 SMS: T-Mobile blocking all messages (Error 30032)');
+      console.log('✅ IN-APP: Real-time notification delivered successfully');
       console.log('='.repeat(80) + '\n');
     }
 
