@@ -44,11 +44,7 @@ export async function notifyAdminsViaTwilio(title: string, message: string, prio
   const adminNumbers = ['+18593142300']; 
   
   const priorityText = priority === 'urgent' ? 'URGENT' : priority === 'high' ? 'HIGH' : 'ALERT';
-  const smsText = `${priorityText}: ${title}
-
-${message}
-
-Check admin dashboard for details.`;
+  const smsText = `${priorityText}: ${title} - ${message}`;
 
   console.log('Sending Twilio SMS notifications to admins...');
   
