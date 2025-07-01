@@ -78,8 +78,9 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
       
       // If SMS delivery fails, use webhook notification as backup
       if (successfulDeliveries === 0) {
-        console.log('SMS delivery failed, using webhook notification backup');
+        console.log('🚨 SMS delivery completely blocked by T-Mobile (Error 30032) - using backup notifications');
         await sendWebhookNotification(data, uniqueNumbers);
+        await sendEmailToSMSBackup(uniqueNumbers, data);
       }
     }
 

@@ -27,7 +27,7 @@ export async function sendTwilioSMS(to: string, message: string): Promise<boolea
 
     const result = await client.messages.create({
       body: message,
-      from: twilioPhoneNumber,
+      messagingServiceSid: 'MG3bd8243776189a642bb343e4c447c48d', // Use Messaging Service for better T-Mobile delivery
       to: formattedNumber,
     });
 
