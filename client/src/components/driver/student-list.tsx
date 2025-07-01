@@ -5,6 +5,16 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Plus, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
+interface StudentPickup {
+  id: number;
+  sessionId: number;
+  studentId: number;
+  schoolId: number;
+  pickedUpAt: string | null;
+  status: 'pending' | 'picked_up' | 'absent' | 'no_show';
+  driverNotes: string | null;
+}
+
 interface StudentListProps {
   students: any[];
   isActive: boolean;
@@ -16,10 +26,11 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
   const { toast } = useToast();
 
   // Fetch student pickups for this session
-  const { data: studentPickups = [] } = useQuery({
+  const { data: studentPickups = [] } = useQuery<StudentPickup[]>({
     queryKey: [`/api/student-pickups?sessionId=${sessionId}`],
+    queryFn: () => fetch(`/api/student-pickups?sessionId=${sessionId}`).then(res => res.json()),
     enabled: !!sessionId,
-  }) as { data: any[] };
+  });
 
   // Update pickup states when student pickups data changes
   useEffect(() => {
