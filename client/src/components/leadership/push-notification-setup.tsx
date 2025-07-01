@@ -95,15 +95,37 @@ export function PushNotificationSetup() {
         )}
 
         {canNotify && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-sm text-green-800">
-              ✓ Push notifications are active. You'll receive instant alerts for:
-            </p>
-            <ul className="text-xs text-green-700 mt-2 space-y-1">
-              <li>• Van maintenance requests</li>
-              <li>• Driver issue reports</li>
-              <li>• Urgent priority alerts</li>
-            </ul>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-3">
+            <div>
+              <p className="text-sm text-green-800">
+                ✓ Push notifications are active. You'll receive instant alerts for:
+              </p>
+              <ul className="text-xs text-green-700 mt-2 space-y-1">
+                <li>• Van maintenance requests</li>
+                <li>• Driver issue reports</li>
+                <li>• Urgent priority alerts</li>
+              </ul>
+            </div>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => {
+                if ('showNotification' in window) {
+                  (window as any).showNotification('Test Notification', {
+                    body: 'Push notifications are working correctly!',
+                    icon: '/favicon.ico'
+                  });
+                } else {
+                  new Notification('Test Notification', {
+                    body: 'Push notifications are working correctly!',
+                    icon: '/favicon.ico'
+                  });
+                }
+              }}
+              className="w-full text-green-700 border-green-300 hover:bg-green-100"
+            >
+              Test Notification
+            </Button>
           </div>
         )}
       </CardContent>

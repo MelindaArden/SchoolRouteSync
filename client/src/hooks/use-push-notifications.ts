@@ -24,9 +24,22 @@ export function usePushNotifications(options: PushNotificationOptions) {
     }
 
     try {
-      const permission = await Notification.requestPermission();
-      setPermission(permission);
-      return permission === 'granted';
+      console.log('Requesting notification permission...');
+      
+      // For older browsers that don't support promise-based API
+      if (typeof Notification.requestPermission === 'function') {
+        const result = Notification.requestPermission();
+        
+        // Handle both callback and promise-based APIs
+        const permission = await (result instanceof Promise ? result : Promise.resolve(result));
+        
+        console.log('Permission result:', permission);
+        setPermission(permission);
+        return permission === 'granted';
+      } else {
+        console.error('Notification.requestPermission is not available');
+        return false;
+      }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
       return false;

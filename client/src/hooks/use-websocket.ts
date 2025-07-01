@@ -44,8 +44,15 @@ export function useWebSocket(userId: number) {
             queryClient.invalidateQueries({ queryKey: ['/api/issues'] });
             
             // Trigger browser notification if enabled
-            if (window.dispatchPushNotification) {
-              window.dispatchPushNotification(data.issue);
+            if ((window as any).dispatchPushNotification) {
+              (window as any).dispatchPushNotification(data.issue);
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+              // Fallback direct notification
+              new Notification(`${data.issue.priority?.toUpperCase() || 'ALERT'}: Driver Issue`, {
+                body: `${data.issue.driver?.firstName} ${data.issue.driver?.lastName}: ${data.issue.title}`,
+                icon: '/favicon.ico',
+                requireInteraction: true
+              });
             }
             
             toast({
