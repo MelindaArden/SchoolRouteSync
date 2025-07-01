@@ -399,18 +399,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test SMS endpoint using Twilio notification system
+  // Test SMS endpoint using Twilio directly  
   app.post("/api/test-sms", async (req, res) => {
     try {
-      const { sendAdminNotifications } = await import('./notification-service');
-      await sendAdminNotifications({
-        type: 'maintenance',
-        title: 'SMS Test', 
-        message: 'This is a test message to verify Twilio SMS notifications are working properly.',
-        driverId: 1,
-        priority: 'medium'
-      });
-      res.json({ message: "Test SMS sent successfully via Twilio" });
+      const { sendTwilioSMS } = await import('./twilio-sms');
+      const success = await sendTwilioSMS('+18593142300', 'Van Alert: Test message from upgraded Twilio account');
+      
+      if (success) {
+        res.json({ message: "Direct Twilio SMS sent - check phone for delivery" });
+      } else {
+        res.status(500).json({ error: "Twilio SMS send failed" });
+      }
     } catch (error) {
       console.error("SMS test failed:", error);
       res.status(500).json({ message: "SMS test failed", error: error instanceof Error ? error.message : String(error) });
