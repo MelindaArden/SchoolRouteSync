@@ -45,7 +45,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 }
 
 export async function sendAdminEmailNotification(title: string, message: string, priority: string = 'medium'): Promise<void> {
-  const adminEmail = 'ma1313@yahoo.com'; // Your admin email  
+  const adminEmail = 'melinda@tntgym.org'; // Your verified admin email  
   const fromEmail = 'melinda@tntgym.org'; // Your verified sender email
   
   if (!process.env.SENDGRID_API_KEY) {
