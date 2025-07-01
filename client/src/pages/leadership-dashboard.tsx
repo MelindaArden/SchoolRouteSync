@@ -21,6 +21,8 @@ import PickupHistory from "@/components/leadership/pickup-history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { PushNotificationSetup } from "@/components/leadership/push-notification-setup";
 import { 
   BarChart3, 
   Route as RouteIcon, 
@@ -50,6 +52,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
+
+  // Push notifications for browser alerts
+  const { showDriverAlert, canNotify } = usePushNotifications({ 
+    enabled: true,
+    onNotificationClick: (data) => {
+      // Focus on alerts/issues when notification is clicked
+      setActiveTab("dashboard");
+    }
+  });
 
   // Fetch data for dynamic counts
   const { data: schools = [] } = useQuery({

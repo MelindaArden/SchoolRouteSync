@@ -39,6 +39,22 @@ export function useWebSocket(userId: number) {
             // Update location data if needed
             break;
             
+          case "issue_created":
+            // Handle new driver issues/maintenance requests
+            queryClient.invalidateQueries({ queryKey: ['/api/issues'] });
+            
+            // Trigger browser notification if enabled
+            if (window.dispatchPushNotification) {
+              window.dispatchPushNotification(data.issue);
+            }
+            
+            toast({
+              title: `${data.issue.priority?.toUpperCase() || 'ALERT'}: Driver Issue`,
+              description: `${data.issue.driver?.firstName} ${data.issue.driver?.lastName}: ${data.issue.title}`,
+              variant: data.issue.priority === 'urgent' ? 'destructive' : 'default'
+            });
+            break;
+            
           default:
             console.log("Unknown WebSocket message:", data);
         }
