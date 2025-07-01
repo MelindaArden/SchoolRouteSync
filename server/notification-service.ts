@@ -49,32 +49,32 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
     // Remove duplicates
     const uniqueNumbers = Array.from(new Set(adminMobileNumbers));
 
-    // Send SMS notifications via GoHighLevel only
+    // Send SMS notifications via Twilio
     if (uniqueNumbers.length > 0) {
       let successfulDeliveries = 0;
       
       try {
-        const { sendGHLSMS } = await import('./ghl-sms');
-        console.log('Sending SMS notifications via GoHighLevel...');
+        const { sendTwilioSMS } = await import('./twilio-sms');
+        console.log('Sending SMS notifications via Twilio...');
         
         for (const number of uniqueNumbers) {
           try {
-            const success = await sendGHLSMS(number, `${data.title}: ${data.message}`);
+            const success = await sendTwilioSMS(number, `${data.title}: ${data.message}`);
             if (success) {
               successfulDeliveries++;
-              console.log(`SMS sent successfully to ${number} via GoHighLevel`);
+              console.log(`SMS sent successfully to ${number} via Twilio`);
             } else {
-              console.warn(`Failed to send SMS to ${number} via GoHighLevel`);
+              console.warn(`Failed to send SMS to ${number} via Twilio`);
             }
           } catch (error) {
-            console.error(`GoHighLevel SMS failed for ${number}:`, error);
+            console.error(`Twilio SMS failed for ${number}:`, error);
           }
         }
       } catch (error) {
-        console.error('GoHighLevel SMS service error:', error);
+        console.error('Twilio SMS service error:', error);
       }
 
-      console.log(`SMS notification summary: ${successfulDeliveries}/${uniqueNumbers.length} delivered via GoHighLevel`);
+      console.log(`SMS notification summary: ${successfulDeliveries}/${uniqueNumbers.length} delivered via Twilio`);
       
       // If SMS delivery fails, use webhook notification as backup
       if (successfulDeliveries === 0) {

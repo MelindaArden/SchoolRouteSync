@@ -399,18 +399,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test SMS endpoint using GoHighLevel notification system
+  // Test SMS endpoint using Twilio notification system
   app.post("/api/test-sms", async (req, res) => {
     try {
       const { sendAdminNotifications } = await import('./notification-service');
       await sendAdminNotifications({
         type: 'maintenance',
         title: 'SMS Test', 
-        message: 'This is a test message to verify GoHighLevel SMS notifications are working properly.',
+        message: 'This is a test message to verify Twilio SMS notifications are working properly.',
         driverId: 1,
         priority: 'medium'
       });
-      res.json({ message: "Test SMS sent successfully via GoHighLevel" });
+      res.json({ message: "Test SMS sent successfully via Twilio" });
     } catch (error) {
       console.error("SMS test failed:", error);
       res.status(500).json({ message: "SMS test failed", error: error instanceof Error ? error.message : String(error) });
@@ -762,15 +762,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Send SMS notifications to admins via GoHighLevel
-      const { notifyAdminsViaGHL } = await import('./ghl-sms');
-      const notificationTitle = issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report";
-      const notificationMessage = `Driver: ${driver?.firstName} ${driver?.lastName}
-Issue: ${issueData.title}
-Priority: ${issueData.priority?.toUpperCase()}
-Description: ${issueData.description}`;
-      
-      await notifyAdminsViaGHL(notificationTitle, notificationMessage, (issueData.priority as string) || 'medium');
+      // Send SMS notifications to admins via Twilio
+      try {
+        const { sendAdminNotifications } = await import('./notification-service');
+        await sendAdminNotifications({
+          type: issueData.type as 'issue' | 'maintenance',
+          title: issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report",
+          message: `Driver: ${driver?.firstName} ${driver?.lastName}\nIssue: ${issueData.title}\nPriority: ${issueData.priority?.toUpperCase()}\nDescription: ${issueData.description}`,
+          driverId: issueData.driverId,
+          priority: (issueData.priority as 'low' | 'medium' | 'high' | 'urgent') || 'medium'
+        });
+      } catch (smsError) {
+        console.error('Failed to send SMS notifications:', smsError);
+      }
 
       // Broadcast to connected admin clients
       broadcast({
