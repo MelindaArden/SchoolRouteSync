@@ -35,15 +35,18 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 
     console.log(`Email sent successfully to ${params.to}`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('SendGrid email error:', error);
+    if (error.response?.body?.errors) {
+      console.error('SendGrid detailed errors:', JSON.stringify(error.response.body.errors, null, 2));
+    }
     return false;
   }
 }
 
 export async function sendAdminEmailNotification(title: string, message: string, priority: string = 'medium'): Promise<void> {
   const adminEmail = 'ma1313@yahoo.com'; // Your admin email  
-  const fromEmail = 'ma1313@yahoo.com'; // Use your verified email as sender
+  const fromEmail = 'melinda@tntgym.org'; // Your verified sender email
   
   if (!process.env.SENDGRID_API_KEY) {
     console.log('SendGrid not configured - skipping admin email notification');

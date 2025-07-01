@@ -108,7 +108,7 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
       await sendAdminEmailNotification(data.title, data.message, data.priority);
       console.log('Email notification sent to admin');
     } catch (error) {
-      console.error('Email notification failed - SendGrid sender verification required:', error.message);
+      console.error('Email notification failed - SendGrid sender verification required:', (error as Error).message);
       
       // Enhanced console notification while email is being set up
       console.log('\n' + '='.repeat(80));
