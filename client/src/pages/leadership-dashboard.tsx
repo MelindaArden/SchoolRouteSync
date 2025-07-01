@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/lib/types";
 import Navigation from "@/components/shared/navigation";
@@ -61,6 +61,19 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
       setActiveTab("dashboard");
     }
   });
+
+  // Set up global push notification dispatcher for WebSocket
+  useEffect(() => {
+    if (canNotify) {
+      (window as any).dispatchPushNotification = showDriverAlert;
+    } else {
+      (window as any).dispatchPushNotification = null;
+    }
+
+    return () => {
+      (window as any).dispatchPushNotification = null;
+    };
+  }, [canNotify, showDriverAlert]);
 
   // Fetch data for dynamic counts
   const { data: schools = [] } = useQuery({
@@ -460,7 +473,8 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         )}
 
         {activeTab === "settings" && (
-          <div className="p-4">
+          <div className="p-4 space-y-6">
+            <PushNotificationSetup />
             <ProfileSettings user={user} />
           </div>
         )}
