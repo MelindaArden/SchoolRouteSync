@@ -7,6 +7,18 @@ import { User } from "@/lib/types";
 import { Bus, Bell, Menu, X, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  recipientId: number;
+  sessionId?: number;
+  studentId?: number;
+  isRead: boolean;
+  createdAt: string;
+}
+
 interface NavigationProps {
   user: User;
   onLogout: () => void;
@@ -17,8 +29,9 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Fetch user notifications
-  const { data: notifications = [], refetch: refetchNotifications } = useQuery({
+  const { data: notifications = [], refetch: refetchNotifications } = useQuery<Notification[]>({
     queryKey: ['/api/users', user.id, 'notifications'],
+    queryFn: () => fetch(`/api/users/${user.id}/notifications`).then(res => res.json()),
     refetchInterval: 5000, // Refetch every 5 seconds to keep notifications current
     staleTime: 0, // Always consider data stale to force fresh fetches
   });
@@ -41,7 +54,7 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
     }
   });
 
-  const unreadCount = notifications.filter((n: any) => !n.isRead).length;
+  const unreadCount = Array.isArray(notifications) ? notifications.filter((n: Notification) => !n.isRead).length : 0;
 
   return (
     <header className="bg-primary text-white shadow-lg sticky top-0 z-50">
@@ -55,7 +68,10 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setShowNotifications(true)}
+            onClick={() => {
+              refetchNotifications(); // Force refresh notifications
+              setShowNotifications(true);
+            }}
             className="text-white hover:text-gray-200 relative"
           >
             <Bell className="h-5 w-5" />
