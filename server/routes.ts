@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { db, pool } from "./db";
-import { pickupSessions, PickupSession } from "@shared/schema";
+import { pickupSessions, notifications, PickupSession } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { 
   insertPickupSessionSchema, 
@@ -736,6 +736,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const notificationId = parseInt(req.params.id);
       await storage.markNotificationRead(notificationId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete notification
+  app.delete("/api/notifications/:id", async (req, res) => {
+    try {
+      const notificationId = parseInt(req.params.id);
+      // Add delete method to storage
+      await db.delete(notifications).where(eq(notifications.id, notificationId));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Mark all notifications as read for user
+  app.patch("/api/users/:userId/notifications/mark-all-read", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      await db.update(notifications)
+        .set({ isRead: true })
+        .where(eq(notifications.recipientId, userId));
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
