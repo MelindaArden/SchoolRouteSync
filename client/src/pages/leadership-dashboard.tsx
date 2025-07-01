@@ -537,6 +537,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <FileText className="h-6 w-6 mb-1" />
             <span className="text-xs">History</span>
           </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex flex-col items-center py-2 px-4 ${
+              activeTab === "settings" ? "text-primary" : "text-gray-500"
+            }`}
+          >
+            <Settings className="h-6 w-6 mb-1" />
+            <span className="text-xs">Settings</span>
+          </button>
         </div>
       </nav>
     </div>
