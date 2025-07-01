@@ -43,8 +43,8 @@ export async function notifyAdminsViaTwilio(title: string, message: string, prio
   // Admin phone numbers - update with your verified numbers
   const adminNumbers = ['+18593142300']; 
   
-  const priorityEmoji = priority === 'urgent' ? '🚨🚨' : priority === 'high' ? '🚨' : '⚠️';
-  const smsText = `${priorityEmoji} ${title}
+  const priorityText = priority === 'urgent' ? 'URGENT' : priority === 'high' ? 'HIGH' : 'ALERT';
+  const smsText = `${priorityText}: ${title}
 
 ${message}
 

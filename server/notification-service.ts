@@ -92,15 +92,20 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
 
 async function sendEmailToSMSBackup(numbers: string[], data: NotificationData): Promise<void> {
   try {
-    // Alternative notification methods when GoHighLevel fails
-    console.log('GoHighLevel SMS failed, logging notification details for manual follow-up:', {
-      numbers,
-      type: data.type,
-      title: data.title,
-      message: data.message,
-      priority: data.priority,
-      timestamp: new Date().toISOString()
-    });
+    // Log critical notifications when SMS fails
+    console.log('='.repeat(60));
+    console.log('🚨 CRITICAL NOTIFICATION - SMS DELIVERY FAILED 🚨');
+    console.log('='.repeat(60));
+    console.log(`TYPE: ${data.type.toUpperCase()}`);
+    console.log(`TITLE: ${data.title}`);
+    console.log(`MESSAGE: ${data.message}`);
+    console.log(`PRIORITY: ${data.priority.toUpperCase()}`);
+    console.log(`DRIVER ID: ${data.driverId}`);
+    console.log(`TARGET NUMBERS: ${numbers.join(', ')}`);
+    console.log(`TIMESTAMP: ${new Date().toISOString()}`);
+    console.log('='.repeat(60));
+    console.log('ACTION REQUIRED: Check admin dashboard for details');
+    console.log('='.repeat(60));
     
   } catch (error) {
     console.error('Backup notification logging failed:', error);
