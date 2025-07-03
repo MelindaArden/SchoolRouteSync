@@ -45,11 +45,23 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 }
 
 export async function sendAdminEmailNotification(title: string, message: string, priority: string = 'medium'): Promise<void> {
-  const adminEmail = 'melinda@tntgym.org'; // Your verified admin email  
-  const fromEmail = 'melinda@tntgym.org'; // Your verified sender email
-  
   if (!process.env.SENDGRID_API_KEY) {
     console.log('SendGrid not configured - skipping admin email notification');
+    return;
+  }
+
+  // Get all admin users with notification emails
+  const { storage } = await import('./storage');
+  const users = await storage.getUsers();
+  const adminsWithEmails = users.filter(user => 
+    user.role === 'leadership' && 
+    user.isActive && 
+    user.notificationEmail && 
+    user.notificationEmail.trim().length > 0
+  );
+  
+  if (adminsWithEmails.length === 0) {
+    console.log('⚠️ No admin users have notification email addresses configured');
     return;
   }
   
@@ -92,21 +104,29 @@ This is an automated notification from the AfterCare school transportation syste
 </div>
 `;
 
-  try {
-    const success = await sendEmail({
-      to: adminEmail,
-      from: fromEmail,
-      subject: subject,
-      text: textContent,
-      html: htmlContent
-    });
+  // Send emails to ALL admin users with notification emails
+  let emailsSent = 0;
+  for (const admin of adminsWithEmails) {
+    try {
+      const success = await sendEmail({
+        to: admin.notificationEmail!,
+        from: 'melinda@tntgym.org', // Verified sender address
+        subject: subject,
+        text: textContent,
+        html: htmlContent
+      });
 
-    if (success) {
-      console.log(`Admin email notification sent successfully for: ${title}`);
-    } else {
-      console.error(`Failed to send admin email notification for: ${title}`);
+      if (success) {
+        emailsSent++;
+        console.log(`✅ Email sent successfully to ${admin.firstName} ${admin.lastName} (${admin.notificationEmail})`);
+      } else {
+        console.error(`❌ Failed to send email to ${admin.notificationEmail}`);
+      }
+    } catch (error) {
+      console.error(`❌ Email error for ${admin.notificationEmail}:`, error);
     }
-  } catch (error) {
-    console.error('Admin email notification failed:', error);
   }
+
+  console.log(`📧 Admin email notifications sent to ${emailsSent}/${adminsWithEmails.length} admin users with notification emails`);
+  console.log(`Admin email notification sent successfully for: ${title}`);
 }
