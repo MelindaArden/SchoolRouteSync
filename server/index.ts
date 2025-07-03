@@ -25,13 +25,13 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'school-bus-management-secret',
   name: 'schoolbus.sid', // Custom session name
   resave: false,
-  saveUninitialized: true, // Changed to true for mobile Safari
+  saveUninitialized: false, // Keep false to avoid unnecessary sessions
   rolling: true, // Reset expiry on each request
   cookie: {
     secure: false, // Must be false for HTTP
     httpOnly: false, // Allow JavaScript access for mobile Safari
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'none' // Changed to 'none' for cross-origin requests in mobile Safari
+    sameSite: 'lax' // Use 'lax' for better mobile Safari compatibility
   }
 }));
 

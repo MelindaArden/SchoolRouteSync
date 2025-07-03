@@ -80,7 +80,13 @@ export default function Login({ onLogin }: LoginProps) {
         const userData = await response.json();
         console.log("Login success:", userData);
         
-        // Store mobile token if provided
+        // Store authentication token for mobile Safari compatibility
+        if (userData.authToken) {
+          localStorage.setItem("authToken", userData.authToken);
+          console.log("Auth token stored for mobile Safari");
+        }
+        
+        // Also store mobile token for backward compatibility
         if (userData.token) {
           localStorage.setItem("mobileToken", userData.token);
         }

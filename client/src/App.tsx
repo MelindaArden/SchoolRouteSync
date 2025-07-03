@@ -17,56 +17,80 @@ function Router() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for active session on server (better for mobile Safari)
-    const checkSession = async () => {
+    // Check for authentication token first, then session (mobile Safari compatible)
+    const checkAuth = async () => {
       try {
-        const response = await fetch("/api/session", {
-          credentials: "include"
-        });
+        const authToken = localStorage.getItem("authToken");
+        const storedUser = localStorage.getItem("user");
         
-        if (response.ok) {
-          const sessionData = await response.json();
-          if (sessionData.isAuthenticated && sessionData.userId) {
-            // Get full user data
-            const userResponse = await fetch(`/api/users/${sessionData.userId}`, {
+        // If we have both token and user data, verify token is still valid
+        if (authToken && storedUser) {
+          try {
+            const response = await fetch("/api/session", {
+              headers: {
+                'Authorization': `Bearer ${authToken}`
+              },
               credentials: "include"
             });
             
-            if (userResponse.ok) {
-              const userData = await userResponse.json();
-              setUser(userData);
-              localStorage.setItem("user", JSON.stringify(userData));
+            if (response.ok) {
+              const sessionData = await response.json();
+              if (sessionData.isAuthenticated) {
+                const userData = JSON.parse(storedUser);
+                setUser(userData);
+                console.log("Token authentication successful");
+                return;
+              }
             }
-          }
-        } else {
-          // Fall back to localStorage for offline cases
-          const storedUser = localStorage.getItem("user");
-          if (storedUser) {
-            try {
-              const userData = JSON.parse(storedUser);
-              setUser(userData);
-            } catch (error) {
-              localStorage.removeItem("user");
-            }
+          } catch (error) {
+            console.log("Token validation failed, clearing stored data");
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("user");
           }
         }
-      } catch (error) {
-        console.log("Session check failed, checking localStorage");
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
+        
+        // Fall back to session check
+        try {
+          const response = await fetch("/api/session", {
+            credentials: "include"
+          });
+          
+          if (response.ok) {
+            const sessionData = await response.json();
+            if (sessionData.isAuthenticated && sessionData.userId) {
+              const userResponse = await fetch(`/api/users/${sessionData.userId}`, {
+                credentials: "include"
+              });
+              
+              if (userResponse.ok) {
+                const userData = await userResponse.json();
+                setUser(userData);
+                localStorage.setItem("user", JSON.stringify(userData));
+                console.log("Session authentication successful");
+              }
+            }
+          }
+        } catch (error) {
+          console.log("Session check failed");
+        }
+        
+        // Final fallback to localStorage only (offline mode)
+        if (!user && storedUser) {
           try {
             const userData = JSON.parse(storedUser);
             setUser(userData);
+            console.log("Using offline authentication");
           } catch (error) {
             localStorage.removeItem("user");
           }
         }
+        
       } finally {
         setLoading(false);
       }
     };
     
-    checkSession();
+    checkAuth();
   }, []);
 
   const handleLogin = (userData: User) => {
@@ -76,15 +100,28 @@ function Router() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/logout", {
-        method: "POST",
-        credentials: "include"
-      });
+      const authToken = localStorage.getItem("authToken");
+      if (authToken) {
+        await fetch("/api/logout", {
+          method: "POST",
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          },
+          credentials: "include"
+        });
+      } else {
+        await fetch("/api/logout", {
+          method: "POST",
+          credentials: "include"
+        });
+      }
     } catch (error) {
       console.log("Logout request failed");
     } finally {
       setUser(null);
       localStorage.removeItem("user");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("mobileToken");
     }
   };
 

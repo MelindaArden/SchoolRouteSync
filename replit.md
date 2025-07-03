@@ -210,6 +210,16 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Enhanced logout functionality to properly destroy server sessions
 - Created comprehensive credentials reference in CREDENTIALS.md with all valid login combinations
 
+### July 3, 2025 - Token-Based Authentication for Mobile Safari
+- Implemented robust token-based authentication system that bypasses mobile Safari session issues
+- Created server-side token management with automatic expiration and validation
+- Enhanced login endpoint to return authToken field for mobile Safari compatibility
+- Updated session endpoint to validate both session cookies and authorization tokens
+- Modified frontend authentication to prioritize token storage in localStorage over sessions
+- Added comprehensive token cleanup and logout functionality
+- Mobile Safari now uses localStorage tokens instead of problematic session cookies
+- System automatically falls back to session authentication for desktop browsers
+
 ### June 16, 2025 - Route Completion History & Reset System
 - Implemented comprehensive pickup history tracking system with detailed records of completed routes
 - Added pickup history dashboard for admin viewing with student pickup details and completion times

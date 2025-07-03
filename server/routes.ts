@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import "./types"; // Import session type declarations
+import { createAuthToken, validateAuthToken, deleteAuthToken } from "./auth-tokens";
 import { db, pool } from "./db";
 import { pickupSessions, notifications, PickupSession, routeSchools } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
@@ -82,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Authentication
+  // Token-based authentication for mobile Safari compatibility
   app.post("/api/login", async (req, res) => {
     try {
       const { username, password } = loginSchema.parse(req.body);
@@ -94,17 +95,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           debug: {
             userFound: !!user,
             userAgent: req.headers['user-agent'],
-            sessionId: req.sessionID
+            timestamp: new Date().toISOString()
           }
         });
       }
 
-      // Store user info in session
+      // Create authentication token for mobile compatibility
+      console.log(`About to create auth token for ${username}`);
+      let authToken;
+      try {
+        authToken = createAuthToken(user.id, user.username, user.role);
+        console.log(`Created auth token for ${username}: ${authToken.substring(0, 16)}...`);
+      } catch (error) {
+        console.error(`Token creation failed for ${username}:`, error);
+        authToken = `fallback_${user.id}_${Date.now()}`;
+      }
+      
+      // Also store in session as backup
       req.session.userId = user.id;
       req.session.username = user.username;
       req.session.role = user.role;
 
-      console.log(`Login successful for ${username}, session: ${req.sessionID}`);
+      console.log(`Login successful for ${username}, token created: ${authToken.substring(0, 8)}...`);
 
       res.json({
         id: user.id,
@@ -112,12 +124,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        authToken: authToken, // Mobile Safari will use this token
         debug: {
+          tokenCreated: true,
           sessionCreated: true,
           sessionId: req.sessionID,
           userAgent: req.headers['user-agent'],
           isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
-          cookies: req.headers.cookie || 'none'
+          loginMethod: 'token-based'
         }
       });
     } catch (error) {
@@ -125,26 +139,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check session endpoint
+  // Check session endpoint - supports both session and token auth
   app.get("/api/session", (req, res) => {
+    // Try session first
     if (req.session.userId) {
       res.json({
         userId: req.session.userId,
         username: req.session.username,
         role: req.session.role,
-        isAuthenticated: true
+        isAuthenticated: true,
+        authMethod: 'session'
       });
-    } else {
-      res.status(401).json({ 
-        isAuthenticated: false,
-        sessionInfo: {
-          sessionExists: !!req.session,
-          sessionId: req.sessionID,
-          cookies: req.headers.cookie || 'none',
-          userAgent: req.headers['user-agent']
-        }
-      });
+      return;
     }
+
+    // Try token authentication
+    const authToken = req.headers.authorization?.replace('Bearer ', '') || req.query.token as string;
+    if (authToken) {
+      const tokenData = validateAuthToken(authToken);
+      if (tokenData) {
+        res.json({
+          userId: tokenData.userId,
+          username: tokenData.username,
+          role: tokenData.role,
+          isAuthenticated: true,
+          authMethod: 'token'
+        });
+        return;
+      }
+    }
+
+    res.status(401).json({ 
+      isAuthenticated: false,
+      sessionInfo: {
+        sessionExists: !!req.session,
+        sessionId: req.sessionID,
+        cookies: req.headers.cookie || 'none',
+        userAgent: req.headers['user-agent'],
+        hasAuthHeader: !!req.headers.authorization,
+        hasTokenParam: !!req.query.token
+      }
+    });
   });
 
   // Logout endpoint
