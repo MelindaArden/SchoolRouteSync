@@ -33,19 +33,80 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
 
     try {
-      const response = await apiRequest("POST", "/api/login", {
-        username,
-        password,
+      // Detect mobile Safari
+      const isMobileSafari = /iPhone|iPad/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+      console.log("Mobile Safari detected:", isMobileSafari);
+      
+      // Try mobile-specific endpoint first for Safari on iOS
+      const loginEndpoint = isMobileSafari ? "/api/mobile-login" : "/api/login";
+      
+      const response = await fetch(loginEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Critical for mobile Safari sessions
+        body: JSON.stringify({ username, password }),
       });
 
-      const userData = await response.json();
-      onLogin(userData);
+      if (!response.ok) {
+        // If mobile endpoint fails, try regular login
+        if (isMobileSafari && loginEndpoint === "/api/mobile-login") {
+          console.log("Mobile login failed, trying regular login");
+          const fallbackResponse = await fetch("/api/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ username, password }),
+          });
+          
+          if (!fallbackResponse.ok) {
+            const errorData = await fallbackResponse.json();
+            console.log("Fallback login error:", errorData);
+            throw new Error(errorData.message || "Login failed");
+          }
+          
+          const userData = await fallbackResponse.json();
+          console.log("Fallback login success:", userData);
+          onLogin(userData);
+        } else {
+          const errorData = await response.json();
+          console.log("Login error:", errorData);
+          throw new Error(errorData.message || "Login failed");
+        }
+      } else {
+        const userData = await response.json();
+        console.log("Login success:", userData);
+        
+        // Store mobile token if provided
+        if (userData.token) {
+          localStorage.setItem("mobileToken", userData.token);
+        }
+        
+        onLogin(userData);
+      }
+      
+      // Verify session after login
+      setTimeout(async () => {
+        try {
+          const sessionCheck = await fetch("/api/session", {
+            credentials: "include"
+          });
+          const sessionData = await sessionCheck.json();
+          console.log("Session verification:", sessionData);
+        } catch (err) {
+          console.log("Session verification failed:", err);
+        }
+      }, 200);
       
       toast({
         title: "Success",
         description: "Logged in successfully",
       });
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Error",
         description: "Invalid username or password",

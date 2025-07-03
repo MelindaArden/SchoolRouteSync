@@ -6,16 +6,32 @@ import { startMissedSchoolMonitoring } from "./missed-school-monitor";
 
 const app = express();
 
-// Session configuration for mobile Safari compatibility
+// CORS headers for mobile Safari compatibility
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
+
+// Session configuration for mobile Safari compatibility  
 app.use(session({
   secret: process.env.SESSION_SECRET || 'school-bus-management-secret',
+  name: 'schoolbus.sid', // Custom session name
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Changed to true for mobile Safari
+  rolling: true, // Reset expiry on each request
   cookie: {
-    secure: false, // Set to false for development, auto-detected in production
-    httpOnly: false, // Allow JavaScript access for mobile Safari compatibility
+    secure: false, // Must be false for HTTP
+    httpOnly: false, // Allow JavaScript access for mobile Safari
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax' // Important for mobile Safari
+    sameSite: 'none' // Changed to 'none' for cross-origin requests in mobile Safari
   }
 }));
 

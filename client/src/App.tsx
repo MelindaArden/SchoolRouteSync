@@ -9,6 +9,7 @@ import Login from "@/pages/login";
 import DriverDashboard from "@/pages/driver-dashboard";
 import LeadershipDashboard from "@/pages/leadership-dashboard";
 import RouteSummary from "@/pages/route-summary";
+import MobileDebug from "@/pages/mobile-debug";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -115,6 +116,9 @@ function Router() {
         {(params) => (
           <RouteSummary user={user} onLogout={handleLogout} sessionId={params.sessionId} />
         )}
+      </Route>
+      <Route path="/mobile-debug">
+        <MobileDebug />
       </Route>
       <Route component={NotFound} />
     </Switch>

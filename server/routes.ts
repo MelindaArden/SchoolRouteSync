@@ -115,7 +115,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         debug: {
           sessionCreated: true,
           sessionId: req.sessionID,
-          userAgent: req.headers['user-agent']
+          userAgent: req.headers['user-agent'],
+          isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+          cookies: req.headers.cookie || 'none'
         }
       });
     } catch (error) {
@@ -151,9 +153,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ message: "Could not log out" });
       }
-      res.clearCookie('connect.sid');
+      res.clearCookie('schoolbus.sid');
       res.json({ message: "Logged out successfully" });
     });
+  });
+
+  // Mobile Safari specific login test endpoint
+  app.post("/api/mobile-login", async (req, res) => {
+    try {
+      const { username, password } = loginSchema.parse(req.body);
+      
+      const user = await storage.getUserByUsername(username);
+      if (!user || user.password !== password) {
+        return res.status(401).json({ 
+          message: "Invalid credentials",
+          userAgent: req.headers['user-agent'],
+          isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || '')
+        });
+      }
+
+      // Create a simple token-based authentication for mobile Safari
+      const token = Buffer.from(`${user.id}:${user.username}:${Date.now()}`).toString('base64');
+      
+      // Store in session and also return token
+      req.session.userId = user.id;
+      req.session.username = user.username;
+      req.session.role = user.role;
+      req.session.mobileToken = token;
+
+      console.log(`Mobile login successful for ${username}, session: ${req.sessionID}, token: ${token}`);
+
+      res.json({
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        token: token, // Include token for mobile Safari backup
+        sessionId: req.sessionID,
+        isMobileUser: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+        userAgent: req.headers['user-agent']
+      });
+    } catch (error) {
+      res.status(400).json({ message: "Invalid request data" });
+    }
   });
 
   // Get user profile

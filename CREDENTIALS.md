@@ -44,3 +44,27 @@
 ## Mobile Testing
 
 The application has been specifically optimized for mobile Safari login issues. Test on mobile devices using any of the above credentials to verify the session management works correctly.
+
+### Mobile Safari Debugging
+
+If you experience login issues on mobile Safari, visit `/mobile-debug` in your browser for comprehensive diagnostics:
+
+1. Go to `[your-app-url]/mobile-debug`
+2. Enter your credentials (defaults to ma1313/Dietdew13!)
+3. Click "Test Login & Session" to run diagnostics
+4. Review the detailed output to identify any issues
+
+### Mobile Safari Features
+
+- Enhanced session management with mobile-specific cookie settings
+- Dual login endpoints: `/api/login` and `/api/mobile-login`
+- Automatic mobile browser detection and fallback mechanisms
+- Comprehensive error logging and debugging information
+- Token-based backup authentication for mobile Safari compatibility
+
+### Troubleshooting Steps
+
+1. Test both regular and mobile login endpoints
+2. Check session creation and persistence
+3. Verify cookies are being set correctly
+4. Review user agent detection and mobile-specific handling
