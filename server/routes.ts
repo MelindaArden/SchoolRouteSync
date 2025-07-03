@@ -588,6 +588,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Mark route as complete (when driver forgets)
+  app.post("/api/admin/routes/:sessionId/complete", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { adminId, notes } = req.body;
+      
+      const session = await storage.getPickupSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      if (session.status === "completed") {
+        return res.status(400).json({ message: "Route is already completed" });
+      }
+      
+      // Mark session as complete
+      await storage.updatePickupSession(sessionId, {
+        status: "completed",
+        completedTime: new Date()
+      });
+      
+      // Get student pickups for this session
+      const studentPickups = await storage.getStudentPickups(sessionId);
+      
+      // Mark any pending students as "no_show" if they weren't picked up
+      for (const pickup of studentPickups) {
+        if (pickup.status === "pending") {
+          await storage.updateStudentPickup(pickup.id, {
+            status: "no_show",
+            pickedUpAt: new Date(),
+            driverNotes: "Marked by admin - route completed"
+          });
+        }
+      }
+      
+      // Create pickup history record
+      const route = await storage.getRoute(session.routeId);
+      const driver = await storage.getUser(session.driverId);
+      
+      const pickupDetails = studentPickups.map(pickup => ({
+        studentId: pickup.studentId,
+        status: pickup.status,
+        pickedUpAt: pickup.pickedUpAt,
+        driverNotes: pickup.driverNotes
+      }));
+      
+      await storage.createPickupHistory({
+        sessionId: session.id,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        date: new Date().toISOString().split('T')[0],
+        completedAt: new Date(),
+        totalStudents: studentPickups.length,
+        studentsPickedUp: studentPickups.filter(p => p.status === 'picked_up').length,
+        pickupDetails: JSON.stringify(pickupDetails),
+        notes: `Route completed by admin. ${notes || ''}`
+      });
+      
+      // Broadcast update via WebSocket
+      broadcast({
+        type: 'route_completed',
+        sessionId: session.id,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        completedBy: 'admin'
+      });
+      
+      res.json({ message: "Route marked as complete successfully" });
+    } catch (error) {
+      console.error('Admin route completion error:', error);
+      res.status(500).json({ message: "Failed to complete route" });
+    }
+  });
+  
+  // Admin: Mark student absent for specific pickup time
+  app.post("/api/admin/students/:studentId/absent", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const { sessionId, adminId, reason, date } = req.body;
+      
+      const student = await storage.getStudentById(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      
+      // If sessionId provided, mark absent for that specific session
+      if (sessionId) {
+        const existingPickup = await storage.getStudentPickups(sessionId);
+        const studentPickup = existingPickup.find(p => p.studentId === studentId);
+        
+        if (studentPickup) {
+          await storage.updateStudentPickup(studentPickup.id, {
+            status: "absent",
+            pickedUpAt: new Date(),
+            driverNotes: `Marked absent by admin: ${reason || 'No reason provided'}`
+          });
+        } else {
+          // Create new pickup record as absent
+          await storage.createStudentPickup({
+            sessionId,
+            studentId,
+            schoolId: student.schoolId,
+            status: "absent",
+            driverNotes: `Marked absent by admin: ${reason || 'No reason provided'}`
+          });
+        }
+        
+        // Broadcast update
+        broadcast({
+          type: 'student_status_updated',
+          studentId,
+          sessionId,
+          status: 'absent',
+          updatedBy: 'admin'
+        });
+      }
+      
+      res.json({ message: "Student marked as absent successfully" });
+    } catch (error) {
+      console.error('Admin mark absent error:', error);
+      res.status(500).json({ message: "Failed to mark student absent" });
+    }
+  });
+
   // Helper function to calculate distance between two points
   function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 3959; // Earth's radius in miles

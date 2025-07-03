@@ -14,7 +14,7 @@ import StudentsList from "@/components/leadership/students-list";
 import UsersList from "@/components/leadership/users-list";
 import UserForm from "@/components/leadership/user-form";
 import ExpandableRouteCard from "@/components/leadership/expandable-route-card";
-import DriverTracking from "@/components/leadership/driver-tracking";
+
 import ProfileSettings from "@/components/leadership/profile-settings";
 import DriverLocationMap from "@/components/leadership/driver-location-map";
 import PickupHistory from "@/components/leadership/pickup-history";
@@ -45,7 +45,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "tracking" | "gps" | "users" | "reports" | "history" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
@@ -98,14 +98,40 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     retry: false,
   });
 
+  // Fetch missed school alerts for alert count
+  const { data: missedAlerts = [] } = useQuery({
+    queryKey: ['/api/missed-school-alerts'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Fetch active driver locations for real-time data
+  const { data: driverLocations = [] } = useQuery({
+    queryKey: ['/api/driver-locations'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   // Calculate dashboard metrics with real data
   const sessionsData = Array.isArray(sessions) ? (sessions as any[]) : [];
   const activeRoutes = sessionsData.filter((s: any) => s.status === "in_progress").length;
-  const totalStudents = sessionsData.reduce((sum: number, s: any) => sum + (s.totalStudents || 0), 0);
-  const completedPickups = sessionsData.reduce((sum: number, s: any) => sum + (s.completedPickups || 0), 0);
-  const onTimePercentage = totalStudents > 0 ? Math.round((completedPickups / totalStudents) * 100) : 95;
-  const activeAlerts = sessionsData.filter((s: any) => 
-    s.status === "in_progress" && (s.progressPercent || 0) < 50
+  
+  // Calculate total students and pickups from sessions
+  let totalStudents = 0;
+  let completedPickups = 0;
+  
+  sessionsData.forEach((session: any) => {
+    if (session.pickupDetails && Array.isArray(session.pickupDetails)) {
+      totalStudents += session.pickupDetails.length;
+      completedPickups += session.pickupDetails.filter((p: any) => p.status === 'picked_up').length;
+    }
+  });
+
+  // Calculate on-time percentage based on completed pickups
+  const onTimePercentage = totalStudents > 0 ? Math.round((completedPickups / totalStudents) * 100) : 0;
+  
+  // Count active alerts from missed school alerts
+  const alertsData = Array.isArray(missedAlerts) ? missedAlerts : [];
+  const activeAlerts = alertsData.filter((alert: any) => 
+    alert.status === 'active' || alert.status === 'pending'
   ).length;
 
   // Real counts from database
@@ -163,8 +189,8 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Students</p>
-                      <p className="text-2xl font-bold text-gray-800">{totalStudents}</p>
+                      <p className="text-sm text-gray-600">Pickups</p>
+                      <p className="text-2xl font-bold text-gray-800">{completedPickups}/{totalStudents}</p>
                     </div>
                     <Users className="h-8 w-8 text-gray-600" />
                   </div>
@@ -440,11 +466,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </div>
         )}
 
-        {activeTab === "tracking" && (
-          <div className="p-4">
-            <DriverTracking />
-          </div>
-        )}
+
 
         {activeTab === "gps" && (
           <div className="p-4">
@@ -501,15 +523,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <RouteIcon className="h-6 w-6 mb-1" />
             <span className="text-xs">Routes</span>
           </button>
-          <button
-            onClick={() => setActiveTab("tracking")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "tracking" ? "text-primary" : "text-gray-500"
-            }`}
-          >
-            <TrendingUp className="h-6 w-6 mb-1" />
-            <span className="text-xs">Tracking</span>
-          </button>
+
           <button
             onClick={() => setActiveTab("gps")}
             className={`flex flex-col items-center py-2 px-4 ${
