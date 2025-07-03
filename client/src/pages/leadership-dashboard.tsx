@@ -19,6 +19,7 @@ import ProfileSettings from "@/components/leadership/profile-settings";
 import DriverLocationMap from "@/components/leadership/driver-location-map";
 import PickupHistory from "@/components/leadership/pickup-history";
 import RouteOptimizer from "@/components/leadership/route-optimizer";
+import MultiDriverRouteOptimizer from "@/components/leadership/multi-driver-route-optimizer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -37,7 +38,8 @@ import {
   School,
   UserPlus,
   GraduationCap,
-  MapPin
+  MapPin,
+  Calculator
 } from "lucide-react";
 
 interface LeadershipDashboardProps {
@@ -48,7 +50,7 @@ interface LeadershipDashboardProps {
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
-  const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer">("management");
+  const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
 
   // WebSocket connection for real-time updates
@@ -381,7 +383,14 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
-                Route Optimizer
+                Single Route
+              </Button>
+              <Button
+                onClick={() => setRoutesView("multi-optimizer")}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white"
+              >
+                <Calculator className="h-4 w-4 mr-2" />
+                Multi-Route
               </Button>
             </div>
 
@@ -458,7 +467,16 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 className="flex-1"
               >
                 <TrendingUp className="h-4 w-4 mr-1" />
-                Optimizer
+                Single Route
+              </Button>
+              <Button
+                variant={routesView === "multi-optimizer" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoutesView("multi-optimizer")}
+                className="flex-1"
+              >
+                <Calculator className="h-4 w-4 mr-1" />
+                Multi-Route
               </Button>
             </div>
 
@@ -504,6 +522,12 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             {routesView === "optimizer" && (
               <div className="p-4">
                 <RouteOptimizer onSave={() => setRoutesView("routes")} />
+              </div>
+            )}
+
+            {routesView === "multi-optimizer" && (
+              <div className="p-4">
+                <MultiDriverRouteOptimizer />
               </div>
             )}
 
