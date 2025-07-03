@@ -239,20 +239,29 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
             {/* Route Status Overview */}
             <div>
-              <h3 className="text-lg font-medium text-gray-800 mb-3">Route Status</h3>
+              <h3 className="text-lg font-medium text-gray-800 mb-3">Active Route Status</h3>
               <div className="space-y-3">
-                {sessionsData.map((session: any) => (
-                  <RouteStatus
-                    key={session.id}
-                    routeName={session.route?.name || `Route ${session.id}`}
-                    driverName={`${session.driver?.firstName} ${session.driver?.lastName}`}
-                    status={session.status}
-                    progress={session.progressPercent}
-                    currentLocation={session.status === "in_progress" ? "En route to next school" : "Complete"}
-                    studentsPickedUp={session.completedPickups}
-                    totalStudents={session.totalStudents}
-                  />
-                ))}
+                {sessionsData
+                  .filter((session: any) => session.status === "in_progress")
+                  .map((session: any) => (
+                    <RouteStatus
+                      key={session.id}
+                      routeName={session.route?.name || `Route ${session.id}`}
+                      driverName={`${session.driver?.firstName} ${session.driver?.lastName}`}
+                      status={session.status}
+                      progress={session.progressPercent}
+                      currentLocation="En route to next school"
+                      studentsPickedUp={session.completedPickups}
+                      totalStudents={session.totalStudents}
+                    />
+                  ))}
+                {sessionsData.filter((session: any) => session.status === "in_progress").length === 0 && (
+                  <Card className="border-blue-200 bg-blue-50">
+                    <CardContent className="p-4 text-center">
+                      <p className="text-blue-800">No active routes in progress</p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
 

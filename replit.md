@@ -173,6 +173,14 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Students now properly appear in driver school cards with full contact details and pickup status
 - Driver route interface now shows accurate student counts per school with expandable student lists
 
+### July 3, 2025 - Driver Pickup System & Admin Dashboard Improvements
+- Fixed driver student pickup marking system by correcting active session detection
+- Enhanced session state management to properly identify in-progress pickup sessions
+- Updated admin dashboard "Route Status" to show only active in-progress routes for current day
+- Improved GPS tracking section to ensure active drivers are properly listed and displayed
+- Fixed driver-side student pickup toggle functionality with proper session ID passing
+- Streamlined admin interface to focus on currently active operations and real-time monitoring
+
 ### June 16, 2025 - Route Completion History & Reset System
 - Implemented comprehensive pickup history tracking system with detailed records of completed routes
 - Added pickup history dashboard for admin viewing with student pickup details and completion times

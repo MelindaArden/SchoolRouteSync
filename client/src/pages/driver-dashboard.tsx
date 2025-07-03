@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { User } from "@/lib/types";
@@ -166,10 +166,12 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const hasActiveSession = !!currentActiveSession;
   
   // Update activeSession state if we found one from the list but don't have one set
-  if (!activeSession && activeSessionFromList) {
-    setActiveSession(activeSessionFromList);
-    setIsTracking(true);
-  }
+  useEffect(() => {
+    if (!activeSession && activeSessionFromList) {
+      setActiveSession(activeSessionFromList);
+      setIsTracking(true);
+    }
+  }, [activeSession, activeSessionFromList]);
   
   // Debug logging
   console.log('Session debug:', { 
