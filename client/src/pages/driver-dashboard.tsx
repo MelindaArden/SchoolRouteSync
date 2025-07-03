@@ -430,7 +430,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
             }`}
           >
             <Users className="h-5 w-5 mb-1" />
-            Profile
+            Notify
           </button>
         </div>
       </div>

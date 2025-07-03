@@ -165,6 +165,14 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Added route optimization guidelines and tips for admins to create most efficient pickup routes
 - Integrated GPS-based bearing calculations and cardinal direction guidance for drivers
 
+### July 3, 2025 - Student Assignment Fix & Driver Interface Enhancement
+- Fixed student listings in driver pickup routes by ensuring proper route assignments exist
+- Added route assignments linking students to specific schools within driver routes
+- Enhanced driver interface with proper student counts and contact information display
+- Changed driver navigation "Profile" tab to "Notify" as requested for clearer notification access
+- Students now properly appear in driver school cards with full contact details and pickup status
+- Driver route interface now shows accurate student counts per school with expandable student lists
+
 ### June 16, 2025 - Route Completion History & Reset System
 - Implemented comprehensive pickup history tracking system with detailed records of completed routes
 - Added pickup history dashboard for admin viewing with student pickup details and completion times
