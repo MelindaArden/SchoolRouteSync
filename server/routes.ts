@@ -1501,5 +1501,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Student Absence Management Routes
+  app.get('/api/student-absences', async (req, res) => {
+    try {
+      const absences = await storage.getStudentAbsences();
+      res.json(absences);
+    } catch (error) {
+      console.error('Error fetching student absences:', error);
+      res.status(500).json({ message: "Failed to fetch student absences" });
+    }
+  });
+
+  app.get('/api/student-absences/date/:date', async (req, res) => {
+    try {
+      const { date } = req.params;
+      const absences = await storage.getStudentAbsencesByDate(date);
+      res.json(absences);
+    } catch (error) {
+      console.error('Error fetching student absences by date:', error);
+      res.status(500).json({ message: "Failed to fetch student absences" });
+    }
+  });
+
+  app.get('/api/students/:studentId/absences', async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const absences = await storage.getStudentAbsencesByStudent(studentId);
+      res.json(absences);
+    } catch (error) {
+      console.error('Error fetching student absences:', error);
+      res.status(500).json({ message: "Failed to fetch student absences" });
+    }
+  });
+
+  app.post('/api/student-absences', async (req, res) => {
+    try {
+      const markedBy = req.session.userId;
+      if (!markedBy) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const absenceData = {
+        ...req.body,
+        markedBy
+      };
+
+      const absence = await storage.createStudentAbsence(absenceData);
+      res.status(201).json(absence);
+    } catch (error) {
+      console.error('Error creating student absence:', error);
+      res.status(500).json({ message: "Failed to create student absence" });
+    }
+  });
+
+  app.delete('/api/student-absences/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteStudentAbsence(id);
+      res.json({ message: "Student absence deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting student absence:', error);
+      res.status(500).json({ message: "Failed to delete student absence" });
+    }
+  });
+
+  app.get('/api/students/:studentId/absence-check/:date', async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const { date } = req.params;
+      const isAbsent = await storage.checkStudentAbsence(studentId, date);
+      res.json({ isAbsent });
+    } catch (error) {
+      console.error('Error checking student absence:', error);
+      res.status(500).json({ message: "Failed to check student absence" });
+    }
+  });
+
   return httpServer;
 }

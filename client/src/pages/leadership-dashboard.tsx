@@ -20,6 +20,7 @@ import DriverLocationMap from "@/components/leadership/driver-location-map";
 import PickupHistory from "@/components/leadership/pickup-history";
 import RouteOptimizer from "@/components/leadership/route-optimizer";
 import MultiDriverRouteOptimizer from "@/components/leadership/multi-driver-route-optimizer";
+import StudentAbsenceManagement from "@/components/leadership/student-absence-management";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -48,7 +49,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
@@ -604,6 +605,12 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </div>
         )}
 
+        {activeTab === "absences" && (
+          <div className="p-4">
+            <StudentAbsenceManagement />
+          </div>
+        )}
+
         {activeTab === "settings" && (
           <div className="p-4 space-y-6">
             <PushNotificationSetup />
@@ -660,6 +667,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           >
             <FileText className="h-6 w-6 mb-1" />
             <span className="text-xs">History</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("absences")}
+            className={`flex flex-col items-center py-2 px-4 ${
+              activeTab === "absences" ? "text-primary" : "text-gray-500"
+            }`}
+          >
+            <GraduationCap className="h-6 w-6 mb-1" />
+            <span className="text-xs">Absences</span>
           </button>
           <button
             onClick={() => setActiveTab("settings")}

@@ -1,13 +1,14 @@
 import {
   users, schools, routes, routeSchools, students, routeAssignments,
-  pickupSessions, studentPickups, notifications, driverLocations, issues, pickupHistory, missedSchoolAlerts,
+  pickupSessions, studentPickups, notifications, driverLocations, issues, pickupHistory, missedSchoolAlerts, studentAbsences,
   type User, type InsertUser, type School, type InsertSchool,
   type Route, type InsertRoute, type RouteSchool, type InsertRouteSchool,
   type Student, type InsertStudent, type RouteAssignment, type InsertRouteAssignment,
   type PickupSession, type InsertPickupSession, type StudentPickup, type InsertStudentPickup,
   type Notification, type InsertNotification, type DriverLocation, type InsertDriverLocation,
   type Issue, type InsertIssue, type PickupHistory, type InsertPickupHistory,
-  type MissedSchoolAlert, type InsertMissedSchoolAlert
+  type MissedSchoolAlert, type InsertMissedSchoolAlert,
+  type StudentAbsence, type InsertStudentAbsence
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -95,6 +96,14 @@ export interface IStorage {
   getMissedSchoolAlertsBySession(sessionId: number): Promise<MissedSchoolAlert[]>;
   createMissedSchoolAlert(alert: InsertMissedSchoolAlert): Promise<MissedSchoolAlert>;
   updateMissedSchoolAlert(id: number, updates: Partial<MissedSchoolAlert>): Promise<MissedSchoolAlert>;
+  
+  // Student Absences
+  getStudentAbsences(): Promise<StudentAbsence[]>;
+  getStudentAbsencesByDate(date: string): Promise<StudentAbsence[]>;
+  getStudentAbsencesByStudent(studentId: number): Promise<StudentAbsence[]>;
+  createStudentAbsence(absence: InsertStudentAbsence): Promise<StudentAbsence>;
+  deleteStudentAbsence(id: number): Promise<void>;
+  checkStudentAbsence(studentId: number, date: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -456,6 +465,40 @@ export class DatabaseStorage implements IStorage {
       .where(eq(missedSchoolAlerts.id, id))
       .returning();
     return alert;
+  }
+
+  // Student Absences
+  async getStudentAbsences(): Promise<StudentAbsence[]> {
+    return await db.select().from(studentAbsences).orderBy(desc(studentAbsences.createdAt));
+  }
+
+  async getStudentAbsencesByDate(date: string): Promise<StudentAbsence[]> {
+    return await db.select().from(studentAbsences).where(eq(studentAbsences.absenceDate, date));
+  }
+
+  async getStudentAbsencesByStudent(studentId: number): Promise<StudentAbsence[]> {
+    return await db.select().from(studentAbsences).where(eq(studentAbsences.studentId, studentId));
+  }
+
+  async createStudentAbsence(insertAbsence: InsertStudentAbsence): Promise<StudentAbsence> {
+    const [created] = await db.insert(studentAbsences).values(insertAbsence).returning();
+    return created;
+  }
+
+  async deleteStudentAbsence(id: number): Promise<void> {
+    await db.delete(studentAbsences).where(eq(studentAbsences.id, id));
+  }
+
+  async checkStudentAbsence(studentId: number, date: string): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(studentAbsences)
+      .where(and(
+        eq(studentAbsences.studentId, studentId),
+        eq(studentAbsences.absenceDate, date)
+      ))
+      .limit(1);
+    return result.length > 0;
   }
 }
 

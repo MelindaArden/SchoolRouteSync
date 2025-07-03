@@ -243,41 +243,11 @@ export default function PickupHistory() {
               </div>
             )}
 
-            {selectedRecord.pickupDetails && selectedRecord.pickupDetails.length > 0 && (
-              <div>
-                <h3 className="text-lg font-medium mb-3">Student Pickup Details</h3>
-                <div className="space-y-2">
-                  {selectedRecord.pickupDetails.map((pickup: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                      <div className="flex items-center gap-3">
-                        {pickup.status === "picked_up" ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-red-600" />
-                        )}
-                        <div>
-                          <p className="font-medium">Student #{pickup.studentId}</p>
-                          <p className="text-sm text-gray-600">School #{pickup.schoolId}</p>
-                          {pickup.driverNotes && (
-                            <p className="text-xs text-gray-500 mt-1">{pickup.driverNotes}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant={pickup.status === "picked_up" ? "default" : "destructive"}>
-                          {pickup.status}
-                        </Badge>
-                        {pickup.pickedUpAt && (
-                          <p className="text-xs text-gray-600 mt-1">
-                            {formatTime(pickup.pickedUpAt)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <RouteBreakdownSection 
+              record={selectedRecord} 
+              schools={schools} 
+              students={students} 
+            />
           </CardContent>
         </Card>
       </div>

@@ -153,6 +153,16 @@ export const missedSchoolAlerts = pgTable("missed_school_alerts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const studentAbsences = pgTable("student_absences", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => students.id),
+  absenceDate: text("absence_date").notNull(), // YYYY-MM-DD format
+  reason: text("reason"), // Optional reason for absence
+  markedBy: integer("marked_by").references(() => users.id), // Admin who marked the absence
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   routes: many(routes),
@@ -311,6 +321,17 @@ export const missedSchoolAlertsRelations = relations(missedSchoolAlerts, ({ one 
   }),
 }));
 
+export const studentAbsencesRelations = relations(studentAbsences, ({ one }) => ({
+  student: one(students, {
+    fields: [studentAbsences.studentId],
+    references: [students.id],
+  }),
+  markedByUser: one(users, {
+    fields: [studentAbsences.markedBy],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -374,6 +395,11 @@ export const insertMissedSchoolAlertSchema = createInsertSchema(missedSchoolAler
   createdAt: true,
 });
 
+export const insertStudentAbsenceSchema = createInsertSchema(studentAbsences).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -401,3 +427,5 @@ export type PickupHistory = typeof pickupHistory.$inferSelect;
 export type InsertPickupHistory = z.infer<typeof insertPickupHistorySchema>;
 export type MissedSchoolAlert = typeof missedSchoolAlerts.$inferSelect;
 export type InsertMissedSchoolAlert = z.infer<typeof insertMissedSchoolAlertSchema>;
+export type StudentAbsence = typeof studentAbsences.$inferSelect;
+export type InsertStudentAbsence = z.infer<typeof insertStudentAbsenceSchema>;
