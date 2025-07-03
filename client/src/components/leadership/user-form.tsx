@@ -20,6 +20,7 @@ const userSchema = z.object({
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
   mobileNumber: z.string().optional(),
+  notificationEmail: z.string().email("Invalid notification email").optional().or(z.literal("")),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -45,6 +46,7 @@ export default function UserForm({ onClose, user }: UserFormProps) {
       email: user?.email || "",
       phone: user?.phone || "",
       mobileNumber: user?.mobileNumber || "",
+      notificationEmail: user?.notificationEmail || "",
     },
   });
 
@@ -214,6 +216,20 @@ export default function UserForm({ onClose, user }: UserFormProps) {
                   <FormLabel>Email (Optional)</FormLabel>
                   <FormControl>
                     <Input {...field} type="email" placeholder="john@example.com" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="notificationEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Admin Notification Email (Alerts & Reports)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="email" placeholder="admin@example.com" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

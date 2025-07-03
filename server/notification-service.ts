@@ -9,6 +9,66 @@ interface NotificationData {
   priority: 'low' | 'medium' | 'high' | 'urgent';
 }
 
+async function sendEmailsToAdmins(data: NotificationData): Promise<void> {
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(user => 
+      user.role === 'leadership' && 
+      user.isActive && 
+      user.notificationEmail && 
+      user.notificationEmail.trim().length > 0
+    );
+    
+    if (admins.length === 0) {
+      console.log('⚠️ No admin users with notification emails configured');
+      return;
+    }
+
+    const { sendEmail } = await import('./sendgrid-email');
+    
+    for (const admin of admins) {
+      try {
+        const success = await sendEmail({
+          to: admin.notificationEmail!,
+          from: 'notifications@tntgym.org',
+          subject: `[School Bus Alert] ${data.title}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                <h2 style="color: #dc3545; margin-top: 0;">School Bus Alert</h2>
+                <div style="background: white; padding: 20px; border-radius: 6px; margin: 10px 0;">
+                  <h3 style="color: #333; margin-top: 0;">${data.title}</h3>
+                  <p style="color: #666; line-height: 1.6;">${data.message}</p>
+                  <div style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+                    <p style="margin: 5px 0; color: #888;"><strong>Priority:</strong> ${data.priority.toUpperCase()}</p>
+                    <p style="margin: 5px 0; color: #888;"><strong>Driver ID:</strong> ${data.driverId}</p>
+                    ${data.sessionId ? `<p style="margin: 5px 0; color: #888;"><strong>Session ID:</strong> ${data.sessionId}</p>` : ''}
+                    <p style="margin: 5px 0; color: #888;"><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                  </div>
+                </div>
+                <p style="color: #666; font-size: 12px; margin-bottom: 0;">
+                  This is an automated notification from the School Bus Management System.
+                </p>
+              </div>
+            </div>
+          `,
+          text: `School Bus Alert: ${data.title}\n\n${data.message}\n\nPriority: ${data.priority}\nDriver ID: ${data.driverId}${data.sessionId ? `\nSession ID: ${data.sessionId}` : ''}\nTime: ${new Date().toLocaleString()}`
+        });
+
+        if (success) {
+          console.log(`✅ Email notification sent to ${admin.firstName} ${admin.lastName} (${admin.notificationEmail})`);
+        } else {
+          console.error(`❌ Failed to send email to ${admin.notificationEmail}`);
+        }
+      } catch (error) {
+        console.error(`❌ Email error for ${admin.notificationEmail}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error sending admin emails:', error);
+  }
+}
+
 export async function sendAdminNotifications(data: NotificationData): Promise<void> {
   try {
     // Get all admin users
@@ -102,11 +162,14 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
       }
     }
 
-    // Send email notifications as primary method
+    // Send email notifications to all admin users with notification emails
+    await sendEmailsToAdmins(data);
+
+    // Send backup email notification as primary method
     try {
       const { sendAdminEmailNotification } = await import('./sendgrid-email');
       await sendAdminEmailNotification(data.title, data.message, data.priority);
-      console.log('Email notification sent to admin');
+      console.log('Backup email notification sent to admin');
     } catch (error) {
       console.error('Email notification failed - SendGrid sender verification required:', (error as Error).message);
       

@@ -60,6 +60,19 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     queryKey: [`/api/drivers/${user.id}/sessions/today`],
   }) as { data: any[], isLoading: boolean, refetch: () => void };
 
+  // Find the most recent active session
+  const activeSessionFromList = (sessions as any[]).find(s => s.status === "in_progress");
+  const currentActiveSession = activeSession || activeSessionFromList;
+  const hasActiveSession = !!currentActiveSession;
+  
+  // Update activeSession state if we found one from the list but don't have one set
+  useEffect(() => {
+    if (!activeSession && activeSessionFromList) {
+      setActiveSession(activeSessionFromList);
+      setIsTracking(true);
+    }
+  }, [activeSession, activeSessionFromList, setActiveSession, setIsTracking]);
+
   // Get the current active route (first route assigned to driver)
   const currentRoute = routes.length > 0 ? routes[0] : null;
 
@@ -160,24 +173,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   }
 
   const totalStudents = currentRoute?.totalStudents || 0;
-  // Find the most recent active session
-  const activeSessionFromList = (sessions as any[]).find(s => s.status === "in_progress");
-  const currentActiveSession = activeSession || activeSessionFromList;
-  const hasActiveSession = !!currentActiveSession;
-  
-  // Update activeSession state if we found one from the list but don't have one set
-  useEffect(() => {
-    if (!activeSession && activeSessionFromList) {
-      setActiveSession(activeSessionFromList);
-      setIsTracking(true);
-    }
-  }, [activeSession, activeSessionFromList]);
   
   // Debug logging
   console.log('Session debug:', { 
     sessions, 
     activeSession, 
-    activeSessionFromList, 
     currentActiveSession, 
     hasActiveSession,
     sessionId: currentActiveSession?.id 

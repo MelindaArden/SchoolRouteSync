@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   email: text("email"),
   phone: text("phone"),
   mobileNumber: text("mobile_number"), // For SMS notifications
+  notificationEmail: text("notification_email"), // Dedicated email for admin notifications and alerts
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
