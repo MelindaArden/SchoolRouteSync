@@ -448,7 +448,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
         {activeTab === "gps" && (
           <div className="p-4">
-            <DriverLocationMap />
+            <DriverLocationMap userId={user.id} />
           </div>
         )}
 

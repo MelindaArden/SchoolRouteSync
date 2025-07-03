@@ -164,6 +164,12 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const currentActiveSession = activeSession || activeSessionFromList;
   const hasActiveSession = !!currentActiveSession;
   
+  // Update activeSession state if we found one from the list but don't have one set
+  if (!activeSession && activeSessionFromList) {
+    setActiveSession(activeSessionFromList);
+    setIsTracking(true);
+  }
+  
   // Debug logging
   console.log('Session debug:', { 
     sessions, 
