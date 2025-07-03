@@ -303,6 +303,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all route schools for a route (used by optimizer)
+  app.delete("/api/routes/:routeId/schools", async (req, res) => {
+    try {
+      const routeId = parseInt(req.params.routeId);
+      await storage.deleteRouteSchools(routeId);
+      res.json({ message: "Route schools deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting route schools:', error);
+      res.status(500).json({ message: "Failed to delete route schools" });
+    }
+  });
+
+  // Add a school to a route (used by optimizer)
+  app.post("/api/routes/:routeId/schools", async (req, res) => {
+    try {
+      const routeId = parseInt(req.params.routeId);
+      const routeSchoolData = {
+        ...req.body,
+        routeId
+      };
+      
+      const routeSchool = await storage.createRouteSchool(routeSchoolData);
+      res.json(routeSchool);
+    } catch (error) {
+      console.error('Error adding school to route:', error);
+      res.status(500).json({ message: "Failed to add school to route" });
+    }
+  });
+
   // Get session with pickup details
   app.get("/api/pickup-sessions/:sessionId", async (req, res) => {
     try {

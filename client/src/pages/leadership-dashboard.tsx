@@ -18,6 +18,7 @@ import ExpandableRouteCard from "@/components/leadership/expandable-route-card";
 import ProfileSettings from "@/components/leadership/profile-settings";
 import DriverLocationMap from "@/components/leadership/driver-location-map";
 import PickupHistory from "@/components/leadership/pickup-history";
+import RouteOptimizer from "@/components/leadership/route-optimizer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -47,7 +48,7 @@ interface LeadershipDashboardProps {
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
-  const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes">("management");
+  const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
 
   // WebSocket connection for real-time updates
@@ -312,6 +313,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 <Plus className="h-4 w-4 mr-2" />
                 Create Route
               </Button>
+              <Button
+                onClick={() => setRoutesView("optimizer")}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Route Optimizer
+              </Button>
             </div>
 
             {/* Quick Stats - Dynamic counts */}
@@ -380,6 +388,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
               >
                 Routes
               </Button>
+              <Button
+                variant={routesView === "optimizer" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoutesView("optimizer")}
+                className="flex-1"
+              >
+                <TrendingUp className="h-4 w-4 mr-1" />
+                Optimizer
+              </Button>
             </div>
 
             {/* Conditional content based on view */}
@@ -419,6 +436,12 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {routesView === "optimizer" && (
+              <div className="p-4">
+                <RouteOptimizer onSave={() => setRoutesView("routes")} />
+              </div>
             )}
 
             {editingRoute && (

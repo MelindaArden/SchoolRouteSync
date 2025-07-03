@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { User } from "@/lib/types";
 import Navigation from "@/components/shared/navigation";
 import StudentList from "@/components/driver/student-list";
+import NavigationView from "@/components/driver/navigation-view";
 import IssueForm from "@/components/driver/issue-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -287,22 +288,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
         )}
 
         {activeTab === "map" && (
-          <div className="p-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2 mb-4">
-                  <NavigationIcon className="h-5 w-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold">Route Navigation</h3>
-                </div>
-                
-                <div className="text-center py-8 text-gray-500">
-                  <MapPin className="h-12 w-12 mx-auto mb-2" />
-                  <p>Map view coming soon...</p>
-                  <p className="text-sm mt-2">Use your preferred navigation app for now</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <NavigationView 
+            route={currentRoute} 
+            currentLocation={location}
+            activeSession={currentActiveSession}
+          />
         )}
 
         {activeTab === "session" && (
