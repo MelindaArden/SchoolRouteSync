@@ -1,9 +1,24 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startMissedSchoolMonitoring } from "./missed-school-monitor";
 
 const app = express();
+
+// Session configuration for mobile Safari compatibility
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'school-bus-management-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to false for development, auto-detected in production
+    httpOnly: false, // Allow JavaScript access for mobile Safari compatibility
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax' // Important for mobile Safari
+  }
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

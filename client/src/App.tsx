@@ -16,17 +16,56 @@ function Router() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    // Check for active session on server (better for mobile Safari)
+    const checkSession = async () => {
       try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
+        const response = await fetch("/api/session", {
+          credentials: "include"
+        });
+        
+        if (response.ok) {
+          const sessionData = await response.json();
+          if (sessionData.isAuthenticated && sessionData.userId) {
+            // Get full user data
+            const userResponse = await fetch(`/api/users/${sessionData.userId}`, {
+              credentials: "include"
+            });
+            
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              setUser(userData);
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+          }
+        } else {
+          // Fall back to localStorage for offline cases
+          const storedUser = localStorage.getItem("user");
+          if (storedUser) {
+            try {
+              const userData = JSON.parse(storedUser);
+              setUser(userData);
+            } catch (error) {
+              localStorage.removeItem("user");
+            }
+          }
+        }
       } catch (error) {
-        localStorage.removeItem("user");
+        console.log("Session check failed, checking localStorage");
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+          } catch (error) {
+            localStorage.removeItem("user");
+          }
+        }
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+    
+    checkSession();
   }, []);
 
   const handleLogin = (userData: User) => {
@@ -34,9 +73,18 @@ function Router() {
     localStorage.setItem("user", JSON.stringify(userData));
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (error) {
+      console.log("Logout request failed");
+    } finally {
+      setUser(null);
+      localStorage.removeItem("user");
+    }
   };
 
   if (loading) {

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import "./types"; // Import session type declarations
 import { db, pool } from "./db";
 import { pickupSessions, notifications, PickupSession, routeSchools } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
@@ -88,8 +89,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = await storage.getUserByUsername(username);
       if (!user || user.password !== password) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ 
+          message: "Invalid credentials",
+          debug: {
+            userFound: !!user,
+            userAgent: req.headers['user-agent'],
+            sessionId: req.sessionID
+          }
+        });
       }
+
+      // Store user info in session
+      req.session.userId = user.id;
+      req.session.username = user.username;
+      req.session.role = user.role;
+
+      console.log(`Login successful for ${username}, session: ${req.sessionID}`);
 
       res.json({
         id: user.id,
@@ -97,10 +112,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        debug: {
+          sessionCreated: true,
+          sessionId: req.sessionID,
+          userAgent: req.headers['user-agent']
+        }
       });
     } catch (error) {
       res.status(400).json({ message: "Invalid request data" });
     }
+  });
+
+  // Check session endpoint
+  app.get("/api/session", (req, res) => {
+    if (req.session.userId) {
+      res.json({
+        userId: req.session.userId,
+        username: req.session.username,
+        role: req.session.role,
+        isAuthenticated: true
+      });
+    } else {
+      res.status(401).json({ 
+        isAuthenticated: false,
+        sessionInfo: {
+          sessionExists: !!req.session,
+          sessionId: req.sessionID,
+          cookies: req.headers.cookie || 'none',
+          userAgent: req.headers['user-agent']
+        }
+      });
+    }
+  });
+
+  // Logout endpoint
+  app.post("/api/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Could not log out" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: "Logged out successfully" });
+    });
   });
 
   // Get user profile
