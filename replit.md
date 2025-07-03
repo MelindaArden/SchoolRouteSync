@@ -208,6 +208,7 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Configured cookie settings with sameSite: 'lax' and httpOnly: false for mobile browsers
 - Implemented automatic session checking on app load with fallback to localStorage
 - Enhanced logout functionality to properly destroy server sessions
+- Created comprehensive credentials reference in CREDENTIALS.md with all valid login combinations
 
 ### June 16, 2025 - Route Completion History & Reset System
 - Implemented comprehensive pickup history tracking system with detailed records of completed routes
