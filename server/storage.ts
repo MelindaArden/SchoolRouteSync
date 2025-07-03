@@ -1,12 +1,13 @@
 import {
   users, schools, routes, routeSchools, students, routeAssignments,
-  pickupSessions, studentPickups, notifications, driverLocations, issues, pickupHistory,
+  pickupSessions, studentPickups, notifications, driverLocations, issues, pickupHistory, missedSchoolAlerts,
   type User, type InsertUser, type School, type InsertSchool,
   type Route, type InsertRoute, type RouteSchool, type InsertRouteSchool,
   type Student, type InsertStudent, type RouteAssignment, type InsertRouteAssignment,
   type PickupSession, type InsertPickupSession, type StudentPickup, type InsertStudentPickup,
   type Notification, type InsertNotification, type DriverLocation, type InsertDriverLocation,
-  type Issue, type InsertIssue, type PickupHistory, type InsertPickupHistory
+  type Issue, type InsertIssue, type PickupHistory, type InsertPickupHistory,
+  type MissedSchoolAlert, type InsertMissedSchoolAlert
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -54,6 +55,7 @@ export interface IStorage {
   
   // Pickup Sessions
   getTodaysSessions(): Promise<PickupSession[]>;
+  getPickupSessionsToday(): Promise<PickupSession[]>;
   getSessionsByDriver(driverId: number, date: string): Promise<PickupSession[]>;
   getPickupSession(id: number): Promise<PickupSession | undefined>;
   createPickupSession(session: InsertPickupSession): Promise<PickupSession>;
@@ -73,6 +75,7 @@ export interface IStorage {
   updateDriverLocation(location: InsertDriverLocation): Promise<DriverLocation>;
   getDriverLocation(driverId: number): Promise<DriverLocation | undefined>;
   getDriverLocations(): Promise<DriverLocation[]>;
+  getDriverLocationsBySession(sessionId: number): Promise<DriverLocation[]>;
   
   // Issues
   getIssues(): Promise<Issue[]>;
@@ -86,6 +89,12 @@ export interface IStorage {
   getPickupHistoryByDriver(driverId: number): Promise<PickupHistory[]>;
   getPickupHistoryByRoute(routeId: number): Promise<PickupHistory[]>;
   createPickupHistory(history: InsertPickupHistory): Promise<PickupHistory>;
+  
+  // Missed School Alerts
+  getMissedSchoolAlerts(): Promise<MissedSchoolAlert[]>;
+  getMissedSchoolAlertsBySession(sessionId: number): Promise<MissedSchoolAlert[]>;
+  createMissedSchoolAlert(alert: InsertMissedSchoolAlert): Promise<MissedSchoolAlert>;
+  updateMissedSchoolAlert(id: number, updates: Partial<MissedSchoolAlert>): Promise<MissedSchoolAlert>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -285,6 +294,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(pickupSessions.id));
   }
 
+  async getPickupSessionsToday(): Promise<PickupSession[]> {
+    const today = new Date().toISOString().split('T')[0];
+    return await db.select().from(pickupSessions)
+      .where(eq(pickupSessions.date, today))
+      .orderBy(desc(pickupSessions.id));
+  }
+
   async getSessionsByDriver(driverId: number, date: string): Promise<PickupSession[]> {
     return await db.select().from(pickupSessions)
       .where(and(eq(pickupSessions.driverId, driverId), eq(pickupSessions.date, date)))
@@ -365,6 +381,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(driverLocations).orderBy(desc(driverLocations.timestamp));
   }
 
+  async getDriverLocationsBySession(sessionId: number): Promise<DriverLocation[]> {
+    return await db.select().from(driverLocations)
+      .where(eq(driverLocations.sessionId, sessionId))
+      .orderBy(desc(driverLocations.timestamp));
+  }
+
   // Issues
   async getIssues(): Promise<Issue[]> {
     return await db.select().from(issues).orderBy(desc(issues.reportedAt));
@@ -409,6 +431,31 @@ export class DatabaseStorage implements IStorage {
   async createPickupHistory(insertHistory: InsertPickupHistory): Promise<PickupHistory> {
     const [history] = await db.insert(pickupHistory).values(insertHistory).returning();
     return history;
+  }
+
+  // Missed School Alerts
+  async getMissedSchoolAlerts(): Promise<MissedSchoolAlert[]> {
+    return await db.select().from(missedSchoolAlerts)
+      .orderBy(desc(missedSchoolAlerts.createdAt));
+  }
+
+  async getMissedSchoolAlertsBySession(sessionId: number): Promise<MissedSchoolAlert[]> {
+    return await db.select().from(missedSchoolAlerts)
+      .where(eq(missedSchoolAlerts.sessionId, sessionId))
+      .orderBy(desc(missedSchoolAlerts.createdAt));
+  }
+
+  async createMissedSchoolAlert(insertAlert: InsertMissedSchoolAlert): Promise<MissedSchoolAlert> {
+    const [alert] = await db.insert(missedSchoolAlerts).values(insertAlert).returning();
+    return alert;
+  }
+
+  async updateMissedSchoolAlert(id: number, updates: Partial<MissedSchoolAlert>): Promise<MissedSchoolAlert> {
+    const [alert] = await db.update(missedSchoolAlerts)
+      .set(updates)
+      .where(eq(missedSchoolAlerts.id, id))
+      .returning();
+    return alert;
   }
 }
 

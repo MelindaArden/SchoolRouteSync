@@ -131,6 +131,18 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Implemented driver location API with enriched data including route and session information
 - Admins can now see exactly where drivers are headed during active pickup sessions
 
+### July 3, 2025 - Missed School Monitoring & Alert System
+- Implemented comprehensive missed school monitoring system with GPS-based tracking
+- Added automated alerts when drivers are late to or miss scheduled school pickups
+- Created real-time monitoring that checks driver locations every 2 minutes during active routes
+- Built admin-configurable alert thresholds (5-60 minutes before expected pickup time)
+- Integrated email notifications to admins for late arrivals and missed schools
+- Added missed school alerts database tracking to prevent duplicate notifications
+- Enhanced notification system with multiple delivery methods (in-app, email, console logging)
+- System calculates distance between driver location and schools using GPS coordinates
+- Automated distance checking (within 1km of school) to determine if driver is on track
+- Built missed school alerts API endpoint for admin dashboard integration
+
 ### July 3, 2025 - Enhanced Route Completion Repository
 - Comprehensive route completion repository now fully operational with detailed historical tracking
 - Enhanced pickup history dashboard with summary statistics showing total routes, completion rates, and performance metrics

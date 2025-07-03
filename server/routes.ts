@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { db, pool } from "./db";
-import { pickupSessions, notifications, PickupSession } from "@shared/schema";
+import { pickupSessions, notifications, PickupSession, routeSchools } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { 
   insertPickupSessionSchema, 
@@ -447,6 +447,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Email test failed:", error);
       res.status(500).json({ message: "Email test failed", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Update route school alert threshold
+  app.patch("/api/route-schools/:id/alert-threshold", async (req, res) => {
+    try {
+      const routeSchoolId = parseInt(req.params.id);
+      const { alertThresholdMinutes } = req.body;
+      
+      if (!alertThresholdMinutes || alertThresholdMinutes < 5 || alertThresholdMinutes > 60) {
+        return res.status(400).json({ message: "Alert threshold must be between 5 and 60 minutes" });
+      }
+
+      await db.update(routeSchools)
+        .set({ alertThresholdMinutes })
+        .where(eq(routeSchools.id, routeSchoolId));
+      
+      res.json({ message: "Alert threshold updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update alert threshold" });
+    }
+  });
+
+  // Get missed school alerts
+  app.get("/api/missed-school-alerts", async (req, res) => {
+    try {
+      const alerts = await storage.getMissedSchoolAlerts();
+      
+      // Enrich with additional data
+      const enrichedAlerts = await Promise.all(
+        alerts.map(async (alert) => {
+          const [driver, session] = await Promise.all([
+            storage.getUser(alert.driverId),
+            storage.getPickupSession(alert.sessionId)
+          ]);
+          
+          let route = null;
+          let routeSchool = null;
+          
+          if (session) {
+            route = await storage.getRoute(session.routeId);
+          }
+          
+          if (alert.routeSchoolId) {
+            const routeSchools = await storage.getRouteSchools(session?.routeId || 0);
+            routeSchool = routeSchools.find(rs => rs.id === alert.routeSchoolId);
+            
+            if (routeSchool) {
+              const school = await storage.getSchool(routeSchool.schoolId);
+              routeSchool = { ...routeSchool, school };
+            }
+          }
+          
+          return {
+            ...alert,
+            driver,
+            session,
+            route,
+            routeSchool
+          };
+        })
+      );
+      
+      res.json(enrichedAlerts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch missed school alerts" });
     }
   });
 

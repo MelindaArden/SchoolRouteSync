@@ -42,6 +42,7 @@ export const routeSchools = pgTable("route_schools", {
   schoolId: integer("school_id").notNull().references(() => schools.id),
   orderIndex: integer("order_index").notNull(),
   estimatedArrivalTime: text("estimated_arrival_time").notNull(),
+  alertThresholdMinutes: integer("alert_threshold_minutes").default(10), // Alert if driver not on track X minutes before pickup
 });
 
 export const students = pgTable("students", {
@@ -134,6 +135,20 @@ export const pickupHistory = pgTable("pickup_history", {
   studentsPickedUp: integer("students_picked_up").notNull().default(0),
   pickupDetails: text("pickup_details"), // JSON string of pickup data
   notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const missedSchoolAlerts = pgTable("missed_school_alerts", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => pickupSessions.id).notNull(),
+  routeSchoolId: integer("route_school_id").references(() => routeSchools.id).notNull(),
+  driverId: integer("driver_id").references(() => users.id).notNull(),
+  alertType: text("alert_type").notNull(), // 'late_arrival', 'missed_school', 'off_route'
+  expectedTime: text("expected_time").notNull(),
+  actualTime: timestamp("actual_time"),
+  driverLocation: text("driver_location"), // JSON: {lat, lng, timestamp}
+  alertSent: boolean("alert_sent").notNull().default(false),
+  emailSent: boolean("email_sent").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -280,6 +295,21 @@ export const pickupHistoryRelations = relations(pickupHistory, ({ one }) => ({
   }),
 }));
 
+export const missedSchoolAlertsRelations = relations(missedSchoolAlerts, ({ one }) => ({
+  session: one(pickupSessions, {
+    fields: [missedSchoolAlerts.sessionId],
+    references: [pickupSessions.id],
+  }),
+  routeSchool: one(routeSchools, {
+    fields: [missedSchoolAlerts.routeSchoolId],
+    references: [routeSchools.id],
+  }),
+  driver: one(users, {
+    fields: [missedSchoolAlerts.driverId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -338,6 +368,11 @@ export const insertPickupHistorySchema = createInsertSchema(pickupHistory).omit(
   createdAt: true,
 });
 
+export const insertMissedSchoolAlertSchema = createInsertSchema(missedSchoolAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -363,3 +398,5 @@ export type Issue = typeof issues.$inferSelect;
 export type InsertIssue = z.infer<typeof insertIssueSchema>;
 export type PickupHistory = typeof pickupHistory.$inferSelect;
 export type InsertPickupHistory = z.infer<typeof insertPickupHistorySchema>;
+export type MissedSchoolAlert = typeof missedSchoolAlerts.$inferSelect;
+export type InsertMissedSchoolAlert = z.infer<typeof insertMissedSchoolAlertSchema>;
