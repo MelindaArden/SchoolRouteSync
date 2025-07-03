@@ -99,6 +99,16 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     retry: false,
   });
 
+  // Fetch active issues for alerts
+  const { data: issues = [] } = useQuery({
+    queryKey: ['/api/issues'],
+  });
+
+  // Fetch missed school alerts  
+  const { data: missedSchoolAlerts = [] } = useQuery({
+    queryKey: ['/api/missed-school-alerts'],
+  });
+
   // Fetch missed school alerts for alert count
   const { data: missedAlerts = [] } = useQuery({
     queryKey: ['/api/missed-school-alerts'],
@@ -129,11 +139,24 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   // Calculate on-time percentage based on completed pickups
   const onTimePercentage = totalStudents > 0 ? Math.round((completedPickups / totalStudents) * 100) : 0;
   
-  // Count active alerts from missed school alerts
+  // Count all active alerts: missed schools + driver issues + behind schedule routes
   const alertsData = Array.isArray(missedAlerts) ? missedAlerts : [];
-  const activeAlerts = alertsData.filter((alert: any) => 
+  const missedSchoolCount = alertsData.filter((alert: any) => 
     alert.status === 'active' || alert.status === 'pending'
   ).length;
+  
+  const behindScheduleRoutes = sessionsData.filter((session: any) => 
+    session.status === "in_progress" && session.progressPercent < 50
+  ).length;
+  
+  const recentIssuesData = Array.isArray(issues) ? issues : [];
+  const recentIssuesCount = recentIssuesData.filter((issue: any) => {
+    const issueDate = new Date(issue.createdAt);
+    const today = new Date();
+    return issueDate.toDateString() === today.toDateString() && issue.status !== 'resolved';
+  }).length;
+  
+  const activeAlerts = missedSchoolCount + behindScheduleRoutes + recentIssuesCount;
 
   // Real counts from database
   const schoolCount = Array.isArray(schools) ? schools.length : 0;
@@ -215,15 +238,46 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <div>
               <h3 className="text-lg font-medium text-gray-800 mb-3">Active Alerts</h3>
               <div className="space-y-3">
+                {/* Behind Schedule Routes */}
                 {sessionsData
                   .filter((session: any) => session.status === "in_progress" && session.progressPercent < 50)
                   .map((session: any) => (
                     <AlertCard
-                      key={session.id}
+                      key={`route-${session.id}`}
                       type="warning"
                       title={`Route ${session.route?.name} - Behind Schedule`}
                       message={`${session.driver?.firstName} ${session.driver?.lastName} has only completed ${session.progressPercent.toFixed(0)}% of pickups`}
                       timestamp="5 minutes ago"
+                    />
+                  ))}
+
+                {/* Missed School Alerts */}
+                {alertsData
+                  .filter((alert: any) => alert.status === 'active' || alert.status === 'pending')
+                  .map((alert: any) => (
+                    <AlertCard
+                      key={`missed-${alert.id}`}
+                      type="error"
+                      title={`Missed School Alert`}
+                      message={`Driver late to ${alert.schoolName || 'school'} - Expected arrival time passed`}
+                      timestamp={new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    />
+                  ))}
+
+                {/* Driver Issues */}
+                {recentIssuesData
+                  .filter((issue: any) => {
+                    const issueDate = new Date(issue.createdAt);
+                    const today = new Date();
+                    return issueDate.toDateString() === today.toDateString() && issue.status !== 'resolved';
+                  })
+                  .map((issue: any) => (
+                    <AlertCard
+                      key={`issue-${issue.id}`}
+                      type="error"
+                      title={`Driver Issue - ${issue.type?.replace('_', ' ').toUpperCase() || 'General'}`}
+                      message={issue.description || 'Driver reported an issue during route'}
+                      timestamp={new Date(issue.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     />
                   ))}
                 

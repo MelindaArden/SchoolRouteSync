@@ -191,6 +191,15 @@ This is a full-stack web application for managing school bus routes, driver assi
 - System now automatically sends all issues, missed schools, and emergency alerts to admin emails
 - Integrated email notifications with existing in-app notifications and SMS backup systems
 
+### July 3, 2025 - Enhanced Active Alerts & Student Pickup System
+- Fixed driver student pickup functionality by correcting session detection and ID passing
+- Enhanced Active Alerts section to display missed schools, driver issues, and behind-schedule routes
+- Implemented comprehensive alert counting system including all alert types
+- Added automatic missed school email notifications to admin notification addresses
+- Enhanced alert display with proper timestamps and categorization by alert type
+- Student pickup marking now works correctly with proper session state management
+- Active Alerts section shows real-time driver issues reported through the system
+
 ### June 16, 2025 - Route Completion History & Reset System
 - Implemented comprehensive pickup history tracking system with detailed records of completed routes
 - Added pickup history dashboard for admin viewing with student pickup details and completion times

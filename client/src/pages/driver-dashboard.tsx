@@ -62,12 +62,13 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
   // Find the most recent active session
   const activeSessionFromList = (sessions as any[]).find(s => s.status === "in_progress");
-  const currentActiveSession = activeSession || activeSessionFromList;
+  // Use activeSessionFromList if available and valid, otherwise use activeSession
+  const currentActiveSession = activeSessionFromList || (activeSession?.id ? activeSession : null);
   const hasActiveSession = !!currentActiveSession;
   
   // Update activeSession state if we found one from the list but don't have one set
   useEffect(() => {
-    if (!activeSession && activeSessionFromList) {
+    if ((!activeSession || !activeSession.id) && activeSessionFromList) {
       setActiveSession(activeSessionFromList);
       setIsTracking(true);
     }
@@ -178,6 +179,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   console.log('Session debug:', { 
     sessions, 
     activeSession, 
+    activeSessionFromList,
     currentActiveSession, 
     hasActiveSession,
     sessionId: currentActiveSession?.id 
