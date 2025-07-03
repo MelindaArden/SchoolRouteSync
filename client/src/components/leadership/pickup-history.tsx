@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Clock, User, Route as RouteIcon, Calendar, CheckCircle, XCircle, Search, Eye } from "lucide-react";
+import { Clock, User, Route as RouteIcon, Calendar, CheckCircle, XCircle, Search, Eye, Download } from "lucide-react";
 import { format } from "date-fns";
 
 export default function PickupHistory() {
@@ -13,9 +13,9 @@ export default function PickupHistory() {
 
   const { data: history = [], isLoading } = useQuery({
     queryKey: ['/api/pickup-history'],
-  });
+  }) as { data: any[], isLoading: boolean };
 
-  const filteredHistory = (history as any[]).filter((record: any) =>
+  const filteredHistory = history.filter((record: any) =>
     record.driver?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.driver?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.route?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -92,6 +92,9 @@ export default function PickupHistory() {
                         <div>
                           <p className="font-medium">Student #{pickup.studentId}</p>
                           <p className="text-sm text-gray-600">School #{pickup.schoolId}</p>
+                          {pickup.driverNotes && (
+                            <p className="text-xs text-gray-500 mt-1">{pickup.driverNotes}</p>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -115,10 +118,98 @@ export default function PickupHistory() {
     );
   }
 
+  // Calculate summary statistics
+  const totalCompletedRoutes = history.length;
+  const totalStudentsPickedUp = history.reduce((sum: number, record: any) => sum + record.studentsPickedUp, 0);
+  const totalStudentsAssigned = history.reduce((sum: number, record: any) => sum + record.totalStudents, 0);
+  const averageCompletionRate = totalStudentsAssigned > 0 ? Math.round((totalStudentsPickedUp / totalStudentsAssigned) * 100) : 0;
+  
+  // Get recent activity (last 7 days)
+  const recentHistory = history.filter((record: any) => {
+    const recordDate = new Date(record.completedAt);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return recordDate >= weekAgo;
+  });
+
+  // Export function for CSV download
+  const exportToCSV = () => {
+    const csvData = history.map((record: any) => ({
+      Date: record.date,
+      Driver: `${record.driver?.firstName} ${record.driver?.lastName}`,
+      Route: record.route?.name || `Route ${record.routeId}`,
+      'Completed At': formatTime(record.completedAt),
+      'Students Picked Up': record.studentsPickedUp,
+      'Total Students': record.totalStudents,
+      'Completion Rate': `${Math.round((record.studentsPickedUp / record.totalStudents) * 100)}%`,
+      Notes: record.notes || 'None'
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `pickup-history-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Pickup History</h2>
+        <h2 className="text-xl font-semibold">Route Completion Repository</h2>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportToCSV}
+            disabled={history.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Badge variant="outline" className="text-sm">
+            {totalCompletedRoutes} Total Routes
+          </Badge>
+        </div>
+      </div>
+
+      {/* Summary Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <RouteIcon className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-gray-800">{totalCompletedRoutes}</p>
+            <p className="text-sm text-gray-600">Completed Routes</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-gray-800">{totalStudentsPickedUp}</p>
+            <p className="text-sm text-gray-600">Students Picked Up</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Clock className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-gray-800">{averageCompletionRate}%</p>
+            <p className="text-sm text-gray-600">Average Completion</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Calendar className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-gray-800">{recentHistory.length}</p>
+            <p className="text-sm text-gray-600">Recent (7 Days)</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="relative">
