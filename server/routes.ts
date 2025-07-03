@@ -275,6 +275,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all today's pickup sessions for admin dashboard
+  app.get("/api/pickup-sessions/today", async (req, res) => {
+    try {
+      const sessions = await storage.getPickupSessionsToday();
+      
+      // Enrich sessions with driver, route, and pickup details
+      const enrichedSessions = await Promise.all(
+        sessions.map(async (session) => {
+          const driver = await storage.getUser(session.driverId);
+          const route = await storage.getRoute(session.routeId);
+          const studentPickups = await storage.getStudentPickups(session.id);
+          
+          return {
+            ...session,
+            driver,
+            route,
+            studentPickups
+          };
+        })
+      );
+      
+      res.json(enrichedSessions);
+    } catch (error) {
+      console.error('Error fetching today\'s pickup sessions:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get session with pickup details
   app.get("/api/pickup-sessions/:sessionId", async (req, res) => {
     try {

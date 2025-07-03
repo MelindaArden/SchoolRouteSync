@@ -521,7 +521,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             }`}
           >
             <RouteIcon className="h-6 w-6 mb-1" />
-            <span className="text-xs">Routes</span>
+            <span className="text-xs">Route Setup</span>
           </button>
 
           <button

@@ -17,6 +17,18 @@ export default function PickupHistory() {
   const [expandedRoutes, setExpandedRoutes] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
+  const toggleRouteExpansion = (routeId: number) => {
+    setExpandedRoutes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(routeId)) {
+        newSet.delete(routeId);
+      } else {
+        newSet.add(routeId);
+      }
+      return newSet;
+    });
+  };
+
   const { data: history = [], isLoading } = useQuery({
     queryKey: ['/api/pickup-history'],
   }) as { data: any[], isLoading: boolean };
@@ -60,15 +72,7 @@ export default function PickupHistory() {
     }
   });
 
-  const toggleRouteExpansion = (routeId: number) => {
-    const newExpanded = new Set(expandedRoutes);
-    if (newExpanded.has(routeId)) {
-      newExpanded.delete(routeId);
-    } else {
-      newExpanded.add(routeId);
-    }
-    setExpandedRoutes(newExpanded);
-  };
+
 
   const filteredHistory = history.filter((record: any) =>
     record.driver?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -474,45 +478,44 @@ export default function PickupHistory() {
       ) : (
         <div className="grid gap-4">
           {filteredHistory.map((record: any) => (
-            <Card key={record.id} className="overflow-hidden hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 bg-blue-100 rounded-full">
-                      <RouteIcon className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{record.route?.name || `Route ${record.routeId}`}</h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {record.driver?.firstName} {record.driver?.lastName}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {record.date}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatTime(record.completedAt)}
+            <Collapsible key={record.id} open={expandedRoutes.has(record.id)} onOpenChange={() => toggleRouteExpansion(record.id)}>
+              <Card className="overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-blue-100 rounded-full">
+                        <RouteIcon className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{record.route?.name || `Route ${record.routeId}`}</h3>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {record.driver?.firstName} {record.driver?.lastName}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {record.date}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatTime(record.completedAt)}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="font-medium">{record.studentsPickedUp}/{record.totalStudents}</p>
-                      <p className="text-sm text-gray-600">Students</p>
-                    </div>
-                    <Badge variant={record.studentsPickedUp === record.totalStudents ? "default" : "secondary"}>
-                      {Math.round((record.studentsPickedUp / record.totalStudents) * 100)}%
-                    </Badge>
-                    <Collapsible>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="font-medium">{record.studentsPickedUp}/{record.totalStudents}</p>
+                        <p className="text-sm text-gray-600">Students</p>
+                      </div>
+                      <Badge variant={record.studentsPickedUp === record.totalStudents ? "default" : "secondary"}>
+                        {Math.round((record.studentsPickedUp / record.totalStudents) * 100)}%
+                      </Badge>
                       <CollapsibleTrigger asChild>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => toggleRouteExpansion(record.id)}
                         >
                           <ChevronDown className={`h-4 w-4 mr-2 transition-transform ${
                             expandedRoutes.has(record.id) ? 'rotate-180' : ''
@@ -520,16 +523,14 @@ export default function PickupHistory() {
                           Details
                         </Button>
                       </CollapsibleTrigger>
-                    </Collapsible>
+                    </div>
                   </div>
-                </div>
-                <Collapsible>
-                  <CollapsibleContent className="px-4 pb-4">
+                  <CollapsibleContent className="pt-4">
                     <RouteBreakdownSection record={record} schools={schools} students={students} />
                   </CollapsibleContent>
-                </Collapsible>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Collapsible>
           ))}
         </div>
       )}
