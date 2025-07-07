@@ -336,21 +336,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const students = await storage.getStudentsByRoute(routeId);
       const assignments = await storage.getRouteAssignments(routeId);
 
-      // Group students by school
+      // Group students by school - FIX #6: ORDER BY DISMISSAL TIME AND EFFICIENCY
       const schoolsWithStudents = await Promise.all(
-        routeSchools.map(async (rs) => {
-          const school = await storage.getSchool(rs.schoolId);
-          const schoolStudents = students.filter(s => 
-            assignments.some(a => a.studentId === s.id && a.schoolId === rs.schoolId)
-          );
-          
-          return {
-            ...rs,
-            school,
-            students: schoolStudents,
-          };
-        })
+        routeSchools
+          .sort((a, b) => a.orderIndex - b.orderIndex) // Primary sort by order index
+          .map(async (rs) => {
+            const school = await storage.getSchool(rs.schoolId);
+            const schoolStudents = students.filter(s => 
+              assignments.some(a => a.studentId === s.id && a.schoolId === rs.schoolId)
+            );
+            
+            return {
+              ...rs,
+              school: {
+                ...school,
+                // Add efficiency sorting based on dismissal time
+                dismissalMinutes: school?.dismissalTime ? 
+                  parseInt(school.dismissalTime.split(':')[0]) * 60 + parseInt(school.dismissalTime.split(':')[1]) : 0
+              },
+              students: schoolStudents,
+            };
+          })
       );
+
+      // ADDITIONAL SORT: Re-sort by dismissal time for optimal driver efficiency
+      schoolsWithStudents.sort((a, b) => {
+        // First by dismissal time (earliest first for efficient pickup sequence)
+        const timeA = a.school?.dismissalMinutes || 0;
+        const timeB = b.school?.dismissalMinutes || 0;
+        if (timeA !== timeB) return timeA - timeB;
+        
+        // Then by order index as secondary sort
+        return a.orderIndex - b.orderIndex;
+      });
 
       res.json({
         ...route,

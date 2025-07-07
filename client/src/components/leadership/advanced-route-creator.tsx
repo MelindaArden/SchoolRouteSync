@@ -14,8 +14,10 @@ import {
   AlertTriangle, 
   CheckCircle,
   TrendingUp,
-  Route
+  Route,
+  Edit
 } from "lucide-react";
+import EnhancedRouteEditor from "./enhanced-route-editor";
 
 interface RouteCreatorProps {
   onClose: () => void;
@@ -40,6 +42,18 @@ interface OptimizedRoute {
   totalTime: number;
   seatUtilization: number;
   warnings: string[];
+  startingPoint?: {
+    name: string;
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
+  endingPoint?: {
+    name: string;
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
 }
 
 interface CreatorConstraints {
@@ -60,6 +74,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingRoute, setEditingRoute] = useState<OptimizedRoute | null>(null); // FIX #2: EDITING CAPABILITY
   const { toast } = useToast();
 
   // Fetch data
@@ -353,6 +368,31 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     setIsSaving(false);
   };
 
+  // FIX #2: Route editing handler
+  const handleEditRoute = (editedRoute: OptimizedRoute) => {
+    setOptimizedRoutes(routes => 
+      routes.map(route => 
+        route.id === editedRoute.id ? editedRoute : route
+      )
+    );
+    setEditingRoute(null);
+    toast({
+      title: "Route Updated",
+      description: "Route has been successfully edited."
+    });
+  };
+
+  // Show route editor if editing
+  if (editingRoute) {
+    return (
+      <EnhancedRouteEditor
+        route={editingRoute}
+        onSave={handleEditRoute}
+        onCancel={() => setEditingRoute(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -522,13 +562,13 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
                   </div>
 
                   {route.warnings.length > 0 && (
-                    <Alert>
-                      <AlertTriangle className="h-4 w-4" />
+                    <Alert className="border-red-200 bg-red-50">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
                       <AlertDescription>
-                        <div className="font-medium">Route Concerns:</div>
+                        <div className="font-medium text-red-600">Route Concerns:</div>
                         <ul className="list-disc list-inside mt-1">
                           {route.warnings.map((warning, i) => (
-                            <li key={i} className="text-sm">{warning}</li>
+                            <li key={i} className="text-sm text-red-600">{warning}</li>
                           ))}
                         </ul>
                       </AlertDescription>
@@ -539,6 +579,25 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
                     <span>Seat Utilization: {route.seatUtilization}%</span>
                     <span>Schools: {route.schools.length}</span>
                     <span>Efficiency: {Math.round(100 - (route.totalDistance / route.schools.length - 5) * 5)}%</span>
+                  </div>
+
+                  {/* FIX #2: EDIT AND SAVE BUTTONS */}
+                  <div className="flex justify-end space-x-2 mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditingRoute(route)}
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Route
+                    </Button>
+                    <Button
+                      onClick={() => saveRoute(route)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Save Route
+                    </Button>
                   </div>
                 </div>
               </CardContent>

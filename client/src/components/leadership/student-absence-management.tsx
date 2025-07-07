@@ -52,14 +52,17 @@ export default function StudentAbsenceManagement() {
     return school ? school.name : 'Unknown School';
   };
 
+  // FIX #5: ABSENCES NOT SHOWING - ENHANCED REAL-TIME REFRESH
   const { data: absences = [], isLoading } = useQuery({
     queryKey: ['/api/student-absences'],
-    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
+    refetchInterval: 5000, // Faster refresh every 5 seconds
+    staleTime: 0, // Always refetch for immediate updates
   });
 
   const { data: todaysAbsences = [], refetch: refetchTodaysAbsences } = useQuery({
     queryKey: ['/api/student-absences/date', selectedDate],
-    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
+    refetchInterval: 3000, // Very fast refresh every 3 seconds for today's absences
+    staleTime: 0, // Always refetch for immediate updates
   });
 
   const createAbsenceMutation = useMutation({
@@ -69,10 +72,12 @@ export default function StudentAbsenceManagement() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Student absence marked successfully" });
+      // FIX #5: FORCE IMMEDIATE REFRESH TO SHOW ABSENCES
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences'] });
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences/date'] });
-      // Force refresh of current date view for real-time updates
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences/date', selectedDate] });
+      // Force immediate refetch to ensure absences show immediately
+      refetchTodaysAbsences();
       setIsDialogOpen(false);
       form.reset({
         absenceDate: format(new Date(), 'yyyy-MM-dd'),
