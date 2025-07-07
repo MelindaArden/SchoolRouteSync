@@ -100,11 +100,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['/api/pickup-sessions/today'],
     retry: false,
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time stats
   });
 
   // Fetch active issues for alerts
   const { data: issues = [] } = useQuery({
     queryKey: ['/api/issues'],
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Fetch missed school alerts  
@@ -294,8 +296,68 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
               <Card>
                 <CardContent className="p-4">
                   <div className="grid grid-cols-7 gap-2 text-center text-xs mb-4">
-                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                      <div key={day} className="font-medium text-gray-600">{day}</div>
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
+                      <div 
+                        key={day} 
+                        className="font-medium text-gray-600 relative group cursor-pointer"
+                        title={`View ${day} performance details`}
+                      >
+                        {day}
+                        
+                        {/* Hover tooltip with driver breakdown */}
+                        <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg min-w-[200px]">
+                          <div className="font-semibold mb-2">{day} Performance:</div>
+                          {users.filter((user: any) => user.role === 'driver').map((driver: any) => {
+                            // Calculate driver performance for this day
+                            const driverSessions = sessionsData.filter((s: any) => {
+                              const sessionDate = new Date(s.date);
+                              const dayOfWeek = sessionDate.getDay();
+                              const targetDay = (index + 1) % 7; // Convert to match JS getDay()
+                              return s.driverId === driver.id && dayOfWeek === targetDay;
+                            });
+                            
+                            const driverTotal = driverSessions.reduce((sum: number, session: any) => 
+                              sum + (session.pickupDetails?.length || 0), 0);
+                            const driverCompleted = driverSessions.reduce((sum: number, session: any) => 
+                              sum + (session.pickupDetails?.filter((p: any) => p.status === 'picked_up').length || 0), 0);
+                            
+                            const percentage = driverTotal > 0 ? Math.round((driverCompleted / driverTotal) * 100) : 0;
+                            
+                            return (
+                              <div key={driver.id} className="flex justify-between mb-1">
+                                <span>{driver.firstName} {driver.lastName}:</span>
+                                <span className={percentage >= 90 ? 'text-green-400' : percentage >= 70 ? 'text-yellow-400' : 'text-red-400'}>
+                                  {percentage}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                          <div className="border-t border-gray-600 mt-2 pt-2">
+                            <div className="flex justify-between font-semibold">
+                              <span>Average:</span>
+                              <span className="text-blue-400">
+                                {users.filter((u: any) => u.role === 'driver').length > 0 
+                                  ? Math.round(users.filter((u: any) => u.role === 'driver').reduce((sum: number, driver: any) => {
+                                      const driverSessions = sessionsData.filter((s: any) => {
+                                        const sessionDate = new Date(s.date);
+                                        const dayOfWeek = sessionDate.getDay();
+                                        const targetDay = (index + 1) % 7;
+                                        return s.driverId === driver.id && dayOfWeek === targetDay;
+                                      });
+                                      
+                                      const driverTotal = driverSessions.reduce((sum2: number, session: any) => 
+                                        sum2 + (session.pickupDetails?.length || 0), 0);
+                                      const driverCompleted = driverSessions.reduce((sum2: number, session: any) => 
+                                        sum2 + (session.pickupDetails?.filter((p: any) => p.status === 'picked_up').length || 0), 0);
+                                      
+                                      return sum + (driverTotal > 0 ? (driverCompleted / driverTotal) * 100 : 0);
+                                    }, 0) / users.filter((u: any) => u.role === 'driver').length)
+                                  : 0}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                   <div className="grid grid-cols-7 gap-2 text-center">

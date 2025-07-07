@@ -54,10 +54,12 @@ export default function StudentAbsenceManagement() {
 
   const { data: absences = [], isLoading } = useQuery({
     queryKey: ['/api/student-absences'],
+    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
   });
 
-  const { data: todaysAbsences = [] } = useQuery({
+  const { data: todaysAbsences = [], refetch: refetchTodaysAbsences } = useQuery({
     queryKey: ['/api/student-absences/date', selectedDate],
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
   const createAbsenceMutation = useMutation({

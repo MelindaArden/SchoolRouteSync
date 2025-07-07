@@ -175,6 +175,19 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
   const totalStudents = currentRoute?.totalStudents || 0;
   
+  // Calculate pickup statistics from session data
+  const sessionPickups = useQuery({
+    queryKey: [`/api/student-pickups?sessionId=${currentActiveSession?.id}`],
+    enabled: !!currentActiveSession?.id,
+    refetchInterval: 5000, // Update every 5 seconds for real-time stats
+  });
+
+  const sessionPickupStats = {
+    pickedUp: sessionPickups.data?.filter((pickup: any) => pickup.status === 'picked_up').length || 0,
+    total: sessionPickups.data?.length || 0,
+    progressPercent: sessionPickups.data?.length ? Math.round((sessionPickups.data.filter((pickup: any) => pickup.status === 'picked_up').length / sessionPickups.data.length) * 100) : 0
+  };
+  
   // Debug logging
   console.log('Session debug:', { 
     sessions, 
@@ -321,7 +334,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                         <div className="text-sm text-gray-600">Total Students</div>
                       </div>
                       <div className="text-center p-3 bg-gray-50 rounded">
-                        <div className="text-2xl font-bold text-green-600">0</div>
+                        <div className="text-2xl font-bold text-green-600">{sessionPickupStats.pickedUp}</div>
                         <div className="text-sm text-gray-600">Picked Up</div>
                       </div>
                     </div>
