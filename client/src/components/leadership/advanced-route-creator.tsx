@@ -250,7 +250,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       return;
     }
 
-    // FIX #2: Validate starting and ending addresses for optimal route planning
+    // FIX #1: Enhanced validation for optimal route creation
     if (!constraints.startingAddress || !constraints.endingAddress) {
       toast({
         title: "Missing Information",
@@ -259,6 +259,8 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       });
       return;
     }
+
+    console.log('🚀 Starting route optimization with constraints:', constraints);
 
     setIsOptimizing(true);
 

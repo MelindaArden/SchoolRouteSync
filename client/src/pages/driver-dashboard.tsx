@@ -203,7 +203,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       <div className="min-h-screen bg-gray-50">
         <Navigation user={user} onLogout={onLogout} role="driver" />
         
-        <div className="max-w-md mx-auto pt-20 p-4">
+        <div className="max-w-md mx-auto pt-20 p-2 sm:p-4">
           <Card>
             <CardContent className="p-6 text-center">
               <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
@@ -226,9 +226,9 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
         role="driver"
       />
 
-      <div className="pb-20">
+      <div className="pb-20 px-2 sm:px-4">
         {activeTab === "routes" && (
-          <div className="p-4 space-y-4">
+          <div className="p-2 sm:p-4 space-y-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -313,7 +313,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
         )}
 
         {activeTab === "session" && (
-          <div className="p-4">
+          <div className="p-2 sm:p-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2 mb-4">
@@ -353,7 +353,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       </div>
 
         {activeTab === "profile" && (
-          <div className="p-4 space-y-4">
+          <div className="p-2 sm:p-4 space-y-4">
             <Card>
               <CardContent className="p-4">
                 <div className="space-y-4">
@@ -410,44 +410,44 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
         />
       )}
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <div className="grid grid-cols-4 gap-1">
+      {/* FIX #3: MOBILE BOTTOM NAVIGATION - ENHANCED VISIBILITY */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-bottom">
+        <div className="grid grid-cols-4 gap-0 max-w-full">
           <button
             onClick={() => setActiveTab("routes")}
-            className={`flex flex-col items-center py-3 px-2 text-xs ${
+            className={`flex flex-col items-center py-2 px-1 text-xs min-h-[60px] ${
               activeTab === "routes" ? "text-blue-600 bg-blue-50" : "text-gray-600"
             }`}
           >
-            <RouteIcon className="h-5 w-5 mb-1" />
-            Route
+            <RouteIcon className="h-4 w-4 mb-1" />
+            <span className="truncate">Route</span>
           </button>
           <button
             onClick={() => setActiveTab("map")}
-            className={`flex flex-col items-center py-3 px-2 text-xs ${
+            className={`flex flex-col items-center py-2 px-1 text-xs min-h-[60px] ${
               activeTab === "map" ? "text-blue-600 bg-blue-50" : "text-gray-600"
             }`}
           >
-            <NavigationIcon className="h-5 w-5 mb-1" />
-            Navigate
+            <NavigationIcon className="h-4 w-4 mb-1" />
+            <span className="truncate">Navigate</span>
           </button>
           <button
             onClick={() => setActiveTab("session")}
-            className={`flex flex-col items-center py-3 px-2 text-xs ${
+            className={`flex flex-col items-center py-2 px-1 text-xs min-h-[60px] ${
               activeTab === "session" ? "text-blue-600 bg-blue-50" : "text-gray-600"
             }`}
           >
-            <Car className="h-5 w-5 mb-1" />
-            Session
+            <Car className="h-4 w-4 mb-1" />
+            <span className="truncate">Session</span>
           </button>
           <button
             onClick={() => setActiveTab("profile")}
-            className={`flex flex-col items-center py-3 px-2 text-xs ${
+            className={`flex flex-col items-center py-2 px-1 text-xs min-h-[60px] ${
               activeTab === "profile" ? "text-blue-600 bg-blue-50" : "text-gray-600"
             }`}
           >
-            <Users className="h-5 w-5 mb-1" />
-            Notify
+            <Users className="h-4 w-4 mb-1" />
+            <span className="truncate">Notify</span>
           </button>
         </div>
       </div>

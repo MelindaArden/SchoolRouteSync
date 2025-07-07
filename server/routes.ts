@@ -265,18 +265,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get driver routes
+  // FIX #6: Get driver routes with ENHANCED STUDENT DISPLAY
   app.get("/api/drivers/:driverId/routes", async (req, res) => {
     try {
       const driverId = parseInt(req.params.driverId);
+      console.log(`🚌 Fetching routes for driver ${driverId}`);
+      
       const routes = await storage.getRoutesByDriver(driverId);
+      console.log(`📋 Found ${routes.length} routes for driver ${driverId}`);
       
       // Get detailed route information including schools and students
       const detailedRoutes = await Promise.all(
         routes.map(async (route) => {
+          console.log(`🔍 Processing route ${route.id}: ${route.name}`);
+          
           const routeSchools = await storage.getRouteSchools(route.id);
           const students = await storage.getStudentsByRoute(route.id);
           const assignments = await storage.getRouteAssignments(route.id);
+          
+          console.log(`🏫 Route ${route.id} has ${routeSchools.length} schools, ${students.length} students, ${assignments.length} assignments`);
           
           // Get school details for each route school
           const schoolsWithDetails = await Promise.all(
@@ -289,35 +296,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   .filter(a => a.schoolId === rs.schoolId)
                   .map(async (assignment) => {
                     const student = await storage.getStudentById(assignment.studentId);
+                    if (student) {
+                      console.log(`👨‍🎓 Student: ${student.firstName} ${student.lastName} assigned to ${school?.name}`);
+                    }
                     return student;
                   })
               );
               
               // Filter out any null/undefined students
               const validStudents = schoolStudents.filter(s => s !== undefined);
+              console.log(`✅ School ${school?.name}: ${validStudents.length} valid students`);
               
               return {
                 ...rs,
                 school,
                 students: validStudents,
+                studentCount: validStudents.length
               };
             })
           );
           
-          // Sort schools by order index
-          schoolsWithDetails.sort((a, b) => a.orderIndex - b.orderIndex);
+          // Sort schools by order index for optimal pickup sequence
+          schoolsWithDetails.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+          
+          const totalRouteStudents = schoolsWithDetails.reduce((sum, school) => sum + school.students.length, 0);
+          console.log(`📊 Route ${route.name} total students: ${totalRouteStudents}`);
           
           return {
             ...route,
             schools: schoolsWithDetails,
-            totalStudents: students.length,
+            totalStudents: totalRouteStudents,
           };
         })
       );
       
+      console.log(`🚀 Returning ${detailedRoutes.length} detailed routes with student information`);
       res.json(detailedRoutes);
     } catch (error) {
-      console.error('Error fetching driver routes:', error);
+      console.error('❌ Error fetching driver routes:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

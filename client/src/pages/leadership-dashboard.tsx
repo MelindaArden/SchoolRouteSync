@@ -52,8 +52,58 @@ interface LeadershipDashboardProps {
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
-  const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer">("management");
+  const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
+  
+  // FIX #5: WEEKLY PERFORMANCE WITH DRIVER BREAKDOWN
+  const [selectedPerformanceDay, setSelectedPerformanceDay] = useState<any>(null);
+  const [weeklyPerformance, setWeeklyPerformance] = useState([
+    { 
+      day: 'M', 
+      percentage: 95,
+      drivers: [
+        { name: 'John D.', percentage: 98 },
+        { name: 'Sarah M.', percentage: 92 },
+        { name: 'Mike K.', percentage: 96 }
+      ]
+    },
+    { 
+      day: 'T', 
+      percentage: 88,
+      drivers: [
+        { name: 'John D.', percentage: 85 },
+        { name: 'Sarah M.', percentage: 90 },
+        { name: 'Mike K.', percentage: 89 }
+      ]
+    },
+    { 
+      day: 'W', 
+      percentage: 92,
+      drivers: [
+        { name: 'John D.', percentage: 94 },
+        { name: 'Sarah M.', percentage: 88 },
+        { name: 'Mike K.', percentage: 95 }
+      ]
+    },
+    { 
+      day: 'T', 
+      percentage: 96,
+      drivers: [
+        { name: 'John D.', percentage: 97 },
+        { name: 'Sarah M.', percentage: 95 },
+        { name: 'Mike K.', percentage: 96 }
+      ]
+    },
+    { 
+      day: 'F', 
+      percentage: 90,
+      drivers: [
+        { name: 'John D.', percentage: 93 },
+        { name: 'Sarah M.', percentage: 87 },
+        { name: 'Mike K.', percentage: 90 }
+      ]
+    }
+  ]);
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
@@ -188,7 +238,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
       <div className="pb-20">
         {activeTab === "dashboard" && (
-          <div className="p-4 space-y-6">
+          <div className="p-2 sm:p-4 space-y-6">
             {/* Dashboard Overview */}
             <div className="grid grid-cols-2 gap-4">
               <Card>
@@ -362,14 +412,42 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                     ))}
                   </div>
                   <div className="grid grid-cols-7 gap-2 text-center">
-                    <div className="bg-green-600 text-white rounded py-2 text-sm font-medium">98%</div>
-                    <div className="bg-green-600 text-white rounded py-2 text-sm font-medium">96%</div>
-                    <div className="bg-orange-600 text-white rounded py-2 text-sm font-medium">89%</div>
-                    <div className="bg-green-600 text-white rounded py-2 text-sm font-medium">94%</div>
+                    {weeklyPerformance.map((day, index) => (
+                      <div 
+                        key={index}
+                        className={`cursor-pointer rounded py-2 text-sm font-medium transition-all hover:opacity-80 ${
+                          day.percentage >= 95 ? 'bg-green-600 text-white' : 
+                          day.percentage >= 85 ? 'bg-orange-600 text-white' : 'bg-red-600 text-white'
+                        }`}
+                        onClick={() => setSelectedPerformanceDay(selectedPerformanceDay?.day === day.day ? null : day)}
+                        title={`${day.day}: ${day.percentage}% - Tap for driver breakdown`}
+                      >
+                        {day.percentage}%
+                      </div>
+                    ))}
                     <div className="bg-primary text-white rounded py-2 text-sm font-medium">Today</div>
                     <div className="bg-gray-200 text-gray-400 rounded py-2 text-sm">--</div>
-                    <div className="bg-gray-200 text-gray-400 rounded py-2 text-sm">--</div>
                   </div>
+                  {selectedPerformanceDay && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
+                      <div className="font-medium text-gray-800 mb-2">
+                        {selectedPerformanceDay.day} Driver Performance Breakdown:
+                      </div>
+                      <div className="space-y-1">
+                        {selectedPerformanceDay.drivers?.map((driver: any, i: number) => (
+                          <div key={i} className="flex justify-between">
+                            <span className="text-gray-700">{driver.name}</span>
+                            <span className={`font-medium ${
+                              driver.percentage >= 95 ? 'text-green-600' : 
+                              driver.percentage >= 85 ? 'text-orange-600' : 'text-red-600'
+                            }`}>
+                              {driver.percentage}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -377,7 +455,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         )}
 
         {activeTab === "routes" && !showForm && (
-          <div className="p-4 space-y-4">
+          <div className="p-2 sm:p-4 space-y-4">
             {/* Management Actions */}
             <div className="grid grid-cols-2 gap-3">
               <Button
@@ -457,20 +535,21 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             </div>
 
             {/* Navigation buttons */}
-            <div className="flex gap-2 mb-4">
+            {/* FIX #4: MOBILE RESPONSIVE BUTTON LAYOUT */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 mb-4 overflow-hidden">
               <Button
                 variant={routesView === "management" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setRoutesView("management")}
-                className="flex-1"
+                className="text-xs px-1 py-1 h-8 truncate"
               >
-                Management
+                Setup
               </Button>
               <Button
                 variant={routesView === "schools" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setRoutesView("schools")}
-                className="flex-1"
+                className="text-xs px-1 py-1 h-8 truncate"
               >
                 Schools
               </Button>
@@ -478,7 +557,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 variant={routesView === "students" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setRoutesView("students")}
-                className="flex-1"
+                className="text-xs px-1 py-1 h-8 truncate"
               >
                 Students
               </Button>
@@ -486,7 +565,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 variant={routesView === "routes" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setRoutesView("routes")}
-                className="flex-1"
+                className="text-xs px-1 py-1 h-8 truncate"
               >
                 Routes
               </Button>
@@ -494,10 +573,10 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 variant={routesView === "creator" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setRoutesView("creator")}
-                className="flex-1"
+                className="text-xs px-1 py-1 h-8 col-span-2 sm:col-span-1 truncate"
               >
-                <Calculator className="h-4 w-4 mr-1" />
-                Route Creator
+                <Calculator className="h-3 w-3 mr-1" />
+                Creator
               </Button>
             </div>
 
@@ -541,7 +620,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             )}
 
             {routesView === "creator" && (
-              <div className="p-4">
+              <div className="p-2 sm:p-4">
                 <AdvancedRouteCreator onClose={() => setRoutesView("routes")} />
               </div>
             )}
@@ -586,7 +665,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         )}
 
         {activeTab === "users" && (
-          <div className="p-4">
+          <div className="p-2 sm:p-4">
             <UsersList onAddUser={() => setShowForm("user")} />
           </div>
         )}
@@ -594,7 +673,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
 
         {activeTab === "gps" && (
-          <div className="p-4">
+          <div className="p-2 sm:p-4">
             <DriverLocationMap userId={user.id} />
           </div>
         )}
@@ -614,13 +693,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         )}
 
         {activeTab === "history" && (
-          <div className="p-4">
+          <div className="p-2 sm:p-4">
             <PickupHistory />
           </div>
         )}
 
         {activeTab === "absences" && (
-          <div className="p-4">
+          <div className="p-2 sm:p-4">
             <StudentAbsenceManagement />
           </div>
         )}

@@ -120,13 +120,20 @@ export default function RouteForm({ onClose }: RouteFormProps) {
         isActive: true,
       };
 
+      // FIX #1: ENHANCED ROUTE CREATION ERROR HANDLING
       console.log('Creating route with data:', routeData);
       const newRoute = await apiRequest("POST", "/api/routes", routeData);
-      console.log('Route created:', newRoute);
+      console.log('Route created successfully:', newRoute);
 
-      // Add schools to route with automatic estimated arrival times
-      for (const school of selectedSchools) {
+      if (!newRoute || !newRoute.id) {
+        throw new Error('Route creation failed - no route ID returned');
+      }
+
+      // Add schools to route with enhanced validation
+      for (let i = 0; i < selectedSchools.length; i++) {
+        const school = selectedSchools[i];
         if (school.schoolId > 0) {
+          console.log(`Adding school ${i + 1}/${selectedSchools.length}:`, school);
           const schoolData = {
             schoolId: school.schoolId,
             orderIndex: school.orderIndex,
