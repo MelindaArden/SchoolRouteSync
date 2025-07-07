@@ -206,17 +206,27 @@ export class DatabaseStorage implements IStorage {
       const sessions = await db.select().from(pickupSessions).where(eq(pickupSessions.routeId, id));
       const sessionIds = sessions.map(s => s.id);
       
+      // Get all route schools for this route
+      const routeSchoolsData = await db.select().from(routeSchools).where(eq(routeSchools.routeId, id));
+      const routeSchoolIds = routeSchoolsData.map(rs => rs.id);
+      
       // Delete student pickups that reference these sessions
       for (const sessionId of sessionIds) {
         await db.delete(studentPickups).where(eq(studentPickups.sessionId, sessionId));
       }
       
-      // Delete all related records to prevent foreign key constraint violations
+      // Delete missed school alerts that reference route schools
+      for (const routeSchoolId of routeSchoolIds) {
+        await db.delete(missedSchoolAlerts).where(eq(missedSchoolAlerts.routeSchoolId, routeSchoolId));
+      }
+      
+      // Delete pickup history before deleting sessions (due to foreign key constraint)
+      await db.delete(pickupHistory).where(eq(pickupHistory.routeId, id));
+      
+      // Delete all other related records to prevent foreign key constraint violations
       await db.delete(routeSchools).where(eq(routeSchools.routeId, id));
       await db.delete(routeAssignments).where(eq(routeAssignments.routeId, id));
       await db.delete(pickupSessions).where(eq(pickupSessions.routeId, id));
-      await db.delete(pickupHistory).where(eq(pickupHistory.routeId, id));
-      await db.delete(missedSchoolAlerts).where(eq(missedSchoolAlerts.routeSchoolId, id));
       
       // Then delete the route itself
       await db.delete(routes).where(eq(routes.id, id));
