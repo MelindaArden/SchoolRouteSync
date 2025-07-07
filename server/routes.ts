@@ -20,6 +20,7 @@ import {
   insertIssueSchema
 } from "@shared/schema";
 import { z } from "zod";
+import { geocodeAddress, validateCoordinates } from "./geocoding-service";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -1273,14 +1274,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the input
       const validatedData = schoolValidationSchema.parse(req.body);
       
+      // Auto-geocode address if coordinates are not provided
+      let latitude = validatedData.latitude ? String(validatedData.latitude) : null;
+      let longitude = validatedData.longitude ? String(validatedData.longitude) : null;
+      
+      if ((!latitude || !longitude) && validatedData.address) {
+        console.log('🗺️ Attempting to geocode address automatically...');
+        const geocodeResult = await geocodeAddress(validatedData.address);
+        if (geocodeResult) {
+          latitude = geocodeResult.latitude;
+          longitude = geocodeResult.longitude;
+          console.log(`✅ Auto-geocoding successful: ${latitude}, ${longitude}`);
+        } else {
+          console.log('⚠️ Auto-geocoding failed, coordinates will be null');
+        }
+      }
+      
       // Transform to match database requirements
       const schoolData = {
         name: validatedData.name,
         address: validatedData.address,
         dismissalTime: validatedData.dismissalTime,
         contactPhone: validatedData.contactPhone || null,
-        latitude: validatedData.latitude ? String(validatedData.latitude) : null,
-        longitude: validatedData.longitude ? String(validatedData.longitude) : null,
+        latitude,
+        longitude,
         isActive: validatedData.isActive ?? true,
       };
       
@@ -1292,6 +1309,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('School creation error:', error);
       res.status(400).json({ message: "Invalid school data", error: error.message });
+    }
+  });
+
+  // Geocode address endpoint
+  app.post("/api/geocode", async (req, res) => {
+    try {
+      const { address } = req.body;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Address is required" });
+      }
+      
+      console.log(`🗺️ Geocoding request for: ${address}`);
+      const result = await geocodeAddress(address);
+      
+      if (result) {
+        console.log(`✅ Geocoding successful: ${result.latitude}, ${result.longitude}`);
+        res.json({
+          success: true,
+          latitude: result.latitude,
+          longitude: result.longitude,
+          formatted_address: result.formatted_address
+        });
+      } else {
+        console.log(`❌ Geocoding failed for: ${address}`);
+        res.status(404).json({
+          success: false,
+          message: "Could not geocode address. Please check the address and try again."
+        });
+      }
+    } catch (error) {
+      console.error('Geocoding endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        message: "Geocoding service error"
+      });
     }
   });
 

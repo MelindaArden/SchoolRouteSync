@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { X } from "lucide-react";
+import { X, MapPin, Loader2 } from "lucide-react";
 
 const schoolSchema = z.object({
   name: z.string().min(1, "School name is required"),
@@ -32,6 +32,8 @@ export default function SchoolForm({ onClose, school }: SchoolFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = !!school;
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodeStatus, setGeocodeStatus] = useState<string>("");
 
   const form = useForm<SchoolFormData>({
     resolver: zodResolver(schoolSchema),
@@ -87,6 +89,51 @@ export default function SchoolForm({ onClose, school }: SchoolFormProps) {
     },
   });
 
+  // Geocoding function
+  const geocodeAddress = async (address: string) => {
+    if (!address || address.trim().length < 10) return;
+    
+    setIsGeocoding(true);
+    setGeocodeStatus("Looking up GPS coordinates...");
+    
+    try {
+      const response = await apiRequest("POST", "/api/geocode", { address });
+      
+      if (response.success) {
+        form.setValue("latitude", response.latitude);
+        form.setValue("longitude", response.longitude);
+        setGeocodeStatus(`✓ GPS coordinates found: ${response.latitude}, ${response.longitude}`);
+        
+        toast({
+          title: "Address Geocoded",
+          description: "GPS coordinates automatically found for this address!",
+        });
+      } else {
+        setGeocodeStatus("Could not find GPS coordinates for this address");
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      setGeocodeStatus("Error finding GPS coordinates");
+    } finally {
+      setIsGeocoding(false);
+      // Clear status after 3 seconds
+      setTimeout(() => setGeocodeStatus(""), 3000);
+    }
+  };
+
+  // Watch address field and auto-geocode
+  const watchedAddress = form.watch("address");
+  useEffect(() => {
+    const delayTimeout = setTimeout(() => {
+      if (watchedAddress && watchedAddress.trim().length > 10 && !isEditing) {
+        // Only auto-geocode for new schools, not when editing
+        geocodeAddress(watchedAddress);
+      }
+    }, 2000); // Wait 2 seconds after user stops typing
+
+    return () => clearTimeout(delayTimeout);
+  }, [watchedAddress, isEditing]);
+
   const onSubmit = (data: SchoolFormData) => {
     if (isEditing) {
       updateSchoolMutation.mutate(data);
@@ -136,7 +183,35 @@ export default function SchoolForm({ onClose, school }: SchoolFormProps) {
                 <FormItem>
                   <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="123 School Street, City, State" />
+                    <div className="space-y-2">
+                      <Input {...field} placeholder="123 School Street, City, State" />
+                      {geocodeStatus && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {isGeocoding && <Loader2 className="h-4 w-4 animate-spin" />}
+                          <MapPin className="h-4 w-4" />
+                          <span>{geocodeStatus}</span>
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => geocodeAddress(field.value)}
+                        disabled={!field.value || field.value.length < 10 || isGeocoding}
+                      >
+                        {isGeocoding ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Finding GPS...
+                          </>
+                        ) : (
+                          <>
+                            <MapPin className="h-4 w-4 mr-2" />
+                            Find GPS Coordinates
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -177,9 +252,13 @@ export default function SchoolForm({ onClose, school }: SchoolFormProps) {
                 name="latitude"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Latitude (Optional)</FormLabel>
+                    <FormLabel>Latitude (Auto-populated)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="40.7128" />
+                      <Input 
+                        {...field} 
+                        placeholder="Auto-filled from address" 
+                        className={field.value ? "bg-green-50 border-green-200" : ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -191,15 +270,28 @@ export default function SchoolForm({ onClose, school }: SchoolFormProps) {
                 name="longitude"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Longitude (Optional)</FormLabel>
+                    <FormLabel>Longitude (Auto-populated)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="-74.0060" />
+                      <Input 
+                        {...field} 
+                        placeholder="Auto-filled from address" 
+                        className={field.value ? "bg-green-50 border-green-200" : ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+            
+            {form.watch("latitude") && form.watch("longitude") && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                <MapPin className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-700">
+                  ✓ GPS coordinates ready for route planning and navigation
+                </span>
+              </div>
+            )}
             
             <div className="flex gap-2 pt-4">
               <Button type="submit" disabled={isPending} className="flex-1">
