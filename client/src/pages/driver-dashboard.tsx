@@ -66,6 +66,13 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const currentActiveSession = activeSessionFromList || (activeSession?.id ? activeSession : null);
   const hasActiveSession = !!currentActiveSession;
   
+  // Calculate pickup statistics from session data - MOVED BEFORE EARLY RETURNS
+  const sessionPickups = useQuery({
+    queryKey: [`/api/student-pickups?sessionId=${currentActiveSession?.id}`],
+    enabled: !!currentActiveSession?.id,
+    refetchInterval: 5000, // Update every 5 seconds for real-time stats
+  });
+  
   // Update activeSession state if we found one from the list but don't have one set
   useEffect(() => {
     if ((!activeSession || !activeSession.id) && activeSessionFromList) {
@@ -175,13 +182,6 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
   const totalStudents = currentRoute?.totalStudents || 0;
   
-  // Calculate pickup statistics from session data
-  const sessionPickups = useQuery({
-    queryKey: [`/api/student-pickups?sessionId=${currentActiveSession?.id}`],
-    enabled: !!currentActiveSession?.id,
-    refetchInterval: 5000, // Update every 5 seconds for real-time stats
-  });
-
   const sessionPickupStats = {
     pickedUp: sessionPickups.data?.filter((pickup: any) => pickup.status === 'picked_up').length || 0,
     total: sessionPickups.data?.length || 0,
