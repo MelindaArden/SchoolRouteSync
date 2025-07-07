@@ -33,6 +33,8 @@ export default function RouteOptimizer({ routeId, onSave }: RouteOptimizerProps)
   const [optimizationResults, setOptimizationResults] = useState<any>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<number | null>(null);
+  const [isManualMode, setIsManualMode] = useState(false);
+  const [manualRouteOrder, setManualRouteOrder] = useState<any[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -62,33 +64,66 @@ export default function RouteOptimizer({ routeId, onSave }: RouteOptimizerProps)
   // Save optimized route mutation
   const saveRouteMutation = useMutation({
     mutationFn: async (data: any) => {
-      if (routeId) {
-        // Update existing route
-        await apiRequest('PUT', `/api/routes/${routeId}`, data.route);
+      console.log('Starting route save with data:', data);
+      
+      try {
+        if (routeId) {
+          // Update existing route
+          console.log('Updating existing route:', routeId);
+          await apiRequest('PUT', `/api/routes/${routeId}`, data.route);
+          
+          // Update route schools
+          console.log('Deleting existing route schools');
+          await apiRequest('DELETE', `/api/routes/${routeId}/schools`);
+          
+          console.log('Adding new route schools:', data.schools);
+          for (const school of data.schools) {
+            await apiRequest('POST', `/api/routes/${routeId}/schools`, school);
+          }
+        } else {
+          // Create new route
+          console.log('Creating new route');
+          const newRoute: any = await apiRequest('POST', '/api/routes', data.route);
+          console.log('New route created:', newRoute);
+          
+          console.log('Adding schools to new route:', data.schools);
+          for (const school of data.schools) {
+            const schoolData = {
+              ...school,
+              routeId: newRoute.id
+            };
+            console.log('Adding school:', schoolData);
+            await apiRequest('POST', `/api/routes/${newRoute.id}/schools`, schoolData);
+          }
+        }
         
-        // Update route schools
-        await apiRequest('DELETE', `/api/routes/${routeId}/schools`);
-        for (const school of data.schools) {
-          await apiRequest('POST', `/api/routes/${routeId}/schools`, school);
-        }
-      } else {
-        // Create new route
-        const newRoute: any = await apiRequest('POST', '/api/routes', data.route);
-        for (const school of data.schools) {
-          await apiRequest('POST', `/api/routes/${newRoute.id}/schools`, {
-            ...school,
-            routeId: newRoute.id
-          });
-        }
+        console.log('Route save completed successfully');
+        return true;
+      } catch (error) {
+        console.error('Route save error:', error);
+        throw error;
       }
     },
     onSuccess: () => {
-      toast({ title: "Route saved", description: "Optimized route has been saved successfully." });
+      toast({ 
+        title: "Route Saved Successfully", 
+        description: "The optimized route has been saved and is now available to drivers." 
+      });
+      
+      // Invalidate all relevant queries to ensure updates everywhere
       queryClient.invalidateQueries({ queryKey: ['/api/routes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/schools'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      
       if (onSave) onSave();
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to save route.", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('Route save mutation error:', error);
+      toast({ 
+        title: "Save Failed", 
+        description: error.message || "Failed to save route. Please try again.", 
+        variant: "destructive" 
+      });
     }
   });
 
@@ -246,6 +281,45 @@ export default function RouteOptimizer({ routeId, onSave }: RouteOptimizerProps)
     return result;
   };
 
+  // Move school up in manual order
+  const moveSchoolUp = (index: number) => {
+    if (index === 0) return;
+    const newOrder = [...manualRouteOrder];
+    [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+    setManualRouteOrder(newOrder);
+    updateManualResults(newOrder);
+  };
+
+  // Move school down in manual order
+  const moveSchoolDown = (index: number) => {
+    if (index === manualRouteOrder.length - 1) return;
+    const newOrder = [...manualRouteOrder];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    setManualRouteOrder(newOrder);
+    updateManualResults(newOrder);
+  };
+
+  // Update results with manual order
+  const updateManualResults = (order: any[]) => {
+    const schoolsWithTimes = generateArrivalTimes(order);
+    const metrics = calculateRouteMetrics(schoolsWithTimes);
+    
+    setOptimizationResults({
+      schools: schoolsWithTimes,
+      metrics,
+      isManualOverride: true
+    });
+  };
+
+  // Switch to manual override mode
+  const enableManualOverride = () => {
+    if (optimizationResults && optimizationResults.schools) {
+      setIsManualMode(true);
+      setManualRouteOrder([...optimizationResults.schools]);
+      updateManualResults(optimizationResults.schools);
+    }
+  };
+
   // Save the optimized route
   const handleSave = () => {
     if (!optimizationResults || !selectedDriver) {
@@ -263,14 +337,15 @@ export default function RouteOptimizer({ routeId, onSave }: RouteOptimizerProps)
         driverId: selectedDriver,
         status: 'active'
       },
-      schools: optimizationResults.schools.map((school: any) => ({
+      schools: optimizationResults.schools.map((school: any, index: number) => ({
         schoolId: school.id,
-        orderIndex: school.orderIndex,
+        orderIndex: index + 1,
         estimatedArrivalTime: school.estimatedArrivalTime,
-        alertThresholdMinutes: school.alertThresholdMinutes
+        alertThresholdMinutes: school.alertThresholdMinutes || 10
       }))
     };
 
+    console.log('Saving route data:', routeData);
     saveRouteMutation.mutate(routeData);
   };
 
@@ -381,38 +456,98 @@ export default function RouteOptimizer({ routeId, onSave }: RouteOptimizerProps)
               </div>
             </div>
 
-            {/* Optimized Route Order */}
-            <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2">
+            {/* Admin Override Controls */}
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium flex items-center gap-2">
                 <Route className="h-4 w-4" />
-                Optimized Pickup Order
+                {optimizationResults.isManualOverride ? "Manual Route Order" : "Optimized Pickup Order"}
               </h4>
-              <div className="space-y-2">
-                {optimizationResults.schools.map((school: any, index: number) => (
-                  <div key={school.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <h5 className="font-medium">{school.name}</h5>
-                        <p className="text-xs text-gray-600 flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {school.address}
-                        </p>
-                      </div>
+              <div className="flex gap-2">
+                {!isManualMode && optimizationResults.schools && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={enableManualOverride}
+                    className="text-xs"
+                  >
+                    <Target className="h-3 w-3 mr-1" />
+                    Override Order
+                  </Button>
+                )}
+                {isManualMode && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setIsManualMode(false);
+                      optimizeRoute();
+                    }}
+                    className="text-xs"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Re-optimize
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {optimizationResults.isManualOverride && (
+              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Admin Override Active</span>
+                </div>
+                <p className="text-xs text-yellow-700 mt-1">
+                  You have manually adjusted the route order. Use the arrow buttons to reorder schools.
+                </p>
+              </div>
+            )}
+
+            {/* Route Order with Manual Controls */}
+            <div className="space-y-2">
+              {optimizationResults.schools.map((school: any, index: number) => (
+                <div key={school.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                      {index + 1}
                     </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="text-xs">
-                        {school.estimatedArrivalTime}
-                      </Badge>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Dismissal: {school.dismissalTime}
+                    <div>
+                      <h5 className="font-medium">{school.name}</h5>
+                      <p className="text-xs text-gray-600 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {school.address}
                       </p>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {school.estimatedArrivalTime}
+                    </Badge>
+                    {isManualMode && (
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => moveSchoolUp(index)}
+                          disabled={index === 0}
+                          className="h-6 w-6 p-0"
+                        >
+                          <ArrowRight className="h-3 w-3 rotate-[-90deg]" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => moveSchoolDown(index)}
+                          disabled={index === optimizationResults.schools.length - 1}
+                          className="h-6 w-6 p-0"
+                        >
+                          <ArrowRight className="h-3 w-3 rotate-90" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Save Button */}

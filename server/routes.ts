@@ -451,16 +451,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/routes/:routeId/schools", async (req, res) => {
     try {
       const routeId = parseInt(req.params.routeId);
+      
+      if (isNaN(routeId)) {
+        console.error('Invalid route ID:', req.params.routeId);
+        return res.status(400).json({ message: "Invalid route ID" });
+      }
+      
       const routeSchoolData = {
         ...req.body,
         routeId
       };
       
+      console.log('Adding school to route:', routeSchoolData);
       const routeSchool = await storage.createRouteSchool(routeSchoolData);
+      
+      // Broadcast route school addition to all connected clients
+      broadcast({
+        type: 'route_school_added',
+        routeId,
+        routeSchool,
+      });
+      
       res.json(routeSchool);
     } catch (error) {
       console.error('Error adding school to route:', error);
-      res.status(500).json({ message: "Failed to add school to route" });
+      res.status(500).json({ message: "Failed to add school to route", error: error.message });
     }
   });
 
@@ -1514,8 +1529,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const routeData = insertRouteSchema.parse(req.body);
       const route = await storage.createRoute(routeData);
+      
+      // Broadcast route creation to all connected clients
+      broadcast({
+        type: 'route_created',
+        route,
+      });
+      
       res.json(route);
     } catch (error) {
+      console.error('Route creation error:', error);
       res.status(400).json({ message: "Invalid route data" });
     }
   });
@@ -1526,8 +1549,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const routeId = parseInt(req.params.id);
       const updates = req.body;
       const route = await storage.updateRoute(routeId, updates);
+      
+      // Broadcast route update to all connected clients
+      broadcast({
+        type: 'route_updated',
+        route,
+      });
+      
       res.json(route);
     } catch (error) {
+      console.error('Route update error:', error);
       res.status(400).json({ message: "Failed to update route" });
     }
   });
