@@ -1567,10 +1567,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/routes/:id", async (req, res) => {
     try {
       const routeId = parseInt(req.params.id);
+      
+      // First delete associated route schools
+      await storage.deleteRouteSchools(routeId);
+      
+      // Then delete the route
       await storage.deleteRoute(routeId);
+      
+      // Broadcast route deletion to all connected clients
+      broadcast({
+        type: 'route_deleted',
+        routeId,
+      });
+      
       res.json({ message: "Route deleted successfully" });
     } catch (error) {
-      res.status(400).json({ message: "Failed to delete route" });
+      console.error('Route deletion error:', error);
+      res.status(500).json({ message: "Failed to delete route" });
     }
   });
 

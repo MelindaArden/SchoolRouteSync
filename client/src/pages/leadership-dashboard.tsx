@@ -200,7 +200,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="relative group">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -208,6 +208,27 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                       <p className="text-2xl font-bold text-green-600">{onTimePercentage}%</p>
                     </div>
                     <Clock className="h-8 w-8 text-green-600" />
+                  </div>
+                  
+                  {/* Hover tooltip with driver breakdown */}
+                  <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg min-w-[200px]">
+                    <div className="font-semibold mb-2">On Time % by Driver:</div>
+                    {users.filter((user: any) => user.role === 'driver').map((driver: any) => {
+                      const driverSessions = sessionsData.filter((s: any) => s.driverId === driver.id);
+                      const driverTotal = driverSessions.reduce((sum: number, session: any) => 
+                        sum + (session.pickupDetails?.length || 0), 0);
+                      const driverCompleted = driverSessions.reduce((sum: number, session: any) => 
+                        sum + (session.pickupDetails?.filter((p: any) => p.status === 'picked_up').length || 0), 0);
+                      const driverPercentage = driverTotal > 0 ? Math.round((driverCompleted / driverTotal) * 100) : 0;
+                      
+                      return (
+                        <div key={driver.id} className="flex justify-between py-1">
+                          <span>{driver.firstName} {driver.lastName}:</span>
+                          <span className="font-semibold">{driverPercentage}%</span>
+                        </div>
+                      );
+                    })}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                   </div>
                 </CardContent>
               </Card>
@@ -237,62 +258,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
               </Card>
             </div>
 
-            {/* Active Alerts */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-800 mb-3">Active Alerts</h3>
-              <div className="space-y-3">
-                {/* Behind Schedule Routes */}
-                {sessionsData
-                  .filter((session: any) => session.status === "in_progress" && session.progressPercent < 50)
-                  .map((session: any) => (
-                    <AlertCard
-                      key={`route-${session.id}`}
-                      type="warning"
-                      title={`Route ${session.route?.name} - Behind Schedule`}
-                      message={`${session.driver?.firstName} ${session.driver?.lastName} has only completed ${session.progressPercent.toFixed(0)}% of pickups`}
-                      timestamp="5 minutes ago"
-                    />
-                  ))}
-
-                {/* Missed School Alerts */}
-                {alertsData
-                  .filter((alert: any) => alert.status === 'active' || alert.status === 'pending')
-                  .map((alert: any) => (
-                    <AlertCard
-                      key={`missed-${alert.id}`}
-                      type="error"
-                      title={`Missed School Alert`}
-                      message={`Driver late to ${alert.schoolName || 'school'} - Expected arrival time passed`}
-                      timestamp={new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    />
-                  ))}
-
-                {/* Driver Issues */}
-                {recentIssuesData
-                  .filter((issue: any) => {
-                    const issueDate = new Date(issue.createdAt);
-                    const today = new Date();
-                    return issueDate.toDateString() === today.toDateString() && issue.status !== 'resolved';
-                  })
-                  .map((issue: any) => (
-                    <AlertCard
-                      key={`issue-${issue.id}`}
-                      type="error"
-                      title={`Driver Issue - ${issue.type?.replace('_', ' ').toUpperCase() || 'General'}`}
-                      message={issue.description || 'Driver reported an issue during route'}
-                      timestamp={new Date(issue.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    />
-                  ))}
-                
-                {activeAlerts === 0 && (
-                  <Card className="border-green-200 bg-green-50">
-                    <CardContent className="p-4 text-center">
-                      <p className="text-green-800">No active alerts - all routes running smoothly!</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
+            {/* Active Alerts section removed as requested */}
 
             {/* Route Status Overview */}
             <div>

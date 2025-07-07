@@ -69,6 +69,8 @@ export default function StudentAbsenceManagement() {
       toast({ title: "Success", description: "Student absence marked successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences'] });
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences/date'] });
+      // Force refresh of current date view for real-time updates
+      queryClient.invalidateQueries({ queryKey: ['/api/student-absences/date', selectedDate] });
       setIsDialogOpen(false);
       form.reset({
         absenceDate: format(new Date(), 'yyyy-MM-dd'),
@@ -92,6 +94,8 @@ export default function StudentAbsenceManagement() {
       toast({ title: "Success", description: "Student absence removed successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences'] });
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences/date'] });
+      // Force refresh of current date view for real-time updates
+      queryClient.invalidateQueries({ queryKey: ['/api/student-absences/date', selectedDate] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to remove student absence", variant: "destructive" });

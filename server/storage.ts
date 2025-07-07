@@ -201,7 +201,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteRoute(id: number): Promise<void> {
-    await db.delete(routes).where(eq(routes.id, id));
+    try {
+      // First get all pickup sessions for this route
+      const sessions = await db.select().from(pickupSessions).where(eq(pickupSessions.routeId, id));
+      const sessionIds = sessions.map(s => s.id);
+      
+      // Delete student pickups that reference these sessions
+      for (const sessionId of sessionIds) {
+        await db.delete(studentPickups).where(eq(studentPickups.sessionId, sessionId));
+      }
+      
+      // Delete all related records to prevent foreign key constraint violations
+      await db.delete(routeSchools).where(eq(routeSchools.routeId, id));
+      await db.delete(routeAssignments).where(eq(routeAssignments.routeId, id));
+      await db.delete(pickupSessions).where(eq(pickupSessions.routeId, id));
+      await db.delete(pickupHistory).where(eq(pickupHistory.routeId, id));
+      await db.delete(missedSchoolAlerts).where(eq(missedSchoolAlerts.routeSchoolId, id));
+      
+      // Then delete the route itself
+      await db.delete(routes).where(eq(routes.id, id));
+    } catch (error) {
+      console.error('Error deleting route:', error);
+      throw error;
+    }
   }
 
   // Route Schools

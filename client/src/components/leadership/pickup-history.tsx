@@ -293,11 +293,153 @@ export default function PickupHistory() {
     link.click();
   };
 
+  // Group history by time periods for organization
+  const groupHistoryByPeriod = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thisWeek = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000));
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const grouped = {
+      today: [] as any[],
+      thisWeek: [] as any[],
+      thisMonth: [] as any[],
+      older: [] as any[]
+    };
+    
+    history.forEach((record: any) => {
+      const recordDate = new Date(record.completedAt);
+      const recordDateOnly = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+      
+      if (recordDateOnly.getTime() === today.getTime()) {
+        grouped.today.push(record);
+      } else if (recordDate >= thisWeek) {
+        grouped.thisWeek.push(record);
+      } else if (recordDate >= thisMonth) {
+        grouped.thisMonth.push(record);
+      } else {
+        grouped.older.push(record);
+      }
+    });
+    
+    return grouped;
+  };
+
+  const groupedHistory = groupHistoryByPeriod();
+
+  // RouteHistoryCard component for consistent display
+  const RouteHistoryCard = ({ record, onSelect }: { record: any; onSelect: (record: any) => void }) => (
+    <Card className="cursor-pointer hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <RouteIcon className="h-5 w-5 text-blue-600" />
+              <div>
+                <h3 className="font-medium text-gray-900">
+                  {record.route?.name || `Route ${record.routeId}`}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Driver: {record.driver?.firstName} {record.driver?.lastName}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Completed: {formatTime(record.completedAt)}
+                </p>
+                {/* Show school and student info */}
+                {record.pickupDetails && record.pickupDetails.length > 0 && (
+                  <div className="mt-1">
+                    <p className="text-xs text-gray-400">
+                      Schools: {[...new Set(record.pickupDetails.map((p: any) => p.schoolName).filter(Boolean))].join(', ')}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Students: {record.pickupDetails.map((p: any) => p.studentName).filter(Boolean).slice(0, 3).join(', ')}
+                      {record.pickupDetails.length > 3 ? '...' : ''}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="text-center">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium">{record.studentsPickedUp}</span>
+              </div>
+              <p className="text-xs text-gray-500">picked up</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-red-600" />
+                <span className="text-sm font-medium">{record.totalStudents - record.studentsPickedUp}</span>
+              </div>
+              <p className="text-xs text-gray-500">missed</p>
+            </div>
+            
+            <div className="text-center">
+              <Badge variant={record.studentsPickedUp === record.totalStudents ? "default" : "secondary"}>
+                {Math.round((record.studentsPickedUp / record.totalStudents) * 100)}%
+              </Badge>
+            </div>
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => onSelect(record)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Route Completion Repository</h2>
         <div className="flex items-center gap-2">
+          <Select value={selectedRecord ? "detailed" : "overview"} onValueChange={(value) => {
+            if (value === "overview") setSelectedRecord(null);
+            else {
+              const record = history.find((h: any) => h.id.toString() === value);
+              if (record) setSelectedRecord(record);
+            }
+          }}>
+            <SelectTrigger className="w-[250px]">
+              <SelectValue placeholder="Select view" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="overview">History Overview</SelectItem>
+              {history.map((record: any) => {
+                const pickupDetails = record.pickupDetails || [];
+                const schoolsInRoute = [...new Set(pickupDetails.map((p: any) => p.schoolName).filter(Boolean))];
+                const studentsInRoute = pickupDetails.map((p: any) => p.studentName).filter(Boolean);
+                
+                return (
+                  <SelectItem key={record.id} value={record.id.toString()}>
+                    <div className="flex flex-col">
+                      <span>{record.route?.name || `Route ${record.routeId}`} - {record.driver?.firstName} {record.driver?.lastName}</span>
+                      <span className="text-xs">{format(new Date(record.completedAt), 'MMM d, yyyy')}</span>
+                      {schoolsInRoute.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          Schools: {schoolsInRoute.join(', ')}
+                        </span>
+                      )}
+                      {studentsInRoute.length > 0 && (
+                        <span className="text-xs text-gray-400">
+                          Students: {studentsInRoute.slice(0, 2).join(', ')}{studentsInRoute.length > 2 ? '...' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
           <Button
             variant="outline"
             size="sm"
@@ -435,75 +577,76 @@ export default function PickupHistory() {
         />
       </div>
 
-      {filteredHistory.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-800 mb-2">No Pickup History</h3>
-            <p className="text-gray-600">
-              {searchTerm ? "No records match your search criteria" : "No completed routes found"}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {filteredHistory.map((record: any) => (
-            <Collapsible key={record.id} open={expandedRoutes.has(record.id)} onOpenChange={() => toggleRouteExpansion(record.id)}>
-              <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-blue-100 rounded-full">
-                        <RouteIcon className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{record.route?.name || `Route ${record.routeId}`}</h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            {record.driver?.firstName} {record.driver?.lastName}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {record.date}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(record.completedAt)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="font-medium">{record.studentsPickedUp}/{record.totalStudents}</p>
-                        <p className="text-sm text-gray-600">Students</p>
-                      </div>
-                      <Badge variant={record.studentsPickedUp === record.totalStudents ? "default" : "secondary"}>
-                        {Math.round((record.studentsPickedUp / record.totalStudents) * 100)}%
-                      </Badge>
-                      <CollapsibleTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                        >
-                          <ChevronDown className={`h-4 w-4 mr-2 transition-transform ${
-                            expandedRoutes.has(record.id) ? 'rotate-180' : ''
-                          }`} />
-                          Details
-                        </Button>
-                      </CollapsibleTrigger>
-                    </div>
-                  </div>
-                  <CollapsibleContent className="pt-4">
-                    <RouteBreakdownSection record={record} schools={schools} students={students} />
-                  </CollapsibleContent>
-                </CardContent>
-              </Card>
-            </Collapsible>
-          ))}
-        </div>
-      )}
+      {/* Time-based History Organization */}
+      <div className="space-y-6">
+        {/* Today's History */}
+        {groupedHistory.today.length > 0 && (
+          <Collapsible open={expandedRoutes.has(-1)} onOpenChange={() => toggleRouteExpansion(-1)}>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+              <ChevronDown className={`h-4 w-4 transition-transform ${expandedRoutes.has(-1) ? 'rotate-180' : ''}`} />
+              <h3 className="font-semibold text-blue-900">Today ({groupedHistory.today.length} routes)</h3>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-2">
+              {groupedHistory.today.map((record: any) => (
+                <RouteHistoryCard key={record.id} record={record} onSelect={setSelectedRecord} />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* This Week's History */}
+        {groupedHistory.thisWeek.length > 0 && (
+          <Collapsible open={expandedRoutes.has(-2)} onOpenChange={() => toggleRouteExpansion(-2)}>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+              <ChevronDown className={`h-4 w-4 transition-transform ${expandedRoutes.has(-2) ? 'rotate-180' : ''}`} />
+              <h3 className="font-semibold text-green-900">This Week ({groupedHistory.thisWeek.length} routes)</h3>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-2">
+              {groupedHistory.thisWeek.map((record: any) => (
+                <RouteHistoryCard key={record.id} record={record} onSelect={setSelectedRecord} />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* This Month's History */}
+        {groupedHistory.thisMonth.length > 0 && (
+          <Collapsible open={expandedRoutes.has(-3)} onOpenChange={() => toggleRouteExpansion(-3)}>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+              <ChevronDown className={`h-4 w-4 transition-transform ${expandedRoutes.has(-3) ? 'rotate-180' : ''}`} />
+              <h3 className="font-semibold text-orange-900">This Month ({groupedHistory.thisMonth.length} routes)</h3>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-2">
+              {groupedHistory.thisMonth.map((record: any) => (
+                <RouteHistoryCard key={record.id} record={record} onSelect={setSelectedRecord} />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Older History */}
+        {groupedHistory.older.length > 0 && (
+          <Collapsible open={expandedRoutes.has(-4)} onOpenChange={() => toggleRouteExpansion(-4)}>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+              <ChevronDown className={`h-4 w-4 transition-transform ${expandedRoutes.has(-4) ? 'rotate-180' : ''}`} />
+              <h3 className="font-semibold text-gray-900">Older ({groupedHistory.older.length} routes)</h3>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-2">
+              {groupedHistory.older.map((record: any) => (
+                <RouteHistoryCard key={record.id} record={record} onSelect={setSelectedRecord} />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {history.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-gray-600">No route completion history found.</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
