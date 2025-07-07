@@ -15,13 +15,13 @@ interface StudentPickup {
   driverNotes: string | null;
 }
 
-interface StudentListProps {
+interface EnhancedStudentListProps {
   students: any[];
   isActive: boolean;
   sessionId?: number;
 }
 
-export default function StudentList({ students, isActive, sessionId }: StudentListProps) {
+export default function EnhancedStudentList({ students, isActive, sessionId }: EnhancedStudentListProps) {
   const [pickupStates, setPickupStates] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
@@ -62,24 +62,37 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
     return todaysAbsences.some((absence: any) => absence.studentId === studentId);
   };
 
-  // Get pickup data for a student
-  const getStudentPickup = (studentId: number): StudentPickup | undefined => {
-    return studentPickups.find(pickup => pickup.studentId === studentId);
+  // Get student pickup record
+  const getStudentPickup = (studentId: number) => {
+    return studentPickups.find((pickup: StudentPickup) => pickup.studentId === studentId);
   };
 
   const handleTogglePickup = async (student: any) => {
-    if (!isActive || !sessionId) {
-      console.log('Cannot toggle pickup - not active or no session ID', { isActive, sessionId });
+    if (!sessionId || !isActive) {
+      toast({
+        title: "Cannot update pickup",
+        description: "Route session is not active",
+        variant: "destructive",
+      });
       return;
     }
 
-    const isPickedUp = pickupStates[student.id];
-    const newStatus = isPickedUp ? "pending" : "picked_up";
+    // Check if student is absent - prevent pickup if absent
+    if (isStudentAbsent(student.id)) {
+      toast({
+        title: "Student is absent today",
+        description: "Cannot pick up absent student",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    const isPickedUp = pickupStates[student.id] || false;
+    const newStatus = isPickedUp ? "pending" : "picked_up";
+    
     try {
       // Find the pickup record for this student and session
       const pickup = studentPickups.find((p: StudentPickup) => p.studentId === student.id && p.sessionId === sessionId);
-      console.log('Looking for pickup record:', { studentId: student.id, sessionId, pickup, studentPickups });
       
       if (pickup) {
         await apiRequest("PATCH", `/api/student-pickups/${pickup.id}`, {
@@ -120,44 +133,52 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
         const isPickedUp = pickupStates[student.id];
         const pickup = getStudentPickup(student.id);
         const pickupTime = pickup?.pickedUpAt ? formatPickupTime(pickup.pickedUpAt) : null;
+        const isAbsent = isStudentAbsent(student.id);
         
         return (
-          <div key={student.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+          <div key={student.id} className={`flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0 ${isAbsent ? 'bg-red-50 opacity-75' : ''}`}>
             <div className="flex items-center space-x-3 flex-1">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-xs font-medium text-primary">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isAbsent ? 'bg-red-100' : 'bg-blue-100'}`}>
+                <span className={`text-xs font-medium ${isAbsent ? 'text-red-600' : 'text-primary'}`}>
                   {getInitials(student.firstName, student.lastName)}
                 </span>
               </div>
               <div className="flex-1">
-                <p className="font-medium text-sm">
+                <p className={`font-medium text-sm ${isAbsent ? 'text-red-700 line-through' : ''}`}>
                   {student.firstName} {student.lastName}
+                  {isAbsent && <span className="ml-2 text-xs text-red-600 font-normal">(ABSENT)</span>}
                 </p>
-                <p className="text-xs text-gray-500">Grade {student.grade}</p>
-                {isPickedUp && pickupTime && (
+                <p className={`text-xs ${isAbsent ? 'text-red-500' : 'text-gray-500'}`}>Grade {student.grade}</p>
+                {isPickedUp && pickupTime && !isAbsent && (
                   <p className="text-xs text-green-600 font-medium">
                     Picked up at {pickupTime}
                   </p>
                 )}
               </div>
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => handleTogglePickup(student)}
-              disabled={!isActive}
-              className={`w-8 h-8 rounded-full p-0 ${
-                isPickedUp
-                  ? "bg-green-600 text-white hover:bg-green-700"
-                  : "border-2 border-gray-300 text-gray-400 hover:border-gray-400"
-              }`}
-            >
-              {isPickedUp ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
-            </Button>
+            {isAbsent ? (
+              <div className="text-xs text-red-600 font-medium px-3 py-1 bg-red-100 rounded">
+                ABSENT
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleTogglePickup(student)}
+                disabled={!isActive}
+                className={`w-8 h-8 rounded-full p-0 ${
+                  isPickedUp
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : "border-2 border-gray-300 text-gray-400 hover:border-gray-400"
+                }`}
+              >
+                {isPickedUp ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+              </Button>
+            )}
           </div>
         );
       })}

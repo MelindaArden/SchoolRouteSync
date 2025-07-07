@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import StudentList from "./student-list";
+import EnhancedStudentList from "./enhanced-student-list";
 import { Clock, MapPin } from "lucide-react";
 
 interface SchoolCardProps {
@@ -63,7 +63,7 @@ export default function SchoolCard({
           <h5 className="text-sm font-medium text-gray-700 mb-2">
             Students ({students.length})
           </h5>
-          <StudentList 
+          <EnhancedStudentList 
             students={students} 
             isActive={status === "next"}
             sessionId={sessionId}
