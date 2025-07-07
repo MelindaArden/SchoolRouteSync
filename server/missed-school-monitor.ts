@@ -184,7 +184,8 @@ async function sendMissedSchoolNotification(alert: any, session: any, school: an
     message,
     driverId: session.driverId,
     sessionId: session.id,
-    priority: priorityLevel as 'low' | 'medium' | 'high' | 'urgent'
+    priority: priorityLevel as 'low' | 'medium' | 'high' | 'urgent',
+    timezone: 'America/New_York' // Default to Eastern Time for US school operations
   });
   
   console.log(`🚨 MISSED SCHOOL ALERT: ${alertTypeText} - ${school.name} - Driver: ${driver?.firstName} ${driver?.lastName}`);

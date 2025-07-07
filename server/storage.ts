@@ -215,6 +215,11 @@ export class DatabaseStorage implements IStorage {
         await db.delete(studentPickups).where(eq(studentPickups.sessionId, sessionId));
       }
       
+      // Delete driver locations that reference these sessions
+      for (const sessionId of sessionIds) {
+        await db.delete(driverLocations).where(eq(driverLocations.sessionId, sessionId));
+      }
+      
       // Delete missed school alerts that reference route schools
       for (const routeSchoolId of routeSchoolIds) {
         await db.delete(missedSchoolAlerts).where(eq(missedSchoolAlerts.routeSchoolId, routeSchoolId));

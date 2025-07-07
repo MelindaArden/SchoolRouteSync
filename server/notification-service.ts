@@ -1,5 +1,39 @@
 import { storage } from './storage';
 
+// Helper function to get localized time based on timezone
+function getLocalTime(timezone?: string): string {
+  const now = new Date();
+  
+  if (timezone) {
+    try {
+      return now.toLocaleString('en-US', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      console.warn(`Invalid timezone: ${timezone}, using local time`);
+    }
+  }
+  
+  // Default to US Eastern time for school bus operations
+  return now.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+}
+
 interface NotificationData {
   type: 'issue' | 'maintenance' | 'proximity' | 'emergency';
   title: string;
@@ -7,6 +41,7 @@ interface NotificationData {
   driverId: number;
   sessionId?: number;
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  timezone?: string;
 }
 
 async function sendEmailsToAdmins(data: NotificationData): Promise<void> {
@@ -43,7 +78,7 @@ async function sendEmailsToAdmins(data: NotificationData): Promise<void> {
                     <p style="margin: 5px 0; color: #888;"><strong>Priority:</strong> ${data.priority.toUpperCase()}</p>
                     <p style="margin: 5px 0; color: #888;"><strong>Driver ID:</strong> ${data.driverId}</p>
                     ${data.sessionId ? `<p style="margin: 5px 0; color: #888;"><strong>Session ID:</strong> ${data.sessionId}</p>` : ''}
-                    <p style="margin: 5px 0; color: #888;"><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                    <p style="margin: 5px 0; color: #888;"><strong>Time:</strong> ${getLocalTime(data.timezone)}</p>
                   </div>
                 </div>
                 <p style="color: #666; font-size: 12px; margin-bottom: 0;">
@@ -189,7 +224,7 @@ export async function sendAdminNotifications(data: NotificationData): Promise<vo
                         <p style="margin: 5px 0; color: #888;"><strong>Priority:</strong> ${data.priority.toUpperCase()}</p>
                         <p style="margin: 5px 0; color: #888;"><strong>Driver ID:</strong> ${data.driverId}</p>
                         ${data.sessionId ? `<p style="margin: 5px 0; color: #888;"><strong>Session ID:</strong> ${data.sessionId}</p>` : ''}
-                        <p style="margin: 5px 0; color: #888;"><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                        <p style="margin: 5px 0; color: #888;"><strong>Time:</strong> ${getLocalTime(data.timezone)}</p>
                       </div>
                     </div>
                     <p style="color: #666; font-size: 12px; margin-bottom: 0;">

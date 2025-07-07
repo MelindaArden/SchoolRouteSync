@@ -1222,7 +1222,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: issueData.type === "maintenance" ? "Van Maintenance Request" : "Driver Issue Report",
           message: `Driver: ${driver?.firstName} ${driver?.lastName}\nIssue: ${issueData.title}\nPriority: ${issueData.priority?.toUpperCase()}\nDescription: ${issueData.description}`,
           driverId: issueData.driverId,
-          priority: (issueData.priority as 'low' | 'medium' | 'high' | 'urgent') || 'medium'
+          priority: (issueData.priority as 'low' | 'medium' | 'high' | 'urgent') || 'medium',
+          timezone: 'America/New_York' // Default to Eastern Time for US school operations
         });
       } catch (smsError) {
         console.error('Failed to send SMS notifications:', smsError);
