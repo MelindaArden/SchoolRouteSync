@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import "./types"; // Import session type declarations
 import { createAuthToken, validateAuthToken, deleteAuthToken } from "./auth-tokens";
 import { db, pool } from "./db";
-import { pickupSessions, notifications, PickupSession, routeSchools } from "@shared/schema";
+import { pickupSessions, notifications, PickupSession, routeSchools, schools } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { 
   insertPickupSessionSchema, 
@@ -1257,11 +1257,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create school
   app.post("/api/schools", async (req, res) => {
     try {
-      const schoolData = insertSchoolSchema.parse(req.body);
-      const school = await storage.createSchool(schoolData);
+      console.log('Creating school with data:', req.body);
+      
+      // Create a custom schema for school validation that handles decimal fields
+      const schoolValidationSchema = z.object({
+        name: z.string().min(1, "School name is required"),
+        address: z.string().min(1, "Address is required"),
+        dismissalTime: z.string().min(1, "Dismissal time is required"),
+        contactPhone: z.string().optional(),
+        latitude: z.union([z.string(), z.number(), z.null()]).optional(),
+        longitude: z.union([z.string(), z.number(), z.null()]).optional(),
+        isActive: z.boolean().optional(),
+      });
+      
+      // Validate the input
+      const validatedData = schoolValidationSchema.parse(req.body);
+      
+      // Transform to match database requirements
+      const schoolData = {
+        name: validatedData.name,
+        address: validatedData.address,
+        dismissalTime: validatedData.dismissalTime,
+        contactPhone: validatedData.contactPhone || null,
+        latitude: validatedData.latitude ? String(validatedData.latitude) : null,
+        longitude: validatedData.longitude ? String(validatedData.longitude) : null,
+        isActive: validatedData.isActive ?? true,
+      };
+      
+      console.log('Transformed school data:', schoolData);
+      
+      // Direct database insertion bypassing strict schema
+      const [school] = await db.insert(schools).values(schoolData).returning();
       res.json(school);
     } catch (error) {
-      res.status(400).json({ message: "Invalid school data" });
+      console.error('School creation error:', error);
+      res.status(400).json({ message: "Invalid school data", error: error.message });
     }
   });
 
