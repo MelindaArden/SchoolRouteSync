@@ -42,6 +42,16 @@ export default function StudentAbsenceManagement() {
     queryKey: ['/api/students'],
   });
 
+  const { data: schools = [] } = useQuery({
+    queryKey: ['/api/schools'],
+  });
+
+  // Create lookup for school names
+  const getSchoolName = (schoolId: number) => {
+    const school = schools.find((s: any) => s.id === schoolId);
+    return school ? school.name : 'Unknown School';
+  };
+
   const { data: absences = [], isLoading } = useQuery({
     queryKey: ['/api/student-absences'],
   });
@@ -51,17 +61,28 @@ export default function StudentAbsenceManagement() {
   });
 
   const createAbsenceMutation = useMutation({
-    mutationFn: (data: z.infer<typeof absenceFormSchema>) =>
-      apiRequest('POST', '/api/student-absences', data),
+    mutationFn: async (data: z.infer<typeof absenceFormSchema>) => {
+      console.log('Creating absence with data:', data);
+      return apiRequest('POST', '/api/student-absences', data);
+    },
     onSuccess: () => {
       toast({ title: "Success", description: "Student absence marked successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences'] });
       queryClient.invalidateQueries({ queryKey: ['/api/student-absences/date'] });
       setIsDialogOpen(false);
-      form.reset();
+      form.reset({
+        absenceDate: format(new Date(), 'yyyy-MM-dd'),
+        reason: '',
+        notes: '',
+      });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to mark student absence", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('Absence creation error:', error);
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to mark student absence. Please ensure you're logged in and try again.", 
+        variant: "destructive" 
+      });
     }
   });
 
@@ -92,7 +113,7 @@ export default function StudentAbsenceManagement() {
 
   const getStudentSchool = (studentId: number) => {
     const student = students.find((s: any) => s.id === studentId);
-    return student?.school?.name || 'Unknown School';
+    return student ? getSchoolName(student.schoolId) : 'Unknown School';
   };
 
   // Get absences for the next 7 days
@@ -143,7 +164,7 @@ export default function StudentAbsenceManagement() {
                         <SelectContent>
                           {students.map((student: any) => (
                             <SelectItem key={student.id} value={student.id.toString()}>
-                              {student.firstName} {student.lastName} - {student.school?.name || 'Unknown School'}
+                              {student.firstName} {student.lastName} - {getSchoolName(student.schoolId)}
                             </SelectItem>
                           ))}
                         </SelectContent>

@@ -20,38 +20,50 @@ export function PushNotificationSetup() {
     try {
       console.log('Attempting to enable notifications...');
       
-      // Direct permission request without the hook for better debugging
-      if ('Notification' in window) {
-        console.log('Current permission:', Notification.permission);
-        
-        if (Notification.permission === 'default') {
-          console.log('Requesting permission...');
-          const permission = await Notification.requestPermission();
-          console.log('Permission result:', permission);
-          
-          if (permission === 'granted') {
-            console.log('Permission granted! Testing notification...');
-            // Test notification
-            new Notification('Test Notification', {
-              body: 'Push notifications are now enabled!',
-              icon: '/favicon.ico'
-            });
-          } else {
-            console.log('Permission denied or dismissed');
-          }
-        } else if (Notification.permission === 'granted') {
-          console.log('Permission already granted, testing notification...');
-          new Notification('Test Notification', {
-            body: 'Push notifications are working!',
-            icon: '/favicon.ico'
-          });
-        }
+      if (!('Notification' in window)) {
+        alert('This browser does not support notifications');
+        return;
+      }
+
+      console.log('Current permission:', Notification.permission);
+      
+      if (Notification.permission === 'denied') {
+        alert('Notifications are blocked. To enable them:\n\n1. Click the lock/info icon in the address bar\n2. Set notifications to "Allow"\n3. Refresh the page and try again\n\nOr check your browser settings under Privacy & Security > Notifications');
+        return;
       }
       
-      // Also use the hook method as backup
-      const granted = await requestPermission();
-      if (granted) {
-        console.log('Push notifications enabled successfully via hook');
+      if (Notification.permission === 'default') {
+        console.log('Requesting notification permission...');
+        const permission = await Notification.requestPermission();
+        console.log('Permission result:', permission);
+        
+        if (permission === 'granted') {
+          console.log('Permission granted! Testing notification...');
+          new Notification('School Bus Notifications Enabled', {
+            body: 'You will now receive real-time updates about routes and pickups.',
+            icon: '/favicon.ico',
+            tag: 'test-notification'
+          });
+        } else {
+          alert('Notification permission was denied. You can enable it later in your browser settings.');
+        }
+      } else if (Notification.permission === 'granted') {
+        console.log('Permission already granted, testing notification...');
+        new Notification('Notifications Working', {
+          body: 'Push notifications are enabled and working correctly!',
+          icon: '/favicon.ico',
+          tag: 'test-notification'
+        });
+      }
+      
+      // Also use the hook method as backup  
+      try {
+        const granted = await requestPermission();
+        if (granted) {
+          console.log('Push notifications enabled successfully via hook');
+        }
+      } catch (hookError) {
+        console.log('Hook method failed, but direct method may have worked');
       }
     } catch (error) {
       console.error('Failed to enable notifications:', error);
