@@ -61,6 +61,8 @@ interface CreatorConstraints {
   seatsPerDriver: number;
   maxRouteTime: number;
   bufferTime: number;
+  startingAddress: string; // FIX #2: Starting point address
+  endingAddress: string;   // FIX #2: Ending point address
 }
 
 export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
@@ -69,6 +71,8 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     seatsPerDriver: 15,
     maxRouteTime: 90,
     bufferTime: 10,
+    startingAddress: "", // FIX #2: Starting address input
+    endingAddress: "",   // FIX #2: Ending address input
   });
   const [optimizedRoutes, setOptimizedRoutes] = useState<OptimizedRoute[]>([]);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
@@ -246,6 +250,16 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       return;
     }
 
+    // FIX #2: Validate starting and ending addresses for optimal route planning
+    if (!constraints.startingAddress || !constraints.endingAddress) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both starting and ending addresses for optimal route calculation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsOptimizing(true);
 
     try {
@@ -258,6 +272,26 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
           description: `Only ${availableDrivers.length} drivers available for ${constraints.driverCount} requested routes.`,
           variant: "destructive",
         });
+      }
+
+      // FIX #2: Geocode starting and ending addresses for route optimization
+      let startingCoords = null;
+      let endingCoords = null;
+
+      try {
+        // Geocode starting address
+        const startResponse = await fetch(`/api/geocode?address=${encodeURIComponent(constraints.startingAddress)}`);
+        if (startResponse.ok) {
+          startingCoords = await startResponse.json();
+        }
+
+        // Geocode ending address
+        const endResponse = await fetch(`/api/geocode?address=${encodeURIComponent(constraints.endingAddress)}`);
+        if (endResponse.ok) {
+          endingCoords = await endResponse.json();
+        }
+      } catch (error) {
+        console.log('Geocoding error, using route optimization without coordinates:', error);
       }
 
       // Cluster schools by capacity constraints
@@ -382,6 +416,15 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     });
   };
 
+  // FIX #3: Route deletion handler
+  const deleteOptimizedRoute = (routeId: string) => {
+    setOptimizedRoutes(routes => routes.filter(route => route.id !== routeId));
+    toast({
+      title: "Route Deleted",
+      description: "Route has been removed from the optimization results."
+    });
+  };
+
   // Show route editor if editing
   if (editingRoute) {
     return (
@@ -454,6 +497,37 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
               value={constraints.bufferTime}
               onChange={(e) => setConstraints({...constraints, bufferTime: parseInt(e.target.value) || 10})}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* FIX #2: STARTING AND ENDING ADDRESS INPUTS */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Route Start & End Points</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="startingAddress">Starting Address (Driver Base)</Label>
+              <Input
+                id="startingAddress"
+                placeholder="Enter driver starting location..."
+                value={constraints.startingAddress}
+                onChange={(e) => setConstraints({...constraints, startingAddress: e.target.value})}
+              />
+              <p className="text-xs text-gray-500 mt-1">Where drivers begin their routes</p>
+            </div>
+            <div>
+              <Label htmlFor="endingAddress">Ending Address (Return Location)</Label>
+              <Input
+                id="endingAddress"
+                placeholder="Enter route ending location..."
+                value={constraints.endingAddress}
+                onChange={(e) => setConstraints({...constraints, endingAddress: e.target.value})}
+              />
+              <p className="text-xs text-gray-500 mt-1">Where drivers end their routes</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -581,7 +655,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
                     <span>Efficiency: {Math.round(100 - (route.totalDistance / route.schools.length - 5) * 5)}%</span>
                   </div>
 
-                  {/* FIX #2: EDIT AND SAVE BUTTONS */}
+                  {/* FIX #2 & #3: EDIT, SAVE, AND DELETE BUTTONS */}
                   <div className="flex justify-end space-x-2 mt-4">
                     <Button
                       variant="outline"
@@ -590,6 +664,13 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Route
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => deleteOptimizedRoute(route.id)}
+                      className="border-red-600 text-red-600 hover:bg-red-50"
+                    >
+                      Delete Route
                     </Button>
                     <Button
                       onClick={() => saveRoute(route)}

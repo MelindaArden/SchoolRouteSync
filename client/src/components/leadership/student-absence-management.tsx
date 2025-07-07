@@ -317,8 +317,8 @@ export default function StudentAbsenceManagement() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {formatDate(absence.absenceDate)}
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Absent: {formatDate(absence.absenceDate)}
                     </Badge>
                     <Button
                       variant="outline"
@@ -363,8 +363,8 @@ export default function StudentAbsenceManagement() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {formatDate(absence.absenceDate)}
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Absent: {formatDate(absence.absenceDate)}
                     </Badge>
                     <Button
                       variant="outline"
