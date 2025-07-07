@@ -127,17 +127,17 @@ export async function checkMissedSchools() {
             const existingAlerts = await storage.getMissedSchoolAlertsBySession(session.id);
             const alreadyAlerted = existingAlerts.some(alert => 
               alert.routeSchoolId === routeSchool.id && 
-              alert.alertType === 'missed_school' &&
+              alert.alertType === 'missed_arrival' &&
               alert.alertSent
             );
             
             if (!alreadyAlerted) {
-              // Create missed school alert
+              // Create missed arrival alert (NEW: separate from missed school)
               const alert = await storage.createMissedSchoolAlert({
                 sessionId: session.id,
                 routeSchoolId: routeSchool.id,
                 driverId: session.driverId,
-                alertType: 'missed_school',
+                alertType: 'missed_arrival',
                 expectedTime: routeSchool.estimatedArrivalTime,
                 actualTime: now,
                 driverLocation: JSON.stringify({
@@ -148,6 +148,9 @@ export async function checkMissedSchools() {
                 alertSent: false,
                 emailSent: false
               });
+              
+              // Send automated email alert to all admins (NEW FEATURE)
+              await sendMissedArrivalEmailAlert(alert, session, school);
               
               // Send urgent notification to admins
               await sendMissedSchoolNotification(alert, session, school, true);
@@ -164,6 +167,37 @@ export async function checkMissedSchools() {
     }
   } catch (error) {
     console.error('Error checking missed schools:', error);
+  }
+}
+
+// NEW: Send automated email alerts for missed arrival times
+async function sendMissedArrivalEmailAlert(alert: any, session: any, school: any) {
+  try {
+    const { sendAdminEmailNotification } = await import('./sendgrid-email');
+    
+    const driver = await storage.getUserById(session.driverId);
+    const driverName = driver ? `${driver.firstName} ${driver.lastName}` : 'Unknown Driver';
+    
+    const title = `🚨 MISSED ARRIVAL TIME ALERT`;
+    const message = `
+Driver ${driverName} has missed their estimated arrival time at ${school.name}.
+
+📍 **School**: ${school.name}
+⏰ **Expected Arrival**: ${alert.expectedTime}
+🕐 **Current Time**: ${new Date(alert.actualTime).toLocaleTimeString('en-US', { timeZone: 'America/New_York' })}
+🚗 **Driver**: ${driverName}
+📊 **Status**: Driver not yet at pickup location
+
+This is an automated alert generated when drivers are not at their assigned school by the estimated arrival time (5 minutes before dismissal).
+
+Please monitor the situation and contact the driver if necessary.
+`;
+    
+    await sendAdminEmailNotification(title, message, 'urgent');
+    console.log(`📧 Automated missed arrival email sent for ${school.name}`);
+    
+  } catch (error) {
+    console.error('❌ Failed to send missed arrival email alert:', error);
   }
 }
 

@@ -57,6 +57,21 @@ export default function RouteForm({ onClose }: RouteFormProps) {
     ]);
   };
 
+  // Calculate estimated arrival time (5 minutes before dismissal)
+  const calculateEstimatedArrival = (schoolId: number): string => {
+    const school = schools.find((s: any) => s.id === schoolId);
+    if (!school?.dismissalTime) return "";
+    
+    const [hours, minutes] = school.dismissalTime.split(':').map(Number);
+    const dismissalDate = new Date();
+    dismissalDate.setHours(hours, minutes, 0, 0);
+    
+    // Subtract 5 minutes
+    const estimatedDate = new Date(dismissalDate.getTime() - 5 * 60 * 1000);
+    
+    return `${estimatedDate.getHours().toString().padStart(2, '0')}:${estimatedDate.getMinutes().toString().padStart(2, '0')}`;
+  };
+
   const removeSchool = (index: number) => {
     const newSchools = selectedSchools.filter((_, i) => i !== index);
     // Update order indices
@@ -74,6 +89,13 @@ export default function RouteForm({ onClose }: RouteFormProps) {
   const updateSchool = (index: number, field: string, value: any) => {
     const updated = [...selectedSchools];
     updated[index] = { ...updated[index], [field]: value };
+    
+    // Auto-calculate estimated arrival time when school is selected
+    if (field === 'schoolId' && value) {
+      const estimatedTime = calculateEstimatedArrival(parseInt(value));
+      updated[index].estimatedArrivalTime = estimatedTime;
+    }
+    
     setSelectedSchools(updated);
   };
 
@@ -91,46 +113,58 @@ export default function RouteForm({ onClose }: RouteFormProps) {
     setLoading(true);
 
     try {
-      // Create route
-      const routeResponse = await apiRequest("POST", "/api/routes", {
+      // Create route with enhanced error handling
+      const routeData = {
         name: formData.name,
         driverId: parseInt(formData.driverId),
-      });
-      
-      const routeData = await routeResponse.json();
-      const routeId = routeData.id;
+        isActive: true,
+      };
 
-      // Add schools to route
+      console.log('Creating route with data:', routeData);
+      const newRoute = await apiRequest("POST", "/api/routes", routeData);
+      console.log('Route created:', newRoute);
+
+      // Add schools to route with automatic estimated arrival times
       for (const school of selectedSchools) {
         if (school.schoolId > 0) {
-          await apiRequest("POST", `/api/routes/${routeId}/schools`, {
+          const schoolData = {
             schoolId: school.schoolId,
             orderIndex: school.orderIndex,
-            estimatedArrivalTime: school.estimatedArrivalTime,
-          });
+            estimatedArrivalTime: school.estimatedArrivalTime || calculateEstimatedArrival(school.schoolId),
+            alertThresholdMinutes: 10, // Default 10 minutes alert threshold
+          };
+          
+          console.log('Adding school to route:', schoolData);
+          await apiRequest("POST", `/api/routes/${newRoute.id}/schools`, schoolData);
         }
       }
 
-      // Assign students to route
+      // Create route assignments for selected students
       for (const student of selectedStudents) {
-        await apiRequest("POST", `/api/routes/${routeId}/students`, {
+        const assignmentData = {
+          routeId: newRoute.id,
           studentId: student.studentId,
           schoolId: student.schoolId,
-        });
+          isActive: true,
+        };
+        
+        console.log('Creating route assignment:', assignmentData);
+        await apiRequest("POST", "/api/route-assignments", assignmentData);
       }
       
       queryClient.invalidateQueries({ queryKey: ['/api/routes'] });
       
       toast({
         title: "Success",
-        description: "Route created successfully",
+        description: "Route created successfully with automatic arrival times",
       });
       
       onClose();
     } catch (error) {
+      console.error("Route creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create route",
+        description: `Failed to create route: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {

@@ -118,8 +118,8 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
 
   const startTime = sessionDetails.startTime ? new Date(sessionDetails.startTime) : null;
   const completedTime = sessionDetails.completedTime ? new Date(sessionDetails.completedTime) : null;
-  const routeDuration = startTime && completedTime ? 
-    Math.round((completedTime.getTime() - startTime.getTime()) / (1000 * 60)) : null;
+  const routeDuration = sessionDetails.durationMinutes || 
+    (startTime && completedTime ? Math.round((completedTime.getTime() - startTime.getTime()) / (1000 * 60)) : null);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
@@ -196,6 +196,13 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Completed Time:</span>
                 <span className="font-medium">{formatTime(completedTime)}</span>
+              </div>
+            )}
+            
+            {routeDuration && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Route Duration:</span>
+                <span className="font-medium">{routeDuration} minutes</span>
               </div>
             )}
             

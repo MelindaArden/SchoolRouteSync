@@ -20,6 +20,7 @@ import DriverLocationMap from "@/components/leadership/driver-location-map";
 import PickupHistory from "@/components/leadership/pickup-history";
 import RouteOptimizer from "@/components/leadership/route-optimizer";
 import MultiDriverRouteOptimizer from "@/components/leadership/multi-driver-route-optimizer";
+import AdvancedRouteCreator from "@/components/leadership/advanced-route-creator";
 import StudentAbsenceManagement from "@/components/leadership/student-absence-management";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -490,22 +491,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 Routes
               </Button>
               <Button
-                variant={routesView === "optimizer" ? "default" : "outline"}
+                variant={routesView === "creator" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setRoutesView("optimizer")}
-                className="flex-1"
-              >
-                <TrendingUp className="h-4 w-4 mr-1" />
-                Single Route
-              </Button>
-              <Button
-                variant={routesView === "multi-optimizer" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setRoutesView("multi-optimizer")}
+                onClick={() => setRoutesView("creator")}
                 className="flex-1"
               >
                 <Calculator className="h-4 w-4 mr-1" />
-                Multi-Route
+                Route Creator
               </Button>
             </div>
 
@@ -548,15 +540,9 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
               </Card>
             )}
 
-            {routesView === "optimizer" && (
+            {routesView === "creator" && (
               <div className="p-4">
-                <RouteOptimizer onSave={() => setRoutesView("routes")} />
-              </div>
-            )}
-
-            {routesView === "multi-optimizer" && (
-              <div className="p-4">
-                <MultiDriverRouteOptimizer />
+                <AdvancedRouteCreator onClose={() => setRoutesView("routes")} />
               </div>
             )}
 

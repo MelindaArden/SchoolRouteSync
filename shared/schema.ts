@@ -76,6 +76,7 @@ export const pickupSessions = pgTable("pickup_sessions", {
   status: text("status").notNull().default("pending"), // pending, in_progress, completed, cancelled
   startTime: timestamp("start_time"),
   completedTime: timestamp("completed_time"),
+  durationMinutes: integer("duration_minutes"), // Route duration in minutes
   notes: text("notes"),
 });
 

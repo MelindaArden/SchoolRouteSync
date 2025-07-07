@@ -568,10 +568,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pickups = await storage.getStudentPickups(sessionId);
       const pickedUpCount = pickups.filter(p => p.status === "picked_up").length;
       
-      // Update session to completed
+      // Calculate duration if session has start time
+      let durationMinutes = null;
+      if (session.startTime) {
+        const startTime = new Date(session.startTime);
+        const endTime = new Date();
+        durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+      }
+
+      // Update session to completed with duration
       await storage.updatePickupSession(sessionId, {
         status: "completed",
-        completedTime: new Date()
+        completedTime: new Date(),
+        durationMinutes
       });
 
       // Save to pickup history
