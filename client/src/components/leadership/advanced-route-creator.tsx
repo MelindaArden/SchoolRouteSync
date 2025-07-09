@@ -223,34 +223,58 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     }));
   };
 
-  // Calculate route metrics
+  // Enhanced route metrics with individual timing analysis
   const calculateRouteMetrics = (schools: any[], driverIndex: number) => {
     let totalDistance = 0;
     let totalTime = 0;
     const warnings: string[] = [];
+    const timingConcerns: string[] = [];
 
-    // Calculate total distance
-    for (let i = 0; i < schools.length - 1; i++) {
-      const dist = calculateDistance(
-        schools[i].latitude,
-        schools[i].longitude,
-        schools[i + 1].latitude,
-        schools[i + 1].longitude
-      );
-      totalDistance += dist;
-      totalTime += (dist / 30) * 60; // Assume 30 km/h average speed
+    // Calculate travel time between schools and check pickup timing
+    let currentTime = new Date(`2000-01-01 13:30:00`); // Start time 1:30 PM
+    
+    for (let i = 0; i < schools.length; i++) {
+      const school = schools[i];
+      const dismissalTime = new Date(`2000-01-01 ${school.dismissalTime}:00`);
+      
+      if (i > 0) {
+        // Calculate travel time from previous school
+        const prevSchool = schools[i - 1];
+        const dist = calculateDistance(
+          prevSchool.latitude,
+          prevSchool.longitude,
+          school.latitude,
+          school.longitude
+        );
+        totalDistance += dist;
+        const travelTime = (dist / 30) * 60; // 30 km/h average speed
+        totalTime += travelTime + constraints.bufferTime;
+        
+        // Add travel time to current time
+        currentTime = new Date(currentTime.getTime() + (travelTime + constraints.bufferTime) * 60000);
+      }
+      
+      // Check if driver will arrive on time
+      const arrivalTime = currentTime;
+      const timeUntilDismissal = (dismissalTime.getTime() - arrivalTime.getTime()) / 60000; // minutes
+      
+      if (timeUntilDismissal < 0) {
+        timingConcerns.push(`${school.name}: Driver arrives ${Math.abs(Math.round(timeUntilDismissal))} minutes LATE (${arrivalTime.toTimeString().slice(0,5)} arrival vs ${school.dismissalTime} dismissal)`);
+        warnings.push(`CRITICAL: Late arrival at ${school.name}`);
+      } else if (timeUntilDismissal < 5) {
+        timingConcerns.push(`${school.name}: Very tight timing - only ${Math.round(timeUntilDismissal)} minutes before dismissal`);
+        warnings.push(`TIMING RISK: ${school.name} has very tight timing`);
+      }
     }
 
-    // Add time between schools (buffer time)
-    totalTime += (schools.length - 1) * constraints.bufferTime;
-
-    // Check for timing conflicts
+    // Check for timing conflicts between schools
     for (let i = 0; i < schools.length - 1; i++) {
       const currentDismissal = schools[i].dismissalTime;
       const nextDismissal = schools[i + 1].dismissalTime;
       
       if (currentDismissal && nextDismissal && currentDismissal > nextDismissal) {
         warnings.push(`Timing conflict: ${schools[i].name} dismisses after ${schools[i + 1].name}`);
+        timingConcerns.push(`Scheduling conflict: ${schools[i].name} (${currentDismissal}) dismisses after ${schools[i + 1].name} (${nextDismissal})`);
       }
     }
 
@@ -272,6 +296,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       totalTime: Math.round(totalTime),
       seatUtilization: Math.round(seatUtilization),
       warnings,
+      timingConcerns, // New field for detailed timing analysis
     };
   };
 
@@ -370,6 +395,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
           totalDistance: metrics.totalDistance,
           totalTime: metrics.totalTime,
           warnings: metrics.warnings,
+          timingConcerns: metrics.timingConcerns || [], // Individual route timing analysis
           seatUtilization: metrics.seatUtilization
         });
       }
@@ -491,7 +517,64 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     });
   };
 
-  // FIX #3: Route deletion handler
+  // FIX #3: Individual route saving handler
+  const saveRoute = async (route: OptimizedRoute) => {
+    setIsSaving(true);
+    
+    try {
+      console.log('💾 Saving individual route:', route);
+      
+      const routeData = {
+        name: `${route.driverName} Route - ${route.schools.length} Schools`,
+        driverId: parseInt(route.driverId),
+        isActive: true,
+        startingPoint: constraints.startingAddress,
+        endingPoint: constraints.endingAddress,
+        description: `Optimized route with ${route.totalStudents} students across ${route.schools.length} schools`
+      };
+
+      const newRoute: any = await apiRequest('POST', '/api/routes', routeData);
+      console.log('✅ Route created successfully:', newRoute);
+
+      // Add schools to route
+      for (const school of route.schools) {
+        await apiRequest('POST', `/api/routes/${newRoute.id}/schools`, {
+          schoolId: school.id,
+          orderIndex: school.orderIndex,
+          estimatedArrivalTime: school.estimatedArrivalTime,
+          alertThresholdMinutes: 10
+        });
+
+        // Create route assignments for students at this school
+        const schoolStudents = students.filter((s: any) => s.schoolId === school.id);
+        for (const student of schoolStudents) {
+          await apiRequest('POST', '/api/routes/assignments', {
+            routeId: newRoute.id,
+            studentId: student.id,
+            schoolId: school.id
+          });
+        }
+      }
+
+      toast({ 
+        title: "Success", 
+        description: `Route saved successfully and is now available to ${route.driverName}!` 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/routes'] });
+      
+    } catch (error) {
+      console.error('❌ Error saving individual route:', error);
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to save route. Please try again.", 
+        variant: "destructive" 
+      });
+    }
+    
+    setIsSaving(false);
+  };
+
+  // FIX #4: Route deletion handler
   const deleteOptimizedRoute = (routeId: string) => {
     setOptimizedRoutes(routes => routes.filter(route => route.id !== routeId));
     toast({

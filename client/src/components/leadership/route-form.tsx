@@ -156,7 +156,7 @@ export default function RouteForm({ onClose }: RouteFormProps) {
         };
         
         console.log('Creating route assignment:', assignmentData);
-        await apiRequest("POST", "/api/route-assignments", assignmentData);
+        await apiRequest("POST", "/api/routes/assignments", assignmentData);
       }
       
       queryClient.invalidateQueries({ queryKey: ['/api/routes'] });
