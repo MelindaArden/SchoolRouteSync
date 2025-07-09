@@ -272,6 +272,19 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       }
     }
 
+    // CRITICAL FIX: Ensure all schools with students are assigned, warn about unassigned schools
+    const assignedSchools = clusters.flat();
+    const unassignedSchools = schoolsWithStudents.filter(school => 
+      !assignedSchools.find(assigned => assigned.id === school.id)
+    );
+    
+    if (unassignedSchools.length > 0) {
+      console.error("❌ CRITICAL: Some schools with students are NOT assigned to any route!");
+      unassignedSchools.forEach(school => {
+        console.error(`⚠️ UNASSIGNED: ${school.name} has ${school.studentCount} student(s) but no route!`);
+      });
+    }
+
     return clusters;
   };
 
@@ -484,13 +497,25 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       const totalDistance = routes.reduce((sum, r) => sum + r.totalDistance, 0);
       const allWarnings = routes.flatMap(r => r.warnings);
       
+      // CRITICAL: Check for unassigned schools and add to analysis
+      const schoolsWithStudents = schools.map(school => ({
+        ...school,
+        studentCount: students.filter((s: any) => s.schoolId === school.id).length,
+      })).filter(school => school.studentCount > 0);
+
+      const assignedSchools = routes.flatMap(r => r.schools);
+      const unassignedSchools = schoolsWithStudents.filter(school => 
+        !assignedSchools.find(assigned => assigned.id === school.id)
+      );
+
       setAnalysisResults({
         totalStudents,
         totalDistance,
         totalDrivers: routes.length,
         avgUtilization: routes.reduce((sum, r) => sum + r.seatUtilization, 0) / routes.length,
         criticalWarnings: allWarnings.length,
-        efficiency: Math.max(0, 100 - (totalDistance / routes.length - 15) * 2)
+        efficiency: Math.max(0, 100 - (totalDistance / routes.length - 15) * 2),
+        unassignedSchools: unassignedSchools // ADD CRITICAL FIELD
       });
 
       toast({ 
@@ -799,6 +824,31 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* CRITICAL: Display unassigned schools warning prominently */}
+            {analysisResults.unassignedSchools && analysisResults.unassignedSchools.length > 0 && (
+              <Alert className="border-red-200 bg-red-50 mb-4">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription>
+                  <div className="font-medium text-red-600">
+                    ⚠️ CRITICAL: {analysisResults.unassignedSchools.length} School(s) with Students NOT Assigned to Routes!
+                  </div>
+                  <div className="mt-2 text-sm">
+                    <strong>Missing Schools:</strong>
+                    <ul className="list-disc list-inside mt-1">
+                      {analysisResults.unassignedSchools.map((school: any) => (
+                        <li key={school.id} className="text-red-700">
+                          <strong>{school.name}</strong> - {school.studentCount} student(s) will be missed!
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-red-700 font-medium">
+                      Increase driver count, seat capacity, or route time limits to ensure all schools are assigned.
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-blue-600">{analysisResults.totalStudents}</div>

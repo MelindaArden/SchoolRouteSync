@@ -25,14 +25,16 @@ const absenceFormSchema = z.object({
 });
 
 export default function StudentAbsenceManagement() {
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  // Fix date to be July 9, 2025 (current date)
+  const today = new Date('2025-07-09');
+  const [selectedDate, setSelectedDate] = useState(format(today, 'yyyy-MM-dd'));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof absenceFormSchema>>({
     resolver: zodResolver(absenceFormSchema),
     defaultValues: {
-      absenceDate: format(new Date(), 'yyyy-MM-dd'),
+      absenceDate: format(today, 'yyyy-MM-dd'),
       reason: '',
       notes: '',
     }
@@ -74,11 +76,11 @@ export default function StudentAbsenceManagement() {
   // Enhanced date-based absence filtering with automatic cleanup
   const getTodaysAbsences = () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const todayStr = '2025-07-09'; // Current date
       return absences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
-          return absenceDate === today;
+          return absenceDate === todayStr;
         } catch (error) {
           console.error('Error filtering today\'s absences:', error, absence);
           return false;
@@ -92,12 +94,12 @@ export default function StudentAbsenceManagement() {
 
   const getUpcomingAbsences = () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const todayStr = '2025-07-09'; // Current date
       return absences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
           // Only show future absences, automatically filter out past dates
-          return absenceDate > today;
+          return absenceDate > todayStr;
         } catch (error) {
           console.error('Error filtering upcoming absences:', error, absence);
           return false;
