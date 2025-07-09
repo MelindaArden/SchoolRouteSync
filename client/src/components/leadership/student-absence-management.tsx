@@ -37,7 +37,6 @@ export default function StudentAbsenceManagement() {
   // Update selectedDate when server date is available
   React.useEffect(() => {
     if (serverDate?.date) {
-      console.log('Server date received:', serverDate.date);
       setSelectedDate(serverDate.date);
     }
   }, [serverDate?.date]);
@@ -114,11 +113,11 @@ export default function StudentAbsenceManagement() {
   // Now absences is already filtered to only show current and future dates
   const filteredAbsences = absences;
 
-  // Enhanced date-based absence filtering for selected date
-  const getTodaysAbsences = () => {
+  // Get absences for the selected date (used in the date picker section)
+  const getSelectedDateAbsences = () => {
     try {
       const targetDate = selectedDate; // Use the selected date from the date picker
-      return filteredAbsences.filter(absence => {
+      const filtered = allAbsences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
           return absenceDate === targetDate;
@@ -127,8 +126,29 @@ export default function StudentAbsenceManagement() {
           return false;
         }
       });
+      return filtered;
     } catch (error) {
       console.error('Error getting selected date absences:', error);
+      return [];
+    }
+  };
+
+  // Get ONLY today's absences (used for the main "Today's Absences" section)
+  const getTodaysAbsences = () => {
+    try {
+      const todayDate = currentDate; // Always use current date, not selected date
+      const filtered = allAbsences.filter(absence => {
+        try {
+          const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
+          return absenceDate === todayDate;
+        } catch (error) {
+          console.error('Error filtering today absences:', error, absence);
+          return false;
+        }
+      });
+      return filtered;
+    } catch (error) {
+      console.error('Error getting today absences:', error);
       return [];
     }
   };
@@ -335,14 +355,7 @@ export default function StudentAbsenceManagement() {
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filteredAbsences.filter(absence => {
-              try {
-                const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
-                return absenceDate === currentDate;
-              } catch (error) {
-                return false;
-              }
-            }).length}</div>
+            <div className="text-2xl font-bold">{getTodaysAbsences().length}</div>
             <p className="text-xs text-muted-foreground">
               Students marked absent today
             </p>
@@ -376,12 +389,58 @@ export default function StudentAbsenceManagement() {
         </Card>
       </div>
 
-      {/* Today's Absences */}
+      {/* Today's Absences (actual today) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
-            {selectedDate === currentDate ? "Today's" : "Selected Date"} Absences - {selectedDate ? format(new Date(selectedDate + 'T00:00:00'), 'MMMM d, yyyy') : 'Loading...'}
+            Today's Absences - {currentDate ? format(new Date(currentDate + 'T00:00:00'), 'MMMM d, yyyy') : 'Loading...'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {getTodaysAbsences().length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No absences marked for today</p>
+          ) : (
+            <div className="space-y-3">
+              {getTodaysAbsences().map((absence: any) => (
+                <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium">{getStudentName(absence.studentId)}</div>
+                    <div className="text-sm text-gray-600">{getStudentSchool(absence.studentId)}</div>
+                    {absence.reason && (
+                      <div className="text-sm text-gray-600">Reason: {absence.reason}</div>
+                    )}
+                    {absence.notes && (
+                      <div className="text-sm text-gray-600">Notes: {absence.notes}</div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Absent Today
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteAbsenceMutation.mutate(absence.id)}
+                      disabled={deleteAbsenceMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Date Picker Section for viewing specific dates */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            View Absences by Date - {selectedDate ? format(new Date(selectedDate + 'T00:00:00'), 'MMMM d, yyyy') : 'Loading...'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -397,11 +456,11 @@ export default function StudentAbsenceManagement() {
 
           </div>
           
-          {getTodaysAbsences().length === 0 ? (
+          {getSelectedDateAbsences().length === 0 ? (
             <p className="text-center text-gray-500 py-8">No absences marked for this date</p>
           ) : (
             <div className="space-y-3">
-              {getTodaysAbsences().map((absence: any) => (
+              {getSelectedDateAbsences().map((absence: any) => (
                 <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{getStudentName(absence.studentId)}</div>
