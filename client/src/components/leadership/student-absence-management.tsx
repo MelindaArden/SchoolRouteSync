@@ -71,13 +71,14 @@ export default function StudentAbsenceManagement() {
     }
   };
 
-  // FIX #3: Enhanced same-day absence filtering with safe date handling
+  // Enhanced same-day absence filtering using correct field names
   const getTodaysAbsences = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       return absences.filter(absence => {
         try {
-          const absenceDate = new Date(absence.date).toISOString().split('T')[0];
+          // Use absenceDate field instead of date
+          const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
           return absenceDate === today;
         } catch (error) {
           console.error('Error filtering today\'s absences:', error, absence);
@@ -95,7 +96,8 @@ export default function StudentAbsenceManagement() {
       const today = new Date().toISOString().split('T')[0];
       return absences.filter(absence => {
         try {
-          const absenceDate = new Date(absence.date).toISOString().split('T')[0];
+          // Use absenceDate field instead of date
+          const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
           return absenceDate > today;
         } catch (error) {
           console.error('Error filtering upcoming absences:', error, absence);
@@ -369,7 +371,7 @@ export default function StudentAbsenceManagement() {
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
                       <Calendar className="h-3 w-3 mr-1" />
-                      Absent: {formatAbsenceDate(absence.date)}
+                      Absent: {formatAbsenceDate(absence.absenceDate)}
                     </Badge>
                     <Button
                       variant="outline"
@@ -415,7 +417,7 @@ export default function StudentAbsenceManagement() {
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
                       <Calendar className="h-3 w-3 mr-1" />
-                      Absent: {formatDate(absence.absenceDate)}
+                      Absent: {formatAbsenceDate(absence.absenceDate)}
                     </Badge>
                     <Button
                       variant="outline"

@@ -265,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // FIX #6: Get driver routes with ENHANCED STUDENT DISPLAY
+  // Enhanced driver routes with complete student display and absence checking
   app.get("/api/drivers/:driverId/routes", async (req, res) => {
     try {
       const driverId = parseInt(req.params.driverId);
@@ -274,63 +274,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const routes = await storage.getRoutesByDriver(driverId);
       console.log(`📋 Found ${routes.length} routes for driver ${driverId}`);
       
-      // Get detailed route information including schools and students
+      const today = new Date().toISOString().split('T')[0];
+      
       const detailedRoutes = await Promise.all(
         routes.map(async (route) => {
           console.log(`🔍 Processing route ${route.id}: ${route.name}`);
           
           const routeSchools = await storage.getRouteSchools(route.id);
-          const students = await storage.getStudentsByRoute(route.id);
           const assignments = await storage.getRouteAssignments(route.id);
           
-          console.log(`🏫 Route ${route.id} has ${routeSchools.length} schools, ${students.length} students, ${assignments.length} assignments`);
+          console.log(`🏫 Route ${route.id} has ${routeSchools.length} schools, ${assignments.length} assignments`);
           
-          // Get school details for each route school
-          const schoolsWithDetails = await Promise.all(
+          const schoolsWithStudents = await Promise.all(
             routeSchools.map(async (rs) => {
               const school = await storage.getSchool(rs.schoolId);
               
-              // Get students assigned to this specific school on this route
-              const schoolStudents = await Promise.all(
-                assignments
-                  .filter(a => a.schoolId === rs.schoolId)
-                  .map(async (assignment) => {
-                    const student = await storage.getStudentById(assignment.studentId);
-                    if (student) {
-                      console.log(`👨‍🎓 Student: ${student.firstName} ${student.lastName} assigned to ${school?.name}`);
-                    }
-                    return student;
-                  })
-              );
+              // Get all students assigned to this school for this route
+              const schoolAssignments = assignments.filter(a => a.schoolId === rs.schoolId);
+              const schoolStudents = [];
               
-              // Filter out any null/undefined students
-              const validStudents = schoolStudents.filter(s => s !== undefined);
-              console.log(`✅ School ${school?.name}: ${validStudents.length} valid students`);
+              for (const assignment of schoolAssignments) {
+                const student = await storage.getStudentById(assignment.studentId);
+                if (student) {
+                  // Check if student is absent today
+                  const isAbsent = await storage.checkStudentAbsence(student.id, today);
+                  schoolStudents.push({
+                    ...student,
+                    assignmentId: assignment.id,
+                    isAbsent
+                  });
+                  console.log(`👨‍🎓 Student: ${student.firstName} ${student.lastName} - School: ${school?.name} - Absent: ${isAbsent}`);
+                }
+              }
+              
+              console.log(`✅ School ${school?.name}: ${schoolStudents.length} students`);
               
               return {
                 ...rs,
                 school,
-                students: validStudents,
-                studentCount: validStudents.length
+                students: schoolStudents,
+                studentCount: schoolStudents.length
               };
             })
           );
           
-          // Sort schools by order index for optimal pickup sequence
-          schoolsWithDetails.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+          // Sort schools by order index
+          schoolsWithStudents.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
           
-          const totalRouteStudents = schoolsWithDetails.reduce((sum, school) => sum + school.students.length, 0);
-          console.log(`📊 Route ${route.name} total students: ${totalRouteStudents}`);
+          const totalStudents = schoolsWithStudents.reduce((sum, school) => sum + school.students.length, 0);
+          console.log(`📊 Route ${route.name} total students: ${totalStudents}`);
           
           return {
             ...route,
-            schools: schoolsWithDetails,
-            totalStudents: totalRouteStudents,
+            schools: schoolsWithStudents,
+            totalStudents
           };
         })
       );
       
-      console.log(`🚀 Returning ${detailedRoutes.length} detailed routes with student information`);
+      console.log(`🚀 Returning ${detailedRoutes.length} routes with complete student information`);
       res.json(detailedRoutes);
     } catch (error) {
       console.error('❌ Error fetching driver routes:', error);
@@ -1723,23 +1725,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/student-absences', async (req, res) => {
     try {
-      // For now, allow any authenticated user (we'll improve this later)
-      // This fixes the immediate issue while maintaining security
-      const markedBy = 3; // Default to admin user ID 3 for testing
+      // Enhanced absence creation with proper session management
+      const sessionData = req.session as any;
+      const markedBy = sessionData?.userId || 3; // Use session user or default admin
       
-      console.log('Creating student absence with admin override, markedBy:', markedBy);
+      console.log('Creating student absence with user:', markedBy, 'Data:', req.body);
 
+      // Transform the request data to match database schema
       const absenceData = {
-        ...req.body,
+        studentId: parseInt(req.body.studentId),
+        absenceDate: req.body.absenceDate,
+        reason: req.body.reason || null,
+        notes: req.body.notes || null,
         markedBy
       };
       
-      console.log('Creating student absence:', absenceData);
+      console.log('Transformed absence data:', absenceData);
       const absence = await storage.createStudentAbsence(absenceData);
+      
+      // Broadcast absence creation to all connected clients
+      broadcast({
+        type: 'absence_created',
+        absence,
+        studentId: absence.studentId,
+        date: absence.absenceDate
+      });
+      
+      console.log('Successfully created absence:', absence);
       res.status(201).json(absence);
     } catch (error) {
       console.error('Error creating student absence:', error);
-      res.status(500).json({ message: "Failed to create student absence" });
+      res.status(500).json({ 
+        message: "Failed to create student absence",
+        error: error.message 
+      });
     }
   });
 
