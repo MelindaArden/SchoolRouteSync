@@ -79,8 +79,17 @@ export default function DriverTracking() {
   const activeDriverLocations = (driverLocations as any[]).filter((location: any) => {
     // Only show drivers who have active in-progress sessions
     return location.sessionId && inProgressSessions.some(session => 
-      session.id === location.sessionId && session.status === "in_progress"
+      session.id === location.sessionId
     );
+  });
+
+  // Debug logging to verify filtering
+  console.log('Debug GPS Filtering:', {
+    totalSessions: activeSessions.length,
+    inProgressSessions: inProgressSessions.length,
+    totalLocations: driverLocations.length,
+    activeLocations: activeDriverLocations.length,
+    sessionStatuses: activeSessions.map(s => ({ id: s.id, status: s.status }))
   });
 
   // Get completed sessions for past routes section with their locations
@@ -155,7 +164,7 @@ export default function DriverTracking() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Active Driver Tracking</h3>
+        <h3 className="text-lg font-semibold">GPS Driver Tracking</h3>
         <div className="flex space-x-2">
           <Button 
             variant="outline" 
@@ -171,17 +180,24 @@ export default function DriverTracking() {
         </div>
       </div>
 
-      {inProgressSessions.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-800 mb-2">No Active Routes</h3>
-            <p className="text-gray-600">No drivers are currently on pickup routes.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {inProgressSessions.map((session: ActiveSession) => {
+      {/* Active Drivers Section - Only In-Progress Routes */}
+      <div>
+        <h4 className="text-md font-medium mb-3 flex items-center">
+          <Users className="h-4 w-4 mr-2 text-blue-600" />
+          Active Drivers ({inProgressSessions.length})
+        </h4>
+
+        {inProgressSessions.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No Active Routes</h3>
+              <p className="text-gray-600">No drivers are currently on pickup routes.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {inProgressSessions.map((session: ActiveSession) => {
             const location = getDriverLocation(session.driverId);
             const nextSchool = getNextSchool(session);
             const proximityAlert = location ? checkProximityAlert(session, location) : null;
@@ -311,16 +327,17 @@ export default function DriverTracking() {
                 </CardContent>
               </Card>
             );
-          })}
-        </div>
-      )}
+            })}
+          </div>
+        )}
+      </div>
 
-      {/* Historical Driver Tracking Section */}
+      {/* All Driver Locations - Historical Section */}
       {(completedSessions.length > 0 || historicalDriverLocations.length > 0) && (
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-            Past Routes (Completed Today)
+            <MapPin className="h-5 w-5 mr-2 text-gray-600" />
+            All Driver Locations (Historical)
           </h3>
           <div className="space-y-4">
             {completedSessions.map((session) => {
