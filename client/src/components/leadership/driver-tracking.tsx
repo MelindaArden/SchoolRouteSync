@@ -70,8 +70,14 @@ export default function DriverTracking() {
     refetchInterval: 15000, // Refresh every 15 seconds
   });
 
+  // Enhanced filtering to show only active drivers with in-progress sessions
   const inProgressSessions = (activeSessions as ActiveSession[]).filter((session: ActiveSession) => 
     session.status === "in_progress"
+  );
+  
+  // Filter driver locations to only show those with active sessions
+  const activeDriverLocations = (driverLocations as any[]).filter((location: any) => 
+    location.sessionId && inProgressSessions.some(session => session.id === location.sessionId)
   );
 
   const getDriverLocation = (driverId: number): DriverLocation | null => {

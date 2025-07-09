@@ -340,6 +340,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all route schools for assignment tracking
+  app.get("/api/route-schools", async (req, res) => {
+    try {
+      const routeSchools = await storage.getRouteSchools(0); // Get all route schools
+      // Actually get all route schools from all routes
+      const allRoutes = await storage.getRoutes();
+      const allRouteSchools = [];
+      
+      for (const route of allRoutes) {
+        const schools = await storage.getRouteSchools(route.id);
+        allRouteSchools.push(...schools);
+      }
+      
+      res.json(allRouteSchools);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get route details with schools and students
   app.get("/api/routes/:routeId/details", async (req, res) => {
     try {

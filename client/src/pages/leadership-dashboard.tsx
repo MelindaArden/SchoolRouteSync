@@ -22,6 +22,7 @@ import RouteOptimizer from "@/components/leadership/route-optimizer";
 import MultiDriverRouteOptimizer from "@/components/leadership/multi-driver-route-optimizer";
 import AdvancedRouteCreator from "@/components/leadership/advanced-route-creator";
 import StudentAbsenceManagement from "@/components/leadership/student-absence-management";
+import AbsenceExport from "@/components/leadership/absence-export";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -53,6 +54,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
+  const [absenceView, setAbsenceView] = useState<"management" | "export">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
   
   // FIX #5: WEEKLY PERFORMANCE WITH DRIVER BREAKDOWN
@@ -700,7 +702,36 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
         {activeTab === "absences" && (
           <div className="p-2 sm:p-4">
-            <StudentAbsenceManagement />
+            {absenceView === "management" && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold">Student Absence Management</h2>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setAbsenceView("export")}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Export Absences
+                  </Button>
+                </div>
+                <StudentAbsenceManagement />
+              </div>
+            )}
+            {absenceView === "export" && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold">Absence Export</h2>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setAbsenceView("management")}
+                  >
+                    Back to Management
+                  </Button>
+                </div>
+                <AbsenceExport />
+              </div>
+            )}
           </div>
         )}
 

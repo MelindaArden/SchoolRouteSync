@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { School, MapPin, Phone, Clock, Edit, Plus, Search, Trash2 } from "lucide-react";
+import { School, MapPin, Phone, Clock, Edit, Plus, Search, Trash2, Route, AlertTriangle } from "lucide-react";
 import SchoolForm from "./school-form";
 
 interface SchoolsListProps {
@@ -26,6 +26,14 @@ export default function SchoolsList({ onAddSchool }: SchoolsListProps) {
     queryKey: ['/api/students'],
   });
 
+  const { data: routes = [] } = useQuery({
+    queryKey: ['/api/routes'],
+  });
+
+  const { data: routeSchools = [] } = useQuery({
+    queryKey: ['/api/route-schools'],
+  });
+
   const filteredSchools = (schools as any[]).filter((school: any) =>
     school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     school.address.toLowerCase().includes(searchTerm.toLowerCase())
@@ -33,6 +41,23 @@ export default function SchoolsList({ onAddSchool }: SchoolsListProps) {
 
   const getStudentCount = (schoolId: number) => {
     return (students as any[]).filter((student: any) => student.schoolId === schoolId).length;
+  };
+
+  // Get route assignment for a school
+  const getSchoolRoute = (schoolId: number) => {
+    const routeSchool = (routeSchools as any[]).find((rs: any) => rs.schoolId === schoolId);
+    if (routeSchool) {
+      const route = (routes as any[]).find((r: any) => r.id === routeSchool.routeId);
+      return route;
+    }
+    return null;
+  };
+
+  // Check if school has active students but no route assignment
+  const isUnassignedSchool = (schoolId: number) => {
+    const studentCount = getStudentCount(schoolId);
+    const route = getSchoolRoute(schoolId);
+    return studentCount > 0 && !route;
   };
 
   const handleDeleteSchool = async (schoolId: number, schoolName: string) => {
@@ -160,6 +185,34 @@ export default function SchoolsList({ onAddSchool }: SchoolsListProps) {
                       {school.contactPhone}
                     </div>
                   )}
+                </div>
+                
+                {/* Route Assignment Display */}
+                <div className="mt-3">
+                  {(() => {
+                    const route = getSchoolRoute(school.id);
+                    if (route) {
+                      return (
+                        <Badge variant="outline" className="text-sm bg-green-50 border-green-300 text-green-700">
+                          <Route className="h-3 w-3 mr-1" />
+                          Assigned to: {route.name}
+                        </Badge>
+                      );
+                    } else if (getStudentCount(school.id) > 0) {
+                      return (
+                        <Badge variant="destructive" className="text-sm">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          No Route Assignment
+                        </Badge>
+                      );
+                    } else {
+                      return (
+                        <Badge variant="secondary" className="text-sm">
+                          No Active Students
+                        </Badge>
+                      );
+                    }
+                  })()}
                 </div>
                 
                 {school.latitude && school.longitude && (

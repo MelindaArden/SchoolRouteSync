@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, UserX, Plus, Trash2, Clock, AlertCircle } from "lucide-react";
+import { Calendar, Users, UserX, Plus, Trash2, Clock, AlertCircle, Download } from "lucide-react";
 import { format, addDays, startOfDay } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -71,13 +71,12 @@ export default function StudentAbsenceManagement() {
     }
   };
 
-  // Enhanced same-day absence filtering using correct field names
+  // Enhanced date-based absence filtering with automatic cleanup
   const getTodaysAbsences = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       return absences.filter(absence => {
         try {
-          // Use absenceDate field instead of date
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
           return absenceDate === today;
         } catch (error) {
@@ -96,8 +95,8 @@ export default function StudentAbsenceManagement() {
       const today = new Date().toISOString().split('T')[0];
       return absences.filter(absence => {
         try {
-          // Use absenceDate field instead of date
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
+          // Only show future absences, automatically filter out past dates
           return absenceDate > today;
         } catch (error) {
           console.error('Error filtering upcoming absences:', error, absence);
@@ -200,17 +199,26 @@ export default function StudentAbsenceManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Student Absence Management</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Mark Student Absent
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Mark Student Absent</DialogTitle>
-            </DialogHeader>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => {
+            // Trigger parent component navigation instead of hash navigation
+            const event = new CustomEvent('navigate-to-export');
+            window.dispatchEvent(event);
+          }}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Absences
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Mark Student Absent
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Mark Student Absent</DialogTitle>
+              </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -286,8 +294,9 @@ export default function StudentAbsenceManagement() {
                 </div>
               </form>
             </Form>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Statistics Cards */}
