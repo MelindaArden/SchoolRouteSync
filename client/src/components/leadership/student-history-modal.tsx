@@ -44,7 +44,10 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
 
   const formatDate = (dateStr: string) => {
     try {
-      return format(new Date(dateStr), 'MMM d, yyyy');
+      if (!dateStr) return 'Invalid Date';
+      const date = new Date(dateStr + 'T00:00:00'); // Add time to prevent timezone issues
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return format(date, 'MMM d, yyyy');
     } catch (error) {
       return 'Invalid Date';
     }
@@ -147,9 +150,11 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                         </div>
                         <div className="flex items-center gap-2">
                           {getStatusBadge('absent')}
-                          <div className="text-xs text-gray-500">
-                            {format(new Date(absence.createdAt), 'MMM d, h:mm a')}
-                          </div>
+                          {absence.createdAt && (
+                            <div className="text-xs text-gray-500">
+                              {format(new Date(absence.createdAt), 'MMM d, h:mm a')}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -190,10 +195,12 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                           </div>
                           <div className="flex items-center gap-2">
                             {getStatusBadge(studentPickup?.status || 'no_show')}
-                            <div className="text-xs text-gray-500">
-                              <Clock className="h-3 w-3 inline mr-1" />
-                              {format(new Date(record.completedAt), 'h:mm a')}
-                            </div>
+                            {record.completedAt && (
+                              <div className="text-xs text-gray-500">
+                                <Clock className="h-3 w-3 inline mr-1" />
+                                {format(new Date(record.completedAt), 'h:mm a')}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

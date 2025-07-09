@@ -33,6 +33,14 @@ export default function StudentAbsenceManagement() {
   
   const currentDate = serverDate?.date || format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(currentDate);
+
+  // Update selectedDate when server date is available
+  React.useEffect(() => {
+    if (serverDate?.date) {
+      console.log('Server date received:', serverDate.date);
+      setSelectedDate(serverDate.date);
+    }
+  }, [serverDate?.date]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -47,10 +55,11 @@ export default function StudentAbsenceManagement() {
 
   // Update form default date when server date is available
   React.useEffect(() => {
-    if (currentDate) {
-      form.setValue('absenceDate', currentDate);
+    if (serverDate?.date) {
+      form.setValue('absenceDate', serverDate.date);
+      setSelectedDate(serverDate.date);
     }
-  }, [currentDate, form]);
+  }, [serverDate?.date, form]);
 
   const { data: students = [] } = useQuery({
     queryKey: ['/api/students'],
@@ -359,12 +368,12 @@ export default function StudentAbsenceManagement() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
-            {selectedDate === currentDate ? "Today's" : "Selected Date"} Absences - {format(new Date(selectedDate), 'MMMM d, yyyy')}
+            {selectedDate === currentDate ? "Today's" : "Selected Date"} Absences - {selectedDate ? format(new Date(selectedDate + 'T00:00:00'), 'MMMM d, yyyy') : 'Loading...'}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <Label htmlFor="date-select">Select Date:</Label>
+            <Label htmlFor="date-select">Select Date (Current: {currentDate}):</Label>
             <Input
               id="date-select"
               type="date"
@@ -372,6 +381,9 @@ export default function StudentAbsenceManagement() {
               onChange={(e) => setSelectedDate(e.target.value)}
               className="w-auto"
             />
+            <div className="text-xs text-gray-500 mt-1">
+              Server date: {serverDate?.date || 'Loading...'} | Selected: {selectedDate}
+            </div>
           </div>
           
           {getTodaysAbsences().length === 0 ? (
