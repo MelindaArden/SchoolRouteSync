@@ -396,35 +396,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create pickup session
+  // Create pickup session with enhanced student tracking
   app.post("/api/pickup-sessions", async (req, res) => {
     try {
       const sessionData = insertPickupSessionSchema.parse(req.body);
       const session = await storage.createPickupSession(sessionData);
+      console.log('📝 Created pickup session:', session);
       
       // Create student pickup records for all students on the route
       const students = await storage.getStudentsByRoute(session.routeId);
       const assignments = await storage.getRouteAssignments(session.routeId);
+      console.log(`👥 Found ${students.length} students and ${assignments.length} assignments for route ${session.routeId}`);
       
       for (const student of students) {
         const assignment = assignments.find(a => a.studentId === student.id);
         if (assignment) {
-          await storage.createStudentPickup({
+          const pickup = await storage.createStudentPickup({
             sessionId: session.id,
             studentId: student.id,
             schoolId: assignment.schoolId,
             status: "pending",
           });
+          console.log('✅ Created pickup record for student:', student.firstName, student.lastName, pickup);
         }
       }
 
       broadcast({
         type: 'session_created',
         session,
+        routeId: session.routeId,
+        driverId: session.driverId
       });
 
       res.json(session);
     } catch (error) {
+      console.error('Pickup session creation error:', error);
       res.status(400).json({ message: "Invalid session data" });
     }
   });

@@ -25,11 +25,19 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
   const [pickupStates, setPickupStates] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
+  console.log('StudentList - Session debug:', { 
+    students: students?.length || 0, 
+    isActive, 
+    sessionId,
+    studentsData: students 
+  });
+
   // Fetch student pickups for this session
   const { data: studentPickups = [] } = useQuery<StudentPickup[]>({
     queryKey: [`/api/student-pickups?sessionId=${sessionId}`],
     queryFn: () => fetch(`/api/student-pickups?sessionId=${sessionId}`).then(res => res.json()),
     enabled: !!sessionId,
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   // Fetch today's student absences

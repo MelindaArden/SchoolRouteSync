@@ -61,7 +61,7 @@ export default function SchoolCard({
 
         <div className="border-t pt-3">
           <h5 className="text-sm font-medium text-gray-700 mb-2">
-            Students ({students.length})
+            Students ({students?.length || 0})
           </h5>
           <EnhancedStudentList 
             students={students} 

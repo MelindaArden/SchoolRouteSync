@@ -54,29 +54,58 @@ export default function StudentAbsenceManagement() {
 
   // FIX #4: Show absence date instead of submission date
   const formatAbsenceDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid Date';
+    }
   };
 
-  // FIX #3: Enhanced same-day absence filtering
+  // FIX #3: Enhanced same-day absence filtering with safe date handling
   const getTodaysAbsences = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return absences.filter(absence => {
-      const absenceDate = new Date(absence.date).toISOString().split('T')[0];
-      return absenceDate === today;
-    });
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      return absences.filter(absence => {
+        try {
+          const absenceDate = new Date(absence.date).toISOString().split('T')[0];
+          return absenceDate === today;
+        } catch (error) {
+          console.error('Error filtering today\'s absences:', error, absence);
+          return false;
+        }
+      });
+    } catch (error) {
+      console.error('Error getting today\'s absences:', error);
+      return [];
+    }
   };
 
   const getUpcomingAbsences = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return absences.filter(absence => {
-      const absenceDate = new Date(absence.date).toISOString().split('T')[0];
-      return absenceDate > today;
-    });
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      return absences.filter(absence => {
+        try {
+          const absenceDate = new Date(absence.date).toISOString().split('T')[0];
+          return absenceDate > today;
+        } catch (error) {
+          console.error('Error filtering upcoming absences:', error, absence);
+          return false;
+        }
+      });
+    } catch (error) {
+      console.error('Error getting upcoming absences:', error);
+      return [];
+    }
   };
 
   // FIX #5: ABSENCES NOT SHOWING - ENHANCED REAL-TIME REFRESH
