@@ -25,8 +25,8 @@ const absenceFormSchema = z.object({
 });
 
 export default function StudentAbsenceManagement() {
-  // Fix date to be July 9, 2025 (current date)
-  const today = new Date('2025-07-09');
+  // Use actual current date dynamically
+  const today = new Date();
   const [selectedDate, setSelectedDate] = useState(format(today, 'yyyy-MM-dd'));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -76,7 +76,7 @@ export default function StudentAbsenceManagement() {
   // Enhanced date-based absence filtering with automatic cleanup
   const getTodaysAbsences = () => {
     try {
-      const todayStr = '2025-07-09'; // Current date
+      const todayStr = new Date().toISOString().split('T')[0]; // Dynamic current date
       return absences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
@@ -94,7 +94,7 @@ export default function StudentAbsenceManagement() {
 
   const getUpcomingAbsences = () => {
     try {
-      const todayStr = '2025-07-09'; // Current date
+      const todayStr = new Date().toISOString().split('T')[0]; // Dynamic current date
       return absences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
