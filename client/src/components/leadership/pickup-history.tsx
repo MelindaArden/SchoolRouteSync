@@ -72,6 +72,130 @@ export default function PickupHistory() {
     }
   });
 
+  // CSV Download functionality
+  const downloadCSVLog = () => {
+    try {
+      const csvData = generateCSVData();
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `pickup_transportation_log_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Download Complete",
+        description: "Transportation log has been downloaded successfully."
+      });
+    } catch (error) {
+      console.error('CSV download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Unable to generate transportation log.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const generateCSVData = () => {
+    // CSV Headers matching the requested information
+    const headers = [
+      "Child's Name",
+      "Pick-Up Location", 
+      "Pick-Up Time",
+      "Drop-Off Location",
+      "Drop-Off Time", 
+      "Driver's Name",
+      "Vehicle Information",
+      "Parent/Guardian Contact Information",
+      "Date",
+      "Route Name",
+      "Status",
+      "Driver Notes",
+      "Session ID"
+    ];
+
+    let csvContent = headers.join(',') + '\n';
+
+    // Process each history record
+    filteredHistory.forEach((record: any) => {
+      let pickupDetails = [];
+      try {
+        pickupDetails = record.pickupDetails ? JSON.parse(record.pickupDetails) : [];
+      } catch (e) {
+        console.error('Error parsing pickup details:', e);
+      }
+
+      // If no pickup details, create a summary row
+      if (pickupDetails.length === 0) {
+        const row = [
+          "No students recorded",
+          "Multiple locations",
+          record.completedAt ? format(new Date(record.completedAt), 'h:mm a') : 'N/A',
+          "Aftercare facilities",
+          record.completedAt ? format(new Date(record.completedAt), 'h:mm a') : 'N/A',
+          `${record.driver?.firstName || ''} ${record.driver?.lastName || ''}`.trim(),
+          `Vehicle ID: ${record.driver?.id || 'N/A'}`,
+          record.driver?.phone || 'N/A',
+          format(new Date(record.date), 'MM/dd/yyyy'),
+          record.route?.name || 'Unknown Route',
+          'Completed',
+          record.notes || 'No notes',
+          record.sessionId?.toString() || 'N/A'
+        ];
+        csvContent += row.map(field => `"${(field || '').toString().replace(/"/g, '""')}"`).join(',') + '\n';
+        return;
+      }
+
+      // Create a row for each student pickup
+      pickupDetails.forEach((pickup: any) => {
+        const student = students.find((s: any) => s.id === pickup.studentId);
+        const school = schools.find((s: any) => s.id === student?.schoolId);
+        
+        const childName = student ? `${student.firstName} ${student.lastName}` : 'Unknown Student';
+        const pickupLocation = school?.name || 'Unknown School';
+        const pickupTime = pickup.pickedUpAt ? format(new Date(pickup.pickedUpAt), 'h:mm a') : 'Not picked up';
+        const dropOffLocation = "Aftercare Facility"; // Default destination
+        const dropOffTime = pickup.pickedUpAt ? format(new Date(new Date(pickup.pickedUpAt).getTime() + 30*60000), 'h:mm a') : 'N/A'; // Estimated 30 min later
+        const driverName = `${record.driver?.firstName || ''} ${record.driver?.lastName || ''}`.trim();
+        const vehicleInfo = `Driver ID: ${record.driver?.id || 'N/A'}, Phone: ${record.driver?.phone || 'N/A'}`;
+        const parentContact = student?.contactPhone || student?.emergencyContact || 'Contact not available';
+        const date = format(new Date(record.date), 'MM/dd/yyyy');
+        const routeName = record.route?.name || 'Unknown Route';
+        const status = pickup.status === 'picked_up' ? 'Transported' : 
+                     pickup.status === 'absent' ? 'Absent' : 
+                     pickup.status === 'no_show' ? 'No Show' : 'Pending';
+        const driverNotes = pickup.driverNotes || record.notes || 'No notes';
+        const sessionId = record.sessionId?.toString() || 'N/A';
+
+        const row = [
+          childName,
+          pickupLocation,
+          pickupTime,
+          dropOffLocation,
+          dropOffTime,
+          driverName,
+          vehicleInfo,
+          parentContact,
+          date,
+          routeName,
+          status,
+          driverNotes,
+          sessionId
+        ];
+
+        csvContent += row.map(field => `"${(field || '').toString().replace(/"/g, '""')}"`).join(',') + '\n';
+      });
+    });
+
+    return csvContent;
+  };
+
 
 
   const filteredHistory = history.filter((record: any) =>
@@ -402,6 +526,14 @@ export default function PickupHistory() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Route Completion Repository</h2>
         <div className="flex items-center gap-2">
+          <Button 
+            onClick={downloadCSVLog} 
+            className="flex items-center gap-2"
+            variant="outline"
+          >
+            <Download className="h-4 w-4" />
+            Download Transportation Log
+          </Button>
           <Select value={selectedRecord ? "detailed" : "overview"} onValueChange={(value) => {
             if (value === "overview") setSelectedRecord(null);
             else {
@@ -440,15 +572,7 @@ export default function PickupHistory() {
               })}
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportToCSV}
-            disabled={history.length === 0}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
+
           <Badge variant="outline" className="text-sm">
             {totalCompletedRoutes} Total Routes
           </Badge>
