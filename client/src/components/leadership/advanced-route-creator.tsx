@@ -123,32 +123,54 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     return R * c;
   };
 
-  // Cluster schools by capacity and geographical proximity
+  // Enhanced clustering with dismissal time and geographical optimization
   const clusterSchoolsByCapacity = (schoolsData: any[], constraints: CreatorConstraints) => {
     const schoolsWithStudents = schoolsData.map(school => ({
       ...school,
       studentCount: students.filter((s: any) => s.schoolId === school.id).length,
       latitude: parseFloat(school.latitude || '0'),
       longitude: parseFloat(school.longitude || '0'),
+      dismissalTime: school.dismissalTime || "15:00",
     })).filter(school => school.studentCount > 0);
 
-    // Sort by student count (descending) for best-fit decreasing
-    schoolsWithStudents.sort((a, b) => b.studentCount - a.studentCount);
+    // Sort by dismissal time first, then by student count for efficient routing
+    schoolsWithStudents.sort((a, b) => {
+      const timeCompare = a.dismissalTime.localeCompare(b.dismissalTime);
+      if (timeCompare !== 0) return timeCompare;
+      return b.studentCount - a.studentCount;
+    });
 
     const clusters: any[][] = Array(constraints.driverCount).fill(null).map(() => []);
     const clusterCapacities = Array(constraints.driverCount).fill(0);
+    const clusterTimeRanges: { start: string, end: string }[] = Array(constraints.driverCount).fill(null).map(() => ({ start: "", end: "" }));
 
-    // Assign schools to clusters using best-fit decreasing
+    // Assign schools to clusters considering timing and capacity
     for (const school of schoolsWithStudents) {
       let bestCluster = -1;
-      let minWasteSpace = Infinity;
+      let bestScore = -Infinity;
 
       for (let i = 0; i < constraints.driverCount; i++) {
         const remainingCapacity = constraints.seatsPerDriver - clusterCapacities[i];
         if (remainingCapacity >= school.studentCount) {
-          const wasteSpace = remainingCapacity - school.studentCount;
-          if (wasteSpace < minWasteSpace) {
-            minWasteSpace = wasteSpace;
+          let score = 0;
+          
+          // Capacity utilization score
+          score += (school.studentCount / remainingCapacity) * 100;
+          
+          // Time continuity score
+          if (clusters[i].length === 0) {
+            score += 50; // Bonus for starting a new cluster
+          } else {
+            const lastTime = clusterTimeRanges[i].end;
+            const timeDiff = Math.abs(
+              new Date(`2000-01-01 ${school.dismissalTime}`).getTime() - 
+              new Date(`2000-01-01 ${lastTime}`).getTime()
+            ) / (1000 * 60); // minutes
+            score += Math.max(0, 60 - timeDiff); // Prefer schools with similar dismissal times
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
             bestCluster = i;
           }
         }
@@ -157,6 +179,19 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       if (bestCluster !== -1) {
         clusters[bestCluster].push(school);
         clusterCapacities[bestCluster] += school.studentCount;
+        
+        // Update time range for this cluster
+        if (clusters[bestCluster].length === 1) {
+          clusterTimeRanges[bestCluster].start = school.dismissalTime;
+          clusterTimeRanges[bestCluster].end = school.dismissalTime;
+        } else {
+          if (school.dismissalTime < clusterTimeRanges[bestCluster].start) {
+            clusterTimeRanges[bestCluster].start = school.dismissalTime;
+          }
+          if (school.dismissalTime > clusterTimeRanges[bestCluster].end) {
+            clusterTimeRanges[bestCluster].end = school.dismissalTime;
+          }
+        }
       }
     }
 
@@ -264,7 +299,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     console.log('🚀 Starting route optimization with constraints:', constraints);
     console.log('🚌 Available drivers for optimization:', drivers.filter(d => d.role === 'driver'));
     
-    // FIX #1: Use ALL available drivers for maximum efficiency (ignore user input count)
+    // Use admin's specified driver count for route optimization
     const availableDrivers = drivers.filter((d: any) => d.role === 'driver');
     if (availableDrivers.length === 0) {
       toast({
@@ -275,9 +310,9 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       return;
     }
 
-    // ALWAYS use ALL available drivers for optimization
-    const effectiveDriverCount = availableDrivers.length;
-    console.log(`🎯 Using ALL ${effectiveDriverCount} available drivers for maximum efficiency`);
+    // Use admin's driver count input, limited by available drivers
+    const effectiveDriverCount = Math.min(constraints.driverCount, availableDrivers.length);
+    console.log(`🎯 Using ${effectiveDriverCount} drivers as requested by admin (${availableDrivers.length} available)`);
 
     setIsOptimizing(true);
 
@@ -412,17 +447,20 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
           console.log(`👥 Creating assignments for ${schoolStudents.length} students at ${school.name}`);
           
           for (const student of schoolStudents) {
-            await apiRequest('POST', '/api/route-assignments', {
+            await apiRequest('POST', '/api/routes/assignments', {
               routeId: newRoute.id,
               studentId: student.id,
-              schoolId: school.id,
-              isActive: true
+              schoolId: school.id
             });
           }
         }
       }
 
-      toast({ title: "Success", description: `Saved ${optimizedRoutes.length} optimized routes with student assignments.` });
+      console.log('✅ All routes saved successfully!');
+      toast({ 
+        title: "Success", 
+        description: `All ${optimizedRoutes.length} routes saved successfully and are now available to drivers!` 
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/routes'] });
       onClose();
       
