@@ -123,7 +123,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     return R * c;
   };
 
-  // Enhanced clustering using ALL drivers to eliminate late arrivals
+  // Enhanced clustering with intelligent time management to prevent route time overruns
   const clusterSchoolsByCapacity = (schoolsData: any[], constraints: CreatorConstraints) => {
     const schoolsWithStudents = schoolsData.map(school => ({
       ...school,
@@ -133,22 +133,42 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       dismissalTime: school.dismissalTime || "15:00",
     })).filter(school => school.studentCount > 0);
 
-    console.log(`🎯 Optimizing for ${constraints.driverCount} drivers to eliminate late arrivals`);
+    console.log(`🎯 Optimizing for ${constraints.driverCount} drivers with ${constraints.maxRouteTime}min max route time`);
 
     // Sort by dismissal time FIRST to ensure no late arrivals
     schoolsWithStudents.sort((a, b) => {
       const timeCompare = a.dismissalTime.localeCompare(b.dismissalTime);
       if (timeCompare !== 0) return timeCompare;
-      // Secondary sort by proximity (using latitude as rough approximation)
       return a.latitude - b.latitude;
     });
 
-    // Initialize exactly the number of clusters requested by admin
+    // Initialize clusters with time tracking
     const clusters: any[][] = Array(constraints.driverCount).fill(null).map(() => []);
     const clusterCapacities = Array(constraints.driverCount).fill(0);
-    const clusterTimeRanges: { start: string, end: string }[] = Array(constraints.driverCount).fill(null).map(() => ({ start: "", end: "" }));
+    const clusterTimings = Array(constraints.driverCount).fill(null).map(() => ({ 
+      start: "", 
+      end: "", 
+      totalTime: 0 
+    }));
 
-    // CRITICAL: Assign schools to ensure maximum on-time pickup coverage
+    // Helper function to calculate route time for a cluster
+    const calculateRouteTime = (cluster: any[]): number => {
+      if (cluster.length === 0) return 0;
+      if (cluster.length === 1) return 15; // Base time for single school
+      
+      // Calculate time between first and last school + buffer time
+      const startTime = new Date(`2000-01-01 ${cluster[0].dismissalTime}`);
+      const endTime = new Date(`2000-01-01 ${cluster[cluster.length - 1].dismissalTime}`);
+      const timeDiff = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+      
+      // Add travel time estimate (5 minutes per school transition)
+      const travelTime = (cluster.length - 1) * 5;
+      const totalTime = timeDiff + travelTime + constraints.bufferTime;
+      
+      return Math.max(totalTime, cluster.length * 10); // Minimum 10 minutes per school
+    };
+
+    // ENHANCED: Assign schools with time management
     for (const school of schoolsWithStudents) {
       let bestCluster = -1;
       let bestScore = -Infinity;
@@ -156,22 +176,37 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       for (let i = 0; i < constraints.driverCount; i++) {
         const remainingCapacity = constraints.seatsPerDriver - clusterCapacities[i];
         if (remainingCapacity >= school.studentCount) {
+          
+          // Test adding this school to the cluster
+          const testCluster = [...clusters[i], school];
+          const testRouteTime = calculateRouteTime(testCluster);
+          
+          // CRITICAL: Skip if this would exceed max route time
+          if (testRouteTime > constraints.maxRouteTime) {
+            console.log(`⚠️ Skipping ${school.name} for driver ${i + 1} - would exceed ${constraints.maxRouteTime}min limit (${testRouteTime}min)`);
+            continue;
+          }
+          
           let score = 0;
           
-          // Priority 1: Time efficiency to prevent late arrivals (80% of score)
+          // Priority 1: Time efficiency (60% of score)
           if (clusters[i].length === 0) {
-            score += 80; // High bonus for starting new routes
+            score += 60; // High bonus for starting new routes
           } else {
-            const lastTime = clusterTimeRanges[i].end;
+            const lastTime = clusterTimings[i].end;
             const timeDiff = Math.abs(
               new Date(`2000-01-01 ${school.dismissalTime}`).getTime() - 
               new Date(`2000-01-01 ${lastTime}`).getTime()
-            ) / (1000 * 60); // minutes
-            score += Math.max(0, 80 - timeDiff * 2); // Heavy penalty for time gaps
+            ) / (1000 * 60);
+            score += Math.max(0, 60 - timeDiff * 2);
           }
           
-          // Priority 2: Capacity efficiency (20% of score)
-          score += (school.studentCount / remainingCapacity) * 20;
+          // Priority 2: Route time efficiency (25% of score)
+          const timeUtilization = testRouteTime / constraints.maxRouteTime;
+          score += (1 - timeUtilization) * 25;
+          
+          // Priority 3: Capacity efficiency (15% of score)
+          score += (school.studentCount / remainingCapacity) * 15;
 
           if (score > bestScore) {
             bestScore = score;
@@ -184,26 +219,59 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
         clusters[bestCluster].push(school);
         clusterCapacities[bestCluster] += school.studentCount;
         
-        // Update time range for this cluster
+        // Update timing for this cluster
+        const updatedTime = calculateRouteTime(clusters[bestCluster]);
+        clusterTimings[bestCluster].totalTime = updatedTime;
+        
         if (clusters[bestCluster].length === 1) {
-          clusterTimeRanges[bestCluster].start = school.dismissalTime;
-          clusterTimeRanges[bestCluster].end = school.dismissalTime;
+          clusterTimings[bestCluster].start = school.dismissalTime;
+          clusterTimings[bestCluster].end = school.dismissalTime;
         } else {
-          if (school.dismissalTime < clusterTimeRanges[bestCluster].start) {
-            clusterTimeRanges[bestCluster].start = school.dismissalTime;
+          if (school.dismissalTime < clusterTimings[bestCluster].start) {
+            clusterTimings[bestCluster].start = school.dismissalTime;
           }
-          if (school.dismissalTime > clusterTimeRanges[bestCluster].end) {
-            clusterTimeRanges[bestCluster].end = school.dismissalTime;
+          if (school.dismissalTime > clusterTimings[bestCluster].end) {
+            clusterTimings[bestCluster].end = school.dismissalTime;
           }
         }
         
-        console.log(`📍 Assigned ${school.name} (${school.dismissalTime}) to driver ${bestCluster + 1} - capacity: ${clusterCapacities[bestCluster]}/${constraints.seatsPerDriver}`);
+        console.log(`📍 Assigned ${school.name} (${school.dismissalTime}) to driver ${bestCluster + 1} - capacity: ${clusterCapacities[bestCluster]}/${constraints.seatsPerDriver}, time: ${updatedTime}min/${constraints.maxRouteTime}min`);
       } else {
-        console.warn(`⚠️ Could not assign ${school.name} - all drivers at capacity!`);
+        console.warn(`⚠️ Could not assign ${school.name} - all drivers at capacity or time limit exceeded!`);
+        
+        // Try to redistribute existing schools to make room
+        for (let i = 0; i < constraints.driverCount; i++) {
+          if (clusters[i].length > 1) {
+            // Move the last school to a different driver if possible
+            const lastSchool = clusters[i].pop();
+            if (lastSchool) {
+              // Find another driver for the moved school
+              for (let j = 0; j < constraints.driverCount; j++) {
+                if (j !== i && clusterCapacities[j] + lastSchool.studentCount <= constraints.seatsPerDriver) {
+                  const testCluster = [...clusters[j], lastSchool];
+                  if (calculateRouteTime(testCluster) <= constraints.maxRouteTime) {
+                    clusters[j].push(lastSchool);
+                    clusterCapacities[j] += lastSchool.studentCount;
+                    clusterCapacities[i] -= lastSchool.studentCount;
+                    console.log(`🔄 Moved ${lastSchool.name} from driver ${i + 1} to driver ${j + 1} to make room`);
+                    
+                    // Now try to assign the current school to driver i
+                    const newTestCluster = [...clusters[i], school];
+                    if (calculateRouteTime(newTestCluster) <= constraints.maxRouteTime) {
+                      clusters[i].push(school);
+                      clusterCapacities[i] += school.studentCount;
+                      console.log(`✅ Successfully assigned ${school.name} to driver ${i + 1} after redistribution`);
+                    }
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
 
-    // Always return exactly the number of clusters requested (even if some are empty)
     return clusters;
   };
 
@@ -463,11 +531,11 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
           description: `Optimized route with ${route.totalStudents} students across ${route.schools.length} schools`
         };
 
-        const newRoute: any = await apiRequest('POST', '/api/routes', routeData);
+        const newRoute = await apiRequest('POST', '/api/routes', routeData);
         console.log('✅ Route created successfully:', newRoute);
 
         if (!newRoute || !newRoute.id) {
-          throw new Error(`Route creation failed for ${route.driverName} - no route ID returned from server`);
+          throw new Error(`Route creation failed for ${route.driverName} - no route ID returned from server. Response: ${JSON.stringify(newRoute)}`);
         }
 
         // Add schools to route with proper validation
@@ -546,11 +614,11 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
         description: `Optimized route with ${route.totalStudents} students across ${route.schools.length} schools`
       };
 
-      const newRoute: any = await apiRequest('POST', '/api/routes', routeData);
+      const newRoute = await apiRequest('POST', '/api/routes', routeData);
       console.log('✅ Route created successfully:', newRoute);
 
       if (!newRoute || !newRoute.id) {
-        throw new Error('Route creation failed - no route ID returned from server');
+        throw new Error(`Route creation failed - no route ID returned from server. Response: ${JSON.stringify(newRoute)}`);
       }
 
       // Add schools to route
