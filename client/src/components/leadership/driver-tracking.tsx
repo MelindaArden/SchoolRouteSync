@@ -83,9 +83,14 @@ export default function DriverTracking() {
     );
   });
 
-  // Get completed sessions for past routes section
+  // Get completed sessions for past routes section with their locations
   const completedSessions = (activeSessions as ActiveSession[]).filter((session: ActiveSession) => 
     session.status === "completed"
+  );
+
+  // Get historical driver locations for completed routes
+  const historicalDriverLocations = (driverLocations as any[]).filter((location: any) => 
+    location.sessionId && completedSessions.some(session => session.id === location.sessionId)
   );
 
   const getDriverLocation = (driverId: number): DriverLocation | null => {
@@ -310,8 +315,8 @@ export default function DriverTracking() {
         </div>
       )}
 
-      {/* Past Routes Section */}
-      {completedSessions.length > 0 && (
+      {/* Historical Driver Tracking Section */}
+      {(completedSessions.length > 0 || historicalDriverLocations.length > 0) && (
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <CheckCircle className="h-5 w-5 mr-2 text-green-600" />

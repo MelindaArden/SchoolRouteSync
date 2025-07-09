@@ -296,6 +296,14 @@ This is a full-stack web application for managing school bus routes, driver assi
 - System automatically creates optimized routes considering driver count, seat capacity, dismissal times, and student distribution
 - Enhanced route form with automatic coordinate population and real-time estimated arrival time calculation
 
+### July 9, 2025 - GPS Tracking Accuracy & Student Pickup History Enhancement
+- Fixed GPS tracking to display only truly active routes in "Active Drivers" section - completed routes no longer appear as active
+- Enhanced history dropdown with comprehensive student pickup records showing picked up students (green checkmarks) and missed students (red X marks)
+- Added dedicated "Past Routes" section showing historical driver locations and paths for completed routes with last known GPS positions
+- Improved GPS accuracy filtering ensuring only in-progress sessions appear as active drivers for real-time monitoring
+- Enhanced student pickup record display in history overview with visual status indicators and detailed school breakdown
+- Separated active vs historical GPS tracking for better admin visibility of current operations vs completed route analysis
+
 ### July 9, 2025 - Complete Nine-Feature Enhancement & Advanced System Integration
 - Implemented comprehensive nine-feature enhancement system with all requested improvements fully operational
 - Enhanced pickup history with detailed student breakdown showing individual pickup timestamps and status by school location
