@@ -165,9 +165,12 @@ export default function StudentAbsenceManagement() {
   const getUpcomingAbsences = () => {
     try {
       const todayStr = currentDate; // Use server-provided current date
-      return absences.filter(absence => {
+      return allAbsences.filter(absence => {
         try {
-          const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
+          // For date strings like "2025-07-07", compare directly
+          const absenceDate = absence.absenceDate.includes('T') 
+            ? new Date(absence.absenceDate).toISOString().split('T')[0] 
+            : absence.absenceDate;
           // Only show future absences (after today)
           return absenceDate > todayStr;
         } catch (error) {

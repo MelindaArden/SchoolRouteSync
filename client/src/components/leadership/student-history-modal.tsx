@@ -44,15 +44,20 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
 
   const formatDate = (dateStr: string) => {
     try {
-      if (!dateStr) return 'Invalid Date';
+      if (!dateStr) {
+        return 'No Date';
+      }
       
       // Handle date-only strings (2025-07-09) - create date at midnight UTC to avoid timezone issues
       if (!dateStr.includes('T')) {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        if (year && month && day) {
-          const date = new Date(year, month - 1, day); // month is 0-indexed
-          if (!isNaN(date.getTime())) {
-            return format(date, 'MMM d, yyyy');
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const [year, month, day] = parts.map(Number);
+          if (year && month && day && year > 1900 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            const date = new Date(year, month - 1, day); // month is 0-indexed
+            if (!isNaN(date.getTime())) {
+              return format(date, 'MMM d, yyyy');
+            }
           }
         }
       }
@@ -63,11 +68,9 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
         return format(date, 'MMM d, yyyy');
       }
       
-      console.error('Invalid date string:', dateStr);
-      return 'Invalid Date';
+      return `${dateStr}`;
     } catch (error) {
-      console.error('Date formatting error:', error, 'for date:', dateStr);
-      return 'Invalid Date';
+      return `${dateStr}`;
     }
   };
 
@@ -156,7 +159,7 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                 ) : (
                   <div className="space-y-3">
                     {absences.map((absence: any) => (
-                      <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg group">
                         <div className="flex-1">
                           <div className="font-medium">{formatDate(absence.absenceDate)}</div>
                           {absence.reason && (
@@ -167,7 +170,16 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          {getStatusBadge('absent')}
+                          <div 
+                            className="relative cursor-help"
+                            title={`Absence Details:
+Date: ${formatDate(absence.absenceDate)}
+Reason: ${absence.reason || 'No reason provided'}
+Notes: ${absence.notes || 'No notes'}
+Submitted: ${absence.createdAt ? format(new Date(absence.createdAt), 'MMM d, yyyy h:mm a') : 'Unknown'}`}
+                          >
+                            {getStatusBadge('absent')}
+                          </div>
                           {absence.createdAt && (
                             <div className="text-xs text-gray-500">
                               {format(new Date(absence.createdAt), 'MMM d, h:mm a')}
