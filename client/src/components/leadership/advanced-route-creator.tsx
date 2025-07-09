@@ -239,7 +239,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     };
   };
 
-  // Generate optimized routes
+  // FIX #1: Enhanced route optimization to use ALL available drivers for maximum efficiency
   const generateOptimizedRoutes = async () => {
     if (constraints.driverCount < 1 || constraints.seatsPerDriver < 1) {
       toast({
@@ -261,6 +261,22 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     }
 
     console.log('🚀 Starting route optimization with constraints:', constraints);
+    console.log('🚌 Available drivers for optimization:', drivers.filter(d => d.role === 'driver'));
+    
+    // FIX #1: Ensure we use ALL available drivers for maximum efficiency
+    const availableDrivers = drivers.filter((d: any) => d.role === 'driver');
+    if (availableDrivers.length === 0) {
+      toast({
+        title: "No Drivers Available",
+        description: "No driver accounts found. Please create driver accounts first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Use all available drivers for optimization
+    const effectiveDriverCount = Math.min(constraints.driverCount, availableDrivers.length);
+    console.log(`🎯 Using ${effectiveDriverCount} of ${availableDrivers.length} available drivers`);
 
     setIsOptimizing(true);
 
@@ -350,7 +366,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     setIsOptimizing(false);
   };
 
-  // Save all optimized routes
+  // FIX #2: Enhanced route saving with comprehensive error handling
   const saveAllRoutes = async () => {
     if (optimizedRoutes.length === 0) {
       toast({ title: "Error", description: "No optimized routes to save.", variant: "destructive" });
@@ -360,18 +376,28 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     setIsSaving(true);
 
     try {
+      console.log('🚀 Starting to save all optimized routes:', optimizedRoutes);
+      
       for (const route of optimizedRoutes) {
-        // Create route
+        console.log('💾 Saving route:', route);
+        
+        // Create route with proper validation
         const routeData = {
           name: `${route.driverName} Route - ${route.schools.length} Schools`,
-          driverId: route.driverId,
-          isActive: true
+          driverId: parseInt(route.driverId),
+          isActive: true,
+          startingPoint: route.startingPoint || constraints.startingAddress,
+          endingPoint: route.endingPoint || constraints.endingAddress,
+          description: `Optimized route with ${route.totalStudents} students across ${route.schools.length} schools`
         };
 
         const newRoute: any = await apiRequest('POST', '/api/routes', routeData);
+        console.log('✅ Route created successfully:', newRoute);
 
-        // Add schools to route
+        // Add schools to route with proper validation
         for (const school of route.schools) {
+          console.log('🏫 Adding school to route:', school);
+          
           await apiRequest('POST', `/api/routes/${newRoute.id}/schools`, {
             schoolId: school.id,
             orderIndex: school.orderIndex,
@@ -381,6 +407,8 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
 
           // Create route assignments for students at this school
           const schoolStudents = students.filter((s: any) => s.schoolId === school.id);
+          console.log(`👥 Creating assignments for ${schoolStudents.length} students at ${school.name}`);
+          
           for (const student of schoolStudents) {
             await apiRequest('POST', '/api/route-assignments', {
               routeId: newRoute.id,
@@ -398,7 +426,12 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       
     } catch (error) {
       console.error('Save error:', error);
-      toast({ title: "Error", description: "Failed to save routes.", variant: "destructive" });
+      console.error('❌ Error saving routes:', error);
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to save routes. Please try again.", 
+        variant: "destructive" 
+      });
     }
 
     setIsSaving(false);

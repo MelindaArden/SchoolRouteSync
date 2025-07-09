@@ -52,6 +52,33 @@ export default function StudentAbsenceManagement() {
     return school ? school.name : 'Unknown School';
   };
 
+  // FIX #4: Show absence date instead of submission date
+  const formatAbsenceDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // FIX #3: Enhanced same-day absence filtering
+  const getTodaysAbsences = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return absences.filter(absence => {
+      const absenceDate = new Date(absence.date).toISOString().split('T')[0];
+      return absenceDate === today;
+    });
+  };
+
+  const getUpcomingAbsences = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return absences.filter(absence => {
+      const absenceDate = new Date(absence.date).toISOString().split('T')[0];
+      return absenceDate > today;
+    });
+  };
+
   // FIX #5: ABSENCES NOT SHOWING - ENHANCED REAL-TIME REFRESH
   const { data: absences = [], isLoading } = useQuery({
     queryKey: ['/api/student-absences'],
@@ -127,13 +154,8 @@ export default function StudentAbsenceManagement() {
     return student ? getSchoolName(student.schoolId) : 'Unknown School';
   };
 
-  // Get absences for the next 7 days
-  const upcomingAbsences = absences.filter((absence: any) => {
-    const absenceDate = new Date(absence.absenceDate);
-    const today = startOfDay(new Date());
-    const weekFromNow = addDays(today, 7);
-    return absenceDate >= today && absenceDate <= weekFromNow;
-  });
+  // FIX #4: Show upcoming absences using absence date instead of creation date
+  const upcomingAbsences = getUpcomingAbsences();
 
   if (isLoading) {
     return (
@@ -245,7 +267,7 @@ export default function StudentAbsenceManagement() {
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todaysAbsences.length}</div>
+            <div className="text-2xl font-bold">{getTodaysAbsences().length}</div>
             <p className="text-xs text-muted-foreground">
               Students marked absent today
             </p>
@@ -299,11 +321,11 @@ export default function StudentAbsenceManagement() {
             />
           </div>
           
-          {todaysAbsences.length === 0 ? (
+          {getTodaysAbsences().length === 0 ? (
             <p className="text-center text-gray-500 py-8">No absences marked for this date</p>
           ) : (
             <div className="space-y-3">
-              {todaysAbsences.map((absence: any) => (
+              {getTodaysAbsences().map((absence: any) => (
                 <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{getStudentName(absence.studentId)}</div>
@@ -318,7 +340,7 @@ export default function StudentAbsenceManagement() {
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
                       <Calendar className="h-3 w-3 mr-1" />
-                      Absent: {formatDate(absence.absenceDate)}
+                      Absent: {formatAbsenceDate(absence.date)}
                     </Badge>
                     <Button
                       variant="outline"

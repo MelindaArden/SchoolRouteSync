@@ -41,21 +41,25 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
     },
   });
 
+  // FIX #5: Enhanced profile update with proper validation and error handling
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
+      console.log('🔄 Updating profile with data:', data);
       return apiRequest("PATCH", `/api/users/${user.id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      console.log('✅ Profile updated successfully:', result);
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('❌ Profile update failed:', error);
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     },
