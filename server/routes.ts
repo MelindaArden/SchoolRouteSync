@@ -526,14 +526,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Adding school to route:', routeSchoolData);
       const routeSchool = await storage.createRouteSchool(routeSchoolData);
       
+      // CRITICAL FIX: Create route assignments for all students at this school
+      const schoolStudents = await storage.getStudentsBySchool(routeSchoolData.schoolId);
+      console.log(`👥 Creating assignments for ${schoolStudents.length} students at school ${routeSchoolData.schoolId}`);
+      
+      for (const student of schoolStudents) {
+        try {
+          await storage.createRouteAssignment({
+            routeId: routeId,
+            studentId: student.id,
+            schoolId: routeSchoolData.schoolId,
+            isActive: true
+          });
+          console.log(`✅ Created assignment: Route ${routeId} -> Student ${student.id} at School ${routeSchoolData.schoolId}`);
+        } catch (assignmentError) {
+          console.error(`Failed to create assignment for student ${student.id}:`, assignmentError);
+        }
+      }
+      
       // Broadcast route school addition to all connected clients
       broadcast({
         type: 'route_school_added',
         routeId,
         routeSchool,
+        studentCount: schoolStudents.length
       });
       
-      res.json(routeSchool);
+      res.json({
+        ...routeSchool,
+        studentsAssigned: schoolStudents.length
+      });
     } catch (error) {
       console.error('Error adding school to route:', error);
       res.status(500).json({ message: "Failed to add school to route", error: error.message });
