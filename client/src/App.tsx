@@ -10,6 +10,7 @@ import DriverDashboard from "@/pages/driver-dashboard";
 import LeadershipDashboard from "@/pages/leadership-dashboard";
 import RouteSummary from "@/pages/route-summary";
 import MobileDebug from "@/pages/mobile-debug";
+import DebugAuth from "@/pages/debug-auth";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -156,6 +157,9 @@ function Router() {
       </Route>
       <Route path="/mobile-debug">
         <MobileDebug />
+      </Route>
+      <Route path="/debug-auth">
+        <DebugAuth />
       </Route>
       <Route component={NotFound} />
     </Switch>
