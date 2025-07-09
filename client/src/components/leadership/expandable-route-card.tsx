@@ -46,7 +46,7 @@ export default function ExpandableRouteCard({ route, driver, onEdit }: Expandabl
             <p className="font-medium">{route.name}</p>
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <span>Driver: {driver ? `${driver.firstName} ${driver.lastName}` : 'Unassigned'}</span>
-              <span>{schools.reduce((sum, school) => sum + getStudentCount(school.school?.id || 0), 0)} students</span>
+              <span>{schools.length} schools • {schools.reduce((sum, school) => sum + getStudentCount(school.school?.id || 0), 0)} students</span>
             </div>
           </div>
         </div>

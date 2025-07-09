@@ -170,7 +170,7 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                       <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg group">
                         <div className="flex-1">
                           <div className="font-medium">
-                            {formatDate(absence.absenceDate || absence.absence_date)}
+                            Absent: {formatDate(absence.absenceDate || absence.absence_date)}
                           </div>
                           {absence.reason && (
                             <div className="text-sm text-gray-600">Reason: {absence.reason}</div>
