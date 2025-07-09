@@ -119,13 +119,18 @@ export default function StudentAbsenceManagement() {
       const targetDate = selectedDate; // Use the selected date from the date picker
       const filtered = allAbsences.filter(absence => {
         try {
-          const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
+          // For date strings like "2025-07-07", compare directly
+          const absenceDate = absence.absenceDate.includes('T') 
+            ? new Date(absence.absenceDate).toISOString().split('T')[0] 
+            : absence.absenceDate;
+          
           return absenceDate === targetDate;
         } catch (error) {
           console.error('Error filtering selected date absences:', error, absence);
           return false;
         }
       });
+      
       return filtered;
     } catch (error) {
       console.error('Error getting selected date absences:', error);
@@ -139,7 +144,11 @@ export default function StudentAbsenceManagement() {
       const todayDate = currentDate; // Always use current date, not selected date
       const filtered = allAbsences.filter(absence => {
         try {
-          const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
+          // For date strings like "2025-07-07", compare directly
+          const absenceDate = absence.absenceDate.includes('T') 
+            ? new Date(absence.absenceDate).toISOString().split('T')[0] 
+            : absence.absenceDate;
+          
           return absenceDate === todayDate;
         } catch (error) {
           console.error('Error filtering today absences:', error, absence);
@@ -435,64 +444,6 @@ export default function StudentAbsenceManagement() {
         </CardContent>
       </Card>
 
-      {/* Date Picker Section for viewing specific dates */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            View Absences by Date - {selectedDate ? format(new Date(selectedDate + 'T00:00:00'), 'MMMM d, yyyy') : 'Loading...'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <Label htmlFor="date-select">Select Date (Current: {currentDate}):</Label>
-            <Input
-              id="date-select"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto"
-            />
-
-          </div>
-          
-          {getSelectedDateAbsences().length === 0 ? (
-            <p className="text-center text-gray-500 py-8">No absences marked for this date</p>
-          ) : (
-            <div className="space-y-3">
-              {getSelectedDateAbsences().map((absence: any) => (
-                <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">{getStudentName(absence.studentId)}</div>
-                    <div className="text-sm text-gray-600">{getStudentSchool(absence.studentId)}</div>
-                    {absence.reason && (
-                      <div className="text-sm text-gray-600">Reason: {absence.reason}</div>
-                    )}
-                    {absence.notes && (
-                      <div className="text-sm text-gray-600">Notes: {absence.notes}</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Absent: {formatAbsenceDate(absence.absenceDate)}
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteAbsenceMutation.mutate(absence.id)}
-                      disabled={deleteAbsenceMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Upcoming Absences */}
       <Card>
         <CardHeader>
@@ -520,6 +471,63 @@ export default function StudentAbsenceManagement() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Absent: {formatAbsenceDate(absence.absenceDate)}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteAbsenceMutation.mutate(absence.id)}
+                      disabled={deleteAbsenceMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Date Picker Section for viewing specific dates */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            View Absences by Date - {selectedDate ? format(new Date(selectedDate + 'T00:00:00'), 'MMMM d, yyyy') : 'Loading...'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <Label htmlFor="date-select">Select Date (Current: {currentDate}):</Label>
+            <Input
+              id="date-select"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-auto"
+            />
+          </div>
+          
+          {getSelectedDateAbsences().length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No absences marked for this date</p>
+          ) : (
+            <div className="space-y-3">
+              {getSelectedDateAbsences().map((absence: any) => (
+                <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium">{getStudentName(absence.studentId)}</div>
+                    <div className="text-sm text-gray-600">{getStudentSchool(absence.studentId)}</div>
+                    {absence.reason && (
+                      <div className="text-sm text-gray-600">Reason: {absence.reason}</div>
+                    )}
+                    {absence.notes && (
+                      <div className="text-sm text-gray-600">Notes: {absence.notes}</div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
                       <Calendar className="h-3 w-3 mr-1" />
                       Absent: {formatAbsenceDate(absence.absenceDate)}
                     </Badge>

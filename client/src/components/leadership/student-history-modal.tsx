@@ -45,11 +45,28 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
   const formatDate = (dateStr: string) => {
     try {
       if (!dateStr) return 'Invalid Date';
-      // Handle both date-only strings (2025-07-09) and full datetime strings
-      const date = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
-      if (isNaN(date.getTime())) return 'Invalid Date';
-      return format(date, 'MMM d, yyyy');
+      
+      // Handle date-only strings (2025-07-09) - create date at midnight UTC to avoid timezone issues
+      if (!dateStr.includes('T')) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        if (year && month && day) {
+          const date = new Date(year, month - 1, day); // month is 0-indexed
+          if (!isNaN(date.getTime())) {
+            return format(date, 'MMM d, yyyy');
+          }
+        }
+      }
+      
+      // Handle full datetime strings
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return format(date, 'MMM d, yyyy');
+      }
+      
+      console.error('Invalid date string:', dateStr);
+      return 'Invalid Date';
     } catch (error) {
+      console.error('Date formatting error:', error, 'for date:', dateStr);
       return 'Invalid Date';
     }
   };
