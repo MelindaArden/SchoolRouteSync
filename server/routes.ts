@@ -518,9 +518,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid route ID" });
       }
       
+      // Get current max order index for this route
+      const existingSchools = await storage.getRouteSchools(routeId);
+      const maxOrder = existingSchools.length > 0 ? Math.max(...existingSchools.map(s => s.orderIndex)) : 0;
+      
       const routeSchoolData = {
         ...req.body,
-        routeId
+        routeId,
+        orderIndex: maxOrder + 1 // Ensure we have an orderIndex
       };
       
       console.log('Adding school to route:', routeSchoolData);
