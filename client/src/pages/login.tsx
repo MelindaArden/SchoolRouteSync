@@ -33,12 +33,21 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
 
     try {
-      // Detect mobile Safari
+      // Enhanced mobile detection for deployment
       const isMobileSafari = /iPhone|iPad/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
-      console.log("Mobile Safari detected:", isMobileSafari);
+      const isMobile = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+      const isDeployment = window.location.hostname.includes('.replit.app') || window.location.hostname.includes('.replit.dev');
       
-      // Try mobile-specific endpoint first for Safari on iOS
-      const loginEndpoint = isMobileSafari ? "/api/mobile-login" : "/api/login";
+      console.log("Mobile detection:", {
+        isMobileSafari,
+        isMobile,
+        isDeployment,
+        hostname: window.location.hostname,
+        userAgent: navigator.userAgent
+      });
+      
+      // Use mobile-specific endpoint for Safari on iOS or deployment environments
+      const loginEndpoint = (isMobileSafari || (isMobile && isDeployment)) ? "/api/mobile-login" : "/api/login";
       
       const response = await fetch(loginEndpoint, {
         method: "POST",
@@ -51,7 +60,7 @@ export default function Login({ onLogin }: LoginProps) {
 
       if (!response.ok) {
         // If mobile endpoint fails, try regular login
-        if (isMobileSafari && loginEndpoint === "/api/mobile-login") {
+        if ((isMobileSafari || (isMobile && isDeployment)) && loginEndpoint === "/api/mobile-login") {
           console.log("Mobile login failed, trying regular login");
           const fallbackResponse = await fetch("/api/login", {
             method: "POST",
@@ -94,18 +103,26 @@ export default function Login({ onLogin }: LoginProps) {
         onLogin(userData);
       }
       
-      // Verify session after login
+      // Enhanced session verification for deployment
       setTimeout(async () => {
         try {
           const sessionCheck = await fetch("/api/session", {
-            credentials: "include"
+            credentials: "include",
+            headers: userData.authToken ? {
+              'Authorization': `Bearer ${userData.authToken}`
+            } : {}
           });
-          const sessionData = await sessionCheck.json();
-          console.log("Session verification:", sessionData);
-        } catch (err) {
-          console.log("Session verification failed:", err);
+          
+          if (sessionCheck.ok) {
+            const sessionData = await sessionCheck.json();
+            console.log("Session verification:", sessionData);
+          } else {
+            console.warn("Session verification failed:", await sessionCheck.text());
+          }
+        } catch (error) {
+          console.error("Session verification failed:", error);
         }
-      }, 200);
+      }, 1000);
       
       toast({
         title: "Success",

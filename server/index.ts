@@ -6,9 +6,24 @@ import { startMissedSchoolMonitoring } from "./missed-school-monitor";
 
 const app = express();
 
-// CORS headers for mobile Safari compatibility
+// Enhanced CORS headers for mobile Safari and deployment compatibility
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://schoolride.replit.app',
+    'https://schoolride.replit.dev',
+    process.env.REPLIT_DOMAIN && `https://${process.env.REPLIT_DOMAIN}`
+  ].filter(Boolean);
+  
+  // Allow any .replit.app or .replit.dev domain for deployment
+  if (origin && (origin.includes('.replit.app') || origin.includes('.replit.dev') || allowedOrigins.includes(origin))) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
@@ -20,7 +35,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Session configuration for mobile Safari compatibility  
+// Enhanced session configuration for mobile Safari and deployment
 app.use(session({
   secret: process.env.SESSION_SECRET || 'school-bus-management-secret',
   name: 'schoolbus.sid', // Custom session name
@@ -28,10 +43,10 @@ app.use(session({
   saveUninitialized: false, // Keep false to avoid unnecessary sessions
   rolling: true, // Reset expiry on each request
   cookie: {
-    secure: false, // Must be false for HTTP
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
     httpOnly: false, // Allow JavaScript access for mobile Safari
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax' // Use 'lax' for better mobile Safari compatibility
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Enhanced mobile compatibility
   }
 }));
 

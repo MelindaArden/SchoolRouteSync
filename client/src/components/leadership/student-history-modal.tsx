@@ -20,27 +20,8 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
     enabled: isOpen && studentId > 0,
   });
 
-  // Fetch pickup history where student was not picked up
-  const { data: pickupHistory = [], isLoading: historyLoading } = useQuery({
-    queryKey: ['/api/pickup-history'],
-    enabled: isOpen,
-  });
-
-  // Filter pickup history for this student where they were not picked up
-  const studentMissedPickups = pickupHistory.filter((record: any) => {
-    if (!record.pickupDetails) return false;
-    try {
-      const pickupDetails = typeof record.pickupDetails === 'string' 
-        ? JSON.parse(record.pickupDetails) 
-        : record.pickupDetails;
-      
-      return pickupDetails.some((pickup: any) => 
-        pickup.studentId === studentId && pickup.status !== 'picked_up'
-      );
-    } catch (error) {
-      return false;
-    }
-  });
+  // Only fetch actual absences - no pickup history placeholders
+  const studentMissedPickups: any[] = []; // Remove pickup history filtering as it creates placeholder entries
 
   const formatDate = (dateStr: string) => {
     try {
@@ -95,7 +76,7 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
     }
   };
 
-  const isLoading = absencesLoading || historyLoading;
+  const isLoading = absencesLoading;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
