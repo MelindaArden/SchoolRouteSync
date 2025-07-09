@@ -45,11 +45,8 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
   const formatDate = (dateStr: string) => {
     try {
       if (!dateStr) {
-        console.error('No date string provided');
         return 'No Date';
       }
-      
-      console.log('Formatting date:', dateStr, 'type:', typeof dateStr);
       
       // Handle date-only strings (2025-07-09) - create date at midnight to avoid timezone issues
       if (!dateStr.includes('T')) {
@@ -59,9 +56,7 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
           if (year && month && day && year > 1900 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
             const date = new Date(year, month - 1, day); // month is 0-indexed
             if (!isNaN(date.getTime())) {
-              const formatted = format(date, 'MMM d, yyyy');
-              console.log('Successfully formatted date:', formatted);
-              return formatted;
+              return format(date, 'MMM d, yyyy');
             }
           }
         }
@@ -80,7 +75,6 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
       }
       
       // Last resort - just return the string
-      console.error('All date formatting attempts failed for:', dateStr);
       return `Date: ${dateStr}`;
     } catch (error) {
       console.error('Date formatting error for:', dateStr, error);
@@ -176,7 +170,6 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                       <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg group">
                         <div className="flex-1">
                           <div className="font-medium">
-                            {console.log('Raw absence data:', absence)}
                             {formatDate(absence.absenceDate)}
                           </div>
                           {absence.reason && (

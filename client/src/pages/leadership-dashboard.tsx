@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { PushNotificationSetup } from "@/components/leadership/push-notification-setup";
+import UnassignedSchools from "@/components/leadership/unassigned-schools";
 import { 
   BarChart3, 
   Route as RouteIcon, 
@@ -602,26 +603,32 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             {routesView === "students" && <StudentsList onAddStudent={() => setShowForm("student")} />}
 
             {routesView === "routes" && !editingRoute && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Current Routes ({routeCount})</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {Array.isArray(routes) && routes.length > 0 ? routes.map((route: any) => {
-                    const driver = Array.isArray(users) ? users.find((u: any) => u.id === route.driverId) : null;
-                    return (
-                      <ExpandableRouteCard
-                        key={route.id}
-                        route={route}
-                        driver={driver}
-                        onEdit={() => setEditingRoute(route)}
-                      />
-                    );
-                  }) : (
-                    <p className="text-gray-500 text-center py-4">No routes created yet</p>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                {/* Current Routes */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Current Routes ({routeCount})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {Array.isArray(routes) && routes.length > 0 ? routes.map((route: any) => {
+                      const driver = Array.isArray(users) ? users.find((u: any) => u.id === route.driverId) : null;
+                      return (
+                        <ExpandableRouteCard
+                          key={route.id}
+                          route={route}
+                          driver={driver}
+                          onEdit={() => setEditingRoute(route)}
+                        />
+                      );
+                    }) : (
+                      <p className="text-gray-500 text-center py-4">No routes created yet</p>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                {/* Unassigned Schools with Drag & Drop */}
+                <UnassignedSchools />
+              </div>
             )}
 
             {routesView === "creator" && (
