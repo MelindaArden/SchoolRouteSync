@@ -1840,5 +1840,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get student absences by student ID for history modal
+  app.get('/api/students/:studentId/absences', async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      
+      const absences = await storage.getStudentAbsencesByStudent(studentId);
+      
+      res.json(absences);
+    } catch (error) {
+      console.error('Error fetching student absences:', error);
+      res.status(500).json({ message: "Failed to fetch student absences" });
+    }
+  });
+
   return httpServer;
 }

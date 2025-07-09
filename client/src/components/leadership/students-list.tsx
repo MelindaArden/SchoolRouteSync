@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { GraduationCap, Phone, Mail, Edit, Plus, Search, Trash2, User } from "lucide-react";
+import { GraduationCap, Phone, Mail, Edit, Plus, Search, Trash2, User, History } from "lucide-react";
 import StudentForm from "./student-form";
+import StudentHistoryModal from "./student-history-modal";
 
 interface StudentsListProps {
   onAddStudent: () => void;
@@ -16,6 +17,7 @@ interface StudentsListProps {
 export default function StudentsList({ onAddStudent }: StudentsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [historyStudent, setHistoryStudent] = useState<any>(null);
   const { toast } = useToast();
 
   const { data: students = [], isLoading } = useQuery({
@@ -133,6 +135,15 @@ export default function StudentsList({ onAddStudent }: StudentsListProps) {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => setHistoryStudent(student)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      title="View Student History"
+                    >
+                      <History className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setEditingStudent(student)}
                     >
                       <Edit className="h-4 w-4" />
@@ -189,6 +200,16 @@ export default function StudentsList({ onAddStudent }: StudentsListProps) {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Student History Modal */}
+      {historyStudent && (
+        <StudentHistoryModal
+          isOpen={!!historyStudent}
+          onClose={() => setHistoryStudent(null)}
+          studentId={historyStudent.id}
+          studentName={`${historyStudent.firstName} ${historyStudent.lastName}`}
+        />
       )}
     </div>
   );

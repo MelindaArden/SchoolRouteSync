@@ -85,21 +85,21 @@ export default function StudentAbsenceManagement() {
     }
   };
 
-  // Enhanced date-based absence filtering with automatic cleanup
+  // Enhanced date-based absence filtering for selected date
   const getTodaysAbsences = () => {
     try {
-      const todayStr = currentDate; // Use server-provided current date
+      const targetDate = selectedDate; // Use the selected date from the date picker
       return absences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
-          return absenceDate === todayStr;
+          return absenceDate === targetDate;
         } catch (error) {
-          console.error('Error filtering today\'s absences:', error, absence);
+          console.error('Error filtering selected date absences:', error, absence);
           return false;
         }
       });
     } catch (error) {
-      console.error('Error getting today\'s absences:', error);
+      console.error('Error getting selected date absences:', error);
       return [];
     }
   };
@@ -313,7 +313,14 @@ export default function StudentAbsenceManagement() {
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{getTodaysAbsences().length}</div>
+            <div className="text-2xl font-bold">{absences.filter(absence => {
+              try {
+                const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
+                return absenceDate === currentDate;
+              } catch (error) {
+                return false;
+              }
+            }).length}</div>
             <p className="text-xs text-muted-foreground">
               Students marked absent today
             </p>
@@ -352,7 +359,7 @@ export default function StudentAbsenceManagement() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
-            Today's Absences - {format(new Date(currentDate), 'MMMM d, yyyy')}
+            {selectedDate === currentDate ? "Today's" : "Selected Date"} Absences - {format(new Date(selectedDate), 'MMMM d, yyyy')}
           </CardTitle>
         </CardHeader>
         <CardContent>
