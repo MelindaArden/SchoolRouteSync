@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,20 +25,32 @@ const absenceFormSchema = z.object({
 });
 
 export default function StudentAbsenceManagement() {
-  // Use actual current date dynamically
-  const today = new Date();
-  const [selectedDate, setSelectedDate] = useState(format(today, 'yyyy-MM-dd'));
+  // Get current date from server to ensure accuracy
+  const { data: serverDate } = useQuery({
+    queryKey: ['/api/student-absences/date'],
+    refetchInterval: 60000, // Refresh every minute to keep date current
+  });
+  
+  const currentDate = serverDate?.date || format(new Date(), 'yyyy-MM-dd');
+  const [selectedDate, setSelectedDate] = useState(currentDate);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof absenceFormSchema>>({
     resolver: zodResolver(absenceFormSchema),
     defaultValues: {
-      absenceDate: format(today, 'yyyy-MM-dd'),
+      absenceDate: currentDate,
       reason: '',
       notes: '',
     }
   });
+
+  // Update form default date when server date is available
+  React.useEffect(() => {
+    if (currentDate) {
+      form.setValue('absenceDate', currentDate);
+    }
+  }, [currentDate, form]);
 
   const { data: students = [] } = useQuery({
     queryKey: ['/api/students'],
@@ -76,7 +88,7 @@ export default function StudentAbsenceManagement() {
   // Enhanced date-based absence filtering with automatic cleanup
   const getTodaysAbsences = () => {
     try {
-      const todayStr = new Date().toISOString().split('T')[0]; // Dynamic current date
+      const todayStr = currentDate; // Use server-provided current date
       return absences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
@@ -94,7 +106,7 @@ export default function StudentAbsenceManagement() {
 
   const getUpcomingAbsences = () => {
     try {
-      const todayStr = new Date().toISOString().split('T')[0]; // Dynamic current date
+      const todayStr = currentDate; // Use server-provided current date
       return absences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
@@ -340,7 +352,7 @@ export default function StudentAbsenceManagement() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
-            Today's Absences - {formatDate(selectedDate)}
+            Today's Absences - {format(new Date(currentDate), 'MMMM d, yyyy')}
           </CardTitle>
         </CardHeader>
         <CardContent>

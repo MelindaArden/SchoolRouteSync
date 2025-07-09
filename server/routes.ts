@@ -1742,6 +1742,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current date endpoint
+  app.get('/api/student-absences/date', async (req, res) => {
+    try {
+      // Return today's date in YYYY-MM-DD format
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      console.log('Current date API called, returning:', todayStr);
+      res.json({ date: todayStr });
+    } catch (error) {
+      console.error('Error getting current date:', error);
+      res.status(500).json({ message: "Failed to get current date" });
+    }
+  });
+
   app.get('/api/student-absences/date/:date', async (req, res) => {
     try {
       const { date } = req.params;
