@@ -53,10 +53,15 @@ export default function UnassignedSchools() {
         alertThresholdMinutes: 10
       });
     },
-    onSuccess: () => {
-      toast({ title: "Success", description: "School added to route successfully" });
+    onSuccess: (data: any) => {
+      toast({ 
+        title: "Success", 
+        description: `School added to route and automatically optimized for efficient pickup order. ${data.studentsAssigned || 0} students assigned.`,
+        duration: 5000
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/routes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/route-schools'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/routes/with-schools'] });
     },
     onError: (error: any) => {
       toast({ 

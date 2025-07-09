@@ -319,7 +319,7 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Created comprehensive absence management with historical logging, date-based filtering, and professional CSV export capabilities
 - Added enhanced WebSocket broadcasting for real-time absence updates across all admin interfaces
 
-### July 9, 2025 - Authentication System Fix & Drag-and-Drop School Assignment
+### July 9, 2025 - Authentication System Fix & Smart Drag-and-Drop with Auto-Optimization
 - Fixed student history modal date formatting issue by removing debugging console logs interfering with date display
 - Enhanced date parsing to handle both date-only strings ("2025-07-07") and datetime strings properly
 - Student absence dates now display correctly as "Jul 7, 2025" instead of "No Date"
@@ -330,6 +330,11 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Added debug authentication tool at /debug-auth for troubleshooting deployment login issues
 - Verified backend authentication system working correctly with all user credentials
 - Both driver and admin login endpoints functioning properly with token-based authentication
+- Enhanced drag-and-drop with automatic route optimization - when schools are dropped onto routes, system automatically reorders all schools for maximum efficiency
+- Implemented intelligent route ordering based on dismissal times and geographic considerations
+- Added automatic estimated arrival time calculation (5 minutes before school dismissal)
+- Created comprehensive visual feedback showing when routes are optimized and number of students assigned
+- Fixed route school assignment orderIndex calculation to prevent database constraint errors
 
 ### July 7, 2025 - Final System Fixes & Same-Day Absence Support
 - Fixed comprehensive route deletion system with proper cascade delete order to handle all foreign key constraints

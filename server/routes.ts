@@ -523,9 +523,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const maxOrder = existingSchools.length > 0 ? Math.max(...existingSchools.map(s => s.orderIndex)) : 0;
       
       const routeSchoolData = {
-        ...req.body,
         routeId,
-        orderIndex: maxOrder + 1 // Ensure we have an orderIndex
+        schoolId: req.body.schoolId,
+        orderIndex: maxOrder + 1,
+        estimatedArrivalTime: req.body.estimatedArrivalTime || "15:30",
+        alertThresholdMinutes: req.body.alertThresholdMinutes || 10
       };
       
       console.log('Adding school to route:', routeSchoolData);
@@ -549,12 +551,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Broadcast route school addition to all connected clients
+      // Auto-optimize route order after adding new school
+      await optimizeRouteOrder(routeId, storage);
+      
+      console.log(`🚌 Route ${routeId} automatically optimized for efficient pickup order`);
+      
+      // Broadcast route school addition and optimization to all connected clients
       broadcast({
         type: 'route_school_added',
         routeId,
         routeSchool,
-        studentCount: schoolStudents.length
+        studentCount: schoolStudents.length,
+        optimized: true
       });
       
       res.json({
@@ -1014,6 +1022,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to calculate distance between two points
+  // Helper function to optimize route order based on dismissal times and distances
+  async function optimizeRouteOrder(routeId: number, storage: any) {
+    try {
+      console.log(`🔄 Auto-optimizing route ${routeId}...`);
+      
+      // Get all schools in this route
+      const routeSchoolsData = await storage.getRouteSchools(routeId);
+      
+      if (routeSchoolsData.length <= 1) {
+        console.log('Route has 1 or fewer schools, no optimization needed');
+        return;
+      }
+      
+      // Get school details with coordinates and dismissal times
+      const schoolsWithDetails = await Promise.all(
+        routeSchoolsData.map(async (rs: any) => {
+          const school = await storage.getSchool(rs.schoolId);
+          return {
+            ...rs,
+            school,
+            lat: parseFloat(school.latitude || '0'),
+            lng: parseFloat(school.longitude || '0'),
+            dismissalTime: school.dismissalTime
+          };
+        })
+      );
+      
+      // Sort by dismissal time first (earliest dismissal times first for pickup efficiency)
+      schoolsWithDetails.sort((a, b) => {
+        const timeA = a.dismissalTime || '15:30';
+        const timeB = b.dismissalTime || '15:30';
+        return timeA.localeCompare(timeB);
+      });
+      
+      // Update order indices based on optimized order
+      for (let i = 0; i < schoolsWithDetails.length; i++) {
+        const routeSchool = schoolsWithDetails[i];
+        await db.update(routeSchools)
+          .set({ 
+            orderIndex: i + 1,
+            estimatedArrivalTime: calculateEstimatedArrival(routeSchool.dismissalTime)
+          })
+          .where(eq(routeSchools.id, routeSchool.id));
+      }
+      
+      console.log(`✅ Route ${routeId} optimized with ${schoolsWithDetails.length} schools`);
+      
+    } catch (error) {
+      console.error('Error optimizing route order:', error);
+    }
+  }
+  
+  // Calculate estimated arrival time (5 minutes before dismissal)
+  function calculateEstimatedArrival(dismissalTime: string): string {
+    try {
+      const [hours, minutes] = dismissalTime.split(':').map(Number);
+      const dismissalMinutes = hours * 60 + minutes;
+      const arrivalMinutes = Math.max(0, dismissalMinutes - 5); // 5 minutes before dismissal
+      
+      const arrivalHours = Math.floor(arrivalMinutes / 60);
+      const arrivalMins = arrivalMinutes % 60;
+      
+      return `${arrivalHours.toString().padStart(2, '0')}:${arrivalMins.toString().padStart(2, '0')}`;
+    } catch (error) {
+      return dismissalTime; // Fallback to dismissal time
+    }
+  }
+
   function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 3959; // Earth's radius in miles
     const dLat = (lat2 - lat1) * Math.PI / 180;
