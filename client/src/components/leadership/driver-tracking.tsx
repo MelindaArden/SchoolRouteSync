@@ -75,10 +75,13 @@ export default function DriverTracking() {
     session.status === "in_progress"
   );
   
-  // Filter driver locations to only show those with active sessions
-  const activeDriverLocations = (driverLocations as any[]).filter((location: any) => 
-    location.sessionId && inProgressSessions.some(session => session.id === location.sessionId)
-  );
+  // Filter driver locations to only show those with active in-progress sessions
+  const activeDriverLocations = (driverLocations as any[]).filter((location: any) => {
+    // Only show drivers who have active in-progress sessions
+    return location.sessionId && inProgressSessions.some(session => 
+      session.id === location.sessionId && session.status === "in_progress"
+    );
+  });
 
   // Get completed sessions for past routes section
   const completedSessions = (activeSessions as ActiveSession[]).filter((session: ActiveSession) => 

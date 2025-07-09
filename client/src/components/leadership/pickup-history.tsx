@@ -547,9 +547,28 @@ export default function PickupHistory() {
             <SelectContent>
               <SelectItem value="overview">History Overview</SelectItem>
               {history.map((record: any) => {
-                const pickupDetails = record.pickupDetails || [];
-                const schoolsInRoute = [...new Set(pickupDetails.map((p: any) => p.schoolName).filter(Boolean))];
-                const studentsInRoute = pickupDetails.map((p: any) => p.studentName).filter(Boolean);
+                let pickupDetails = [];
+                try {
+                  pickupDetails = record.pickupDetails ? JSON.parse(record.pickupDetails) : [];
+                } catch (e) {
+                  console.error('Error parsing pickup details:', e);
+                }
+                
+                // Get student names and schools from the pickup details
+                const studentsWithPickup = pickupDetails.map((pickup: any) => {
+                  const student = students.find((s: any) => s.id === pickup.studentId);
+                  const school = schools.find((s: any) => s.id === student?.schoolId);
+                  return {
+                    studentName: student ? `${student.firstName} ${student.lastName}` : 'Unknown',
+                    schoolName: school?.name || 'Unknown School',
+                    status: pickup.status,
+                    pickedUp: pickup.status === 'picked_up'
+                  };
+                });
+                
+                const schoolsInRoute = [...new Set(studentsWithPickup.map(s => s.schoolName).filter(Boolean))];
+                const pickedUpStudents = studentsWithPickup.filter(s => s.pickedUp);
+                const missedStudents = studentsWithPickup.filter(s => !s.pickedUp);
                 
                 return (
                   <SelectItem key={record.id} value={record.id.toString()}>
@@ -561,9 +580,14 @@ export default function PickupHistory() {
                           Schools: {schoolsInRoute.join(', ')}
                         </span>
                       )}
-                      {studentsInRoute.length > 0 && (
-                        <span className="text-xs text-gray-400">
-                          Students: {studentsInRoute.slice(0, 2).join(', ')}{studentsInRoute.length > 2 ? '...' : ''}
+                      {pickedUpStudents.length > 0 && (
+                        <span className="text-xs text-green-600">
+                          ✓ Picked up: {pickedUpStudents.map(s => s.studentName).slice(0, 2).join(', ')}{pickedUpStudents.length > 2 ? '...' : ''}
+                        </span>
+                      )}
+                      {missedStudents.length > 0 && (
+                        <span className="text-xs text-red-600">
+                          ✗ Missed: {missedStudents.map(s => s.studentName).slice(0, 2).join(', ')}{missedStudents.length > 2 ? '...' : ''}
                         </span>
                       )}
                     </div>
