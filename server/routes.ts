@@ -1568,11 +1568,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create route
+  // Create route with enhanced error handling and logging
   app.post("/api/routes", async (req, res) => {
     try {
       const routeData = insertRouteSchema.parse(req.body);
+      console.log('Creating route with data:', routeData);
+      
       const route = await storage.createRoute(routeData);
+      console.log('✅ Route created successfully with ID:', route.id);
       
       // Broadcast route creation to all connected clients
       broadcast({
@@ -1580,10 +1583,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         route,
       });
       
-      res.json(route);
+      // Ensure route ID is properly returned
+      res.json({
+        id: route.id,
+        ...route
+      });
     } catch (error) {
-      console.error('Route creation error:', error);
-      res.status(400).json({ message: "Invalid route data" });
+      console.error('❌ Route creation error:', error);
+      res.status(400).json({ 
+        message: "Invalid route data", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

@@ -123,7 +123,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     return R * c;
   };
 
-  // Enhanced clustering with dismissal time and geographical optimization
+  // Enhanced clustering using ALL drivers to eliminate late arrivals
   const clusterSchoolsByCapacity = (schoolsData: any[], constraints: CreatorConstraints) => {
     const schoolsWithStudents = schoolsData.map(school => ({
       ...school,
@@ -133,18 +133,22 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       dismissalTime: school.dismissalTime || "15:00",
     })).filter(school => school.studentCount > 0);
 
-    // Sort by dismissal time first, then by student count for efficient routing
+    console.log(`🎯 Optimizing for ${constraints.driverCount} drivers to eliminate late arrivals`);
+
+    // Sort by dismissal time FIRST to ensure no late arrivals
     schoolsWithStudents.sort((a, b) => {
       const timeCompare = a.dismissalTime.localeCompare(b.dismissalTime);
       if (timeCompare !== 0) return timeCompare;
-      return b.studentCount - a.studentCount;
+      // Secondary sort by proximity (using latitude as rough approximation)
+      return a.latitude - b.latitude;
     });
 
+    // Initialize exactly the number of clusters requested by admin
     const clusters: any[][] = Array(constraints.driverCount).fill(null).map(() => []);
     const clusterCapacities = Array(constraints.driverCount).fill(0);
     const clusterTimeRanges: { start: string, end: string }[] = Array(constraints.driverCount).fill(null).map(() => ({ start: "", end: "" }));
 
-    // Assign schools to clusters considering timing and capacity
+    // CRITICAL: Assign schools to ensure maximum on-time pickup coverage
     for (const school of schoolsWithStudents) {
       let bestCluster = -1;
       let bestScore = -Infinity;
@@ -154,20 +158,20 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
         if (remainingCapacity >= school.studentCount) {
           let score = 0;
           
-          // Capacity utilization score
-          score += (school.studentCount / remainingCapacity) * 100;
-          
-          // Time continuity score
+          // Priority 1: Time efficiency to prevent late arrivals (80% of score)
           if (clusters[i].length === 0) {
-            score += 50; // Bonus for starting a new cluster
+            score += 80; // High bonus for starting new routes
           } else {
             const lastTime = clusterTimeRanges[i].end;
             const timeDiff = Math.abs(
               new Date(`2000-01-01 ${school.dismissalTime}`).getTime() - 
               new Date(`2000-01-01 ${lastTime}`).getTime()
             ) / (1000 * 60); // minutes
-            score += Math.max(0, 60 - timeDiff); // Prefer schools with similar dismissal times
+            score += Math.max(0, 80 - timeDiff * 2); // Heavy penalty for time gaps
           }
+          
+          // Priority 2: Capacity efficiency (20% of score)
+          score += (school.studentCount / remainingCapacity) * 20;
 
           if (score > bestScore) {
             bestScore = score;
@@ -192,10 +196,15 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
             clusterTimeRanges[bestCluster].end = school.dismissalTime;
           }
         }
+        
+        console.log(`📍 Assigned ${school.name} (${school.dismissalTime}) to driver ${bestCluster + 1} - capacity: ${clusterCapacities[bestCluster]}/${constraints.seatsPerDriver}`);
+      } else {
+        console.warn(`⚠️ Could not assign ${school.name} - all drivers at capacity!`);
       }
     }
 
-    return clusters.filter(cluster => cluster.length > 0);
+    // Always return exactly the number of clusters requested (even if some are empty)
+    return clusters;
   };
 
   // FIX: Enhanced route optimization with dismissal time priority for proper pickup scheduling
@@ -457,6 +466,10 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
         const newRoute: any = await apiRequest('POST', '/api/routes', routeData);
         console.log('✅ Route created successfully:', newRoute);
 
+        if (!newRoute || !newRoute.id) {
+          throw new Error(`Route creation failed for ${route.driverName} - no route ID returned from server`);
+        }
+
         // Add schools to route with proper validation
         for (const school of route.schools) {
           console.log('🏫 Adding school to route:', school);
@@ -536,8 +549,13 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       const newRoute: any = await apiRequest('POST', '/api/routes', routeData);
       console.log('✅ Route created successfully:', newRoute);
 
+      if (!newRoute || !newRoute.id) {
+        throw new Error('Route creation failed - no route ID returned from server');
+      }
+
       // Add schools to route
       for (const school of route.schools) {
+        console.log(`🏫 Adding school ${school.name} to route ${newRoute.id}`);
         await apiRequest('POST', `/api/routes/${newRoute.id}/schools`, {
           schoolId: school.id,
           orderIndex: school.orderIndex,
