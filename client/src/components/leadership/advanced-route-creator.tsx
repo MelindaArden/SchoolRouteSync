@@ -163,7 +163,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     return clusters.filter(cluster => cluster.length > 0);
   };
 
-  // Optimize school order within a cluster using TSP approximation
+  // FIX: Enhanced route optimization with dismissal time priority for proper pickup scheduling
   const optimizeClusterRoute = (cluster: any[], constraints: CreatorConstraints) => {
     if (cluster.length <= 1) {
       return cluster.map((school, index) => ({
@@ -173,10 +173,11 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       }));
     }
 
-    // Sort by dismissal time first to respect timing constraints
+    // CRITICAL: Sort by dismissal time first to ensure drivers arrive on time for pickup
     const sortedByTime = [...cluster].sort((a, b) => {
       const timeA = a.dismissalTime || "15:00";
       const timeB = b.dismissalTime || "15:00";
+      console.log(`📅 Ordering schools: ${a.name} (${timeA}) before ${b.name} (${timeB})`);
       return timeA.localeCompare(timeB);
     });
 
@@ -263,7 +264,7 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
     console.log('🚀 Starting route optimization with constraints:', constraints);
     console.log('🚌 Available drivers for optimization:', drivers.filter(d => d.role === 'driver'));
     
-    // FIX #1: Ensure we use ALL available drivers for maximum efficiency
+    // FIX #1: Use ALL available drivers for maximum efficiency (ignore user input count)
     const availableDrivers = drivers.filter((d: any) => d.role === 'driver');
     if (availableDrivers.length === 0) {
       toast({
@@ -274,23 +275,14 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
       return;
     }
 
-    // Use all available drivers for optimization
-    const effectiveDriverCount = Math.min(constraints.driverCount, availableDrivers.length);
-    console.log(`🎯 Using ${effectiveDriverCount} of ${availableDrivers.length} available drivers`);
+    // ALWAYS use ALL available drivers for optimization
+    const effectiveDriverCount = availableDrivers.length;
+    console.log(`🎯 Using ALL ${effectiveDriverCount} available drivers for maximum efficiency`);
 
     setIsOptimizing(true);
 
     try {
-      // Get available drivers
-      const availableDrivers = drivers.slice(0, constraints.driverCount);
-      
-      if (availableDrivers.length < constraints.driverCount) {
-        toast({
-          title: "Warning",
-          description: `Only ${availableDrivers.length} drivers available for ${constraints.driverCount} requested routes.`,
-          variant: "destructive",
-        });
-      }
+      console.log(`✅ Ready to optimize routes for ALL ${effectiveDriverCount} drivers`);
 
       // FIX #2: Geocode starting and ending addresses for route optimization
       let startingCoords = null;
@@ -312,22 +304,32 @@ export default function AdvancedRouteCreator({ onClose }: RouteCreatorProps) {
         console.log('Geocoding error, using route optimization without coordinates:', error);
       }
 
-      // Cluster schools by capacity constraints
-      const clusters = clusterSchoolsByCapacity(schools, constraints);
+      // FIX #1: Use ALL available drivers to create maximum number of routes
+      const clusters = clusterSchoolsByCapacity(schools, {
+        ...constraints,
+        driverCount: effectiveDriverCount // Use ALL available drivers
+      });
+      console.log(`📊 Generated ${clusters.length} clusters for ${effectiveDriverCount} drivers`);
       
-      // Create optimized routes for each cluster
+      // Create optimized routes for each cluster using ALL drivers
       const routes: OptimizedRoute[] = [];
       
-      for (let i = 0; i < clusters.length && i < constraints.driverCount; i++) {
+      for (let i = 0; i < clusters.length && i < effectiveDriverCount; i++) {
         const cluster = clusters[i];
-        const optimizedSchools = optimizeClusterRoute(cluster, constraints);
+        // FIX: Optimize route considering dismissal times for proper pickup scheduling
+        const optimizedSchools = optimizeClusterRoute(cluster, {
+          ...constraints,
+          driverCount: effectiveDriverCount
+        });
         const metrics = calculateRouteMetrics(optimizedSchools, i);
-        const driver = availableDrivers[i];
+        const driver = availableDrivers[i]; // Use driver from ALL available drivers
+        
+        console.log(`🚛 Route ${i + 1}: ${driver.firstName} ${driver.lastName} - ${optimizedSchools.length} schools`);
         
         routes.push({
           id: `route-${i + 1}`,
-          driverId: driver?.id || 0,
-          driverName: driver ? `${driver.firstName} ${driver.lastName}` : `Driver ${i + 1}`,
+          driverId: driver.id,
+          driverName: `${driver.firstName} ${driver.lastName}`,
           schools: optimizedSchools,
           totalStudents: optimizedSchools.reduce((sum, s) => sum + s.studentCount, 0),
           totalDistance: metrics.totalDistance,
