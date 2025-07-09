@@ -77,9 +77,28 @@ export default function StudentAbsenceManagement() {
   // FIX #4: Show absence date instead of submission date
   const formatAbsenceDate = (dateStr: string) => {
     try {
+      if (!dateStr) return 'No Date';
+      
+      // Handle date-only strings like "2025-07-07"
+      if (!dateStr.includes('T')) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const [year, month, day] = parts.map(Number);
+          if (year && month && day) {
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            });
+          }
+        }
+      }
+      
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) {
-        return 'Invalid Date';
+        return dateStr;
       }
       return date.toLocaleDateString('en-US', {
         weekday: 'short',
@@ -89,7 +108,7 @@ export default function StudentAbsenceManagement() {
       });
     } catch (error) {
       console.error('Date formatting error:', error);
-      return 'Invalid Date';
+      return dateStr;
     }
   };
 
@@ -164,8 +183,8 @@ export default function StudentAbsenceManagement() {
 
   const getUpcomingAbsences = () => {
     try {
-      const todayStr = currentDate; // Use server-provided current date
-      return allAbsences.filter(absence => {
+      const todayStr = currentDate; // Use server-provided current date (2025-07-09)
+      const filtered = allAbsences.filter(absence => {
         try {
           // For date strings like "2025-07-07", compare directly
           const absenceDate = absence.absenceDate.includes('T') 
@@ -178,6 +197,7 @@ export default function StudentAbsenceManagement() {
           return false;
         }
       });
+      return filtered;
     } catch (error) {
       console.error('Error getting upcoming absences:', error);
       return [];

@@ -45,10 +45,13 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
   const formatDate = (dateStr: string) => {
     try {
       if (!dateStr) {
+        console.error('No date string provided');
         return 'No Date';
       }
       
-      // Handle date-only strings (2025-07-09) - create date at midnight UTC to avoid timezone issues
+      console.log('Formatting date:', dateStr, 'type:', typeof dateStr);
+      
+      // Handle date-only strings (2025-07-09) - create date at midnight to avoid timezone issues
       if (!dateStr.includes('T')) {
         const parts = dateStr.split('-');
         if (parts.length === 3) {
@@ -56,9 +59,17 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
           if (year && month && day && year > 1900 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
             const date = new Date(year, month - 1, day); // month is 0-indexed
             if (!isNaN(date.getTime())) {
-              return format(date, 'MMM d, yyyy');
+              const formatted = format(date, 'MMM d, yyyy');
+              console.log('Successfully formatted date:', formatted);
+              return formatted;
             }
           }
+        }
+        
+        // Fallback for malformed date strings - try to parse anyway
+        const fallbackDate = new Date(dateStr + 'T00:00:00');
+        if (!isNaN(fallbackDate.getTime())) {
+          return format(fallbackDate, 'MMM d, yyyy');
         }
       }
       
@@ -68,9 +79,12 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
         return format(date, 'MMM d, yyyy');
       }
       
-      return `${dateStr}`;
+      // Last resort - just return the string
+      console.error('All date formatting attempts failed for:', dateStr);
+      return `Date: ${dateStr}`;
     } catch (error) {
-      return `${dateStr}`;
+      console.error('Date formatting error for:', dateStr, error);
+      return `Date: ${dateStr}`;
     }
   };
 
@@ -161,7 +175,10 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                     {absences.map((absence: any) => (
                       <div key={absence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg group">
                         <div className="flex-1">
-                          <div className="font-medium">{formatDate(absence.absenceDate)}</div>
+                          <div className="font-medium">
+                            {console.log('Raw absence data:', absence)}
+                            {formatDate(absence.absenceDate)}
+                          </div>
                           {absence.reason && (
                             <div className="text-sm text-gray-600">Reason: {absence.reason}</div>
                           )}
