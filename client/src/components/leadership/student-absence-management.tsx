@@ -94,6 +94,26 @@ export default function StudentAbsenceManagement() {
     }
   };
 
+  // FIX #5: ABSENCES NOT SHOWING - ENHANCED REAL-TIME REFRESH
+  const { data: allAbsences = [], isLoading } = useQuery({
+    queryKey: ['/api/student-absences'],
+    refetchInterval: 5000, // Faster refresh every 5 seconds
+    staleTime: 0, // Always refetch for immediate updates
+  });
+
+  // Filter absences to only show today and future dates (past absences are available in student history)
+  const absences = allAbsences.filter((absence: any) => {
+    try {
+      const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
+      return absenceDate >= currentDate; // Only show today and future
+    } catch (error) {
+      return false;
+    }
+  });
+
+  // Now absences is already filtered to only show current and future dates
+  const filteredAbsences = absences;
+
   // Enhanced date-based absence filtering for selected date
   const getTodaysAbsences = () => {
     try {
@@ -131,26 +151,6 @@ export default function StudentAbsenceManagement() {
       return [];
     }
   };
-
-  // Now absences is already filtered to only show current and future dates
-  const filteredAbsences = absences;
-
-  // FIX #5: ABSENCES NOT SHOWING - ENHANCED REAL-TIME REFRESH
-  const { data: allAbsences = [], isLoading } = useQuery({
-    queryKey: ['/api/student-absences'],
-    refetchInterval: 5000, // Faster refresh every 5 seconds
-    staleTime: 0, // Always refetch for immediate updates
-  });
-
-  // Filter absences to only show today and future dates (past absences are available in student history)
-  const absences = allAbsences.filter((absence: any) => {
-    try {
-      const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
-      return absenceDate >= currentDate; // Only show today and future
-    } catch (error) {
-      return false;
-    }
-  });
 
   const { data: todaysAbsences = [], refetch: refetchTodaysAbsences } = useQuery({
     queryKey: ['/api/student-absences/date', selectedDate],

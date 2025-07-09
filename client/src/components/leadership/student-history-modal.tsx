@@ -45,7 +45,8 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
   const formatDate = (dateStr: string) => {
     try {
       if (!dateStr) return 'Invalid Date';
-      const date = new Date(dateStr + 'T00:00:00'); // Add time to prevent timezone issues
+      // Handle both date-only strings (2025-07-09) and full datetime strings
+      const date = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
       if (isNaN(date.getTime())) return 'Invalid Date';
       return format(date, 'MMM d, yyyy');
     } catch (error) {
@@ -185,8 +186,8 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                         <div key={record.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex-1">
                             <div className="font-medium">{formatDate(record.completedAt)}</div>
-                            <div className="text-sm text-gray-600">Route: {record.routeName}</div>
-                            <div className="text-sm text-gray-600">Driver: {record.driverName}</div>
+                            <div className="text-sm text-gray-600">Route: {record.route?.name || 'Unknown Route'}</div>
+                            <div className="text-sm text-gray-600">Driver: {record.driver?.firstName} {record.driver?.lastName}</div>
                             {studentPickup?.notes && (
                               <div className="text-sm text-gray-600">Notes: {studentPickup.notes}</div>
                             )}

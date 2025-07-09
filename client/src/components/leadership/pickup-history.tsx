@@ -126,7 +126,10 @@ export default function PickupHistory() {
     filteredHistory.forEach((record: any) => {
       let pickupDetails = [];
       try {
-        pickupDetails = record.pickupDetails ? JSON.parse(record.pickupDetails) : [];
+        // Handle both parsed arrays and string JSON for backward compatibility
+        pickupDetails = Array.isArray(record.pickupDetails) 
+          ? record.pickupDetails 
+          : record.pickupDetails ? JSON.parse(record.pickupDetails) : [];
       } catch (e) {
         console.error('Error parsing pickup details:', e);
       }
@@ -212,7 +215,10 @@ export default function PickupHistory() {
   const RouteBreakdownSection = ({ record, schools, students }: any) => {
     let pickupDetails = [];
     try {
-      pickupDetails = record.pickupDetails ? JSON.parse(record.pickupDetails) : [];
+      // Handle both parsed arrays and string JSON for backward compatibility
+      pickupDetails = Array.isArray(record.pickupDetails) 
+        ? record.pickupDetails 
+        : record.pickupDetails ? JSON.parse(record.pickupDetails) : [];
     } catch (e) {
       console.error('Error parsing pickup details:', e);
     }
