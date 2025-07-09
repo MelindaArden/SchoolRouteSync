@@ -200,14 +200,6 @@ export default function StudentAbsenceManagement() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Student Absence Management</h2>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => {
-            // Trigger parent component navigation instead of hash navigation
-            const event = new CustomEvent('navigate-to-export');
-            window.dispatchEvent(event);
-          }}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Absences
-          </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>

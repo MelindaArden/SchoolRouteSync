@@ -590,6 +590,9 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-gray-600 text-sm">Use the buttons above to add schools, students, drivers, or create routes.</p>
+                  <div className="border-t pt-3">
+                    <PushNotificationSetup />
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -735,12 +738,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </div>
         )}
 
-        {activeTab === "settings" && (
-          <div className="p-4 space-y-6">
-            <PushNotificationSetup />
-            <ProfileSettings user={user} />
-          </div>
-        )}
+
       </div>
 
       {/* Bottom Navigation */}
@@ -801,15 +799,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <GraduationCap className="h-6 w-6 mb-1" />
             <span className="text-xs">Absences</span>
           </button>
-          <button
-            onClick={() => setActiveTab("settings")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "settings" ? "text-primary" : "text-gray-500"
-            }`}
-          >
-            <Settings className="h-6 w-6 mb-1" />
-            <span className="text-xs">Settings</span>
-          </button>
+
         </div>
       </nav>
     </div>

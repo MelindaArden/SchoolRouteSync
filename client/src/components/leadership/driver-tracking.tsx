@@ -80,6 +80,11 @@ export default function DriverTracking() {
     location.sessionId && inProgressSessions.some(session => session.id === location.sessionId)
   );
 
+  // Get completed sessions for past routes section
+  const completedSessions = (activeSessions as ActiveSession[]).filter((session: ActiveSession) => 
+    session.status === "completed"
+  );
+
   const getDriverLocation = (driverId: number): DriverLocation | null => {
     return (driverLocations as DriverLocation[]).find((loc: DriverLocation) => loc.driverId === driverId) || null;
   };
@@ -299,6 +304,74 @@ export default function DriverTracking() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Past Routes Section */}
+      {completedSessions.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+            Past Routes (Completed Today)
+          </h3>
+          <div className="space-y-4">
+            {completedSessions.map((session) => {
+              const location = getDriverLocation(session.driverId);
+              const nextSchool = getNextSchool(session);
+              
+              return (
+                <Card key={session.id} className="border-green-200 bg-green-50">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-green-700">
+                            {session.driver.firstName.charAt(0)}{session.driver.lastName.charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-green-900">
+                            {session.driver.firstName} {session.driver.lastName}
+                          </h4>
+                          <p className="text-sm text-green-600">{session.route.name}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="border-green-600 text-green-600">
+                        Completed
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Route Progress:</span>
+                      <span className="font-medium text-green-600">
+                        {session.completedPickups}/{session.totalStudents} students
+                      </span>
+                    </div>
+                    
+                    {/* Last Known Location */}
+                    {location && (
+                      <div className="bg-white border border-green-200 rounded-lg p-3">
+                        <div className="flex items-start space-x-3">
+                          <MapPin className="h-4 w-4 text-green-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-green-800">Last Known Location</p>
+                            <p className="text-xs text-green-600 mt-1">
+                              {location.latitude}, {location.longitude}
+                            </p>
+                            <p className="text-xs text-green-500 mt-1">
+                              Updated: {new Date(location.updatedAt).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
