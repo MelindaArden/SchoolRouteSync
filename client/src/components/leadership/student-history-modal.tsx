@@ -177,11 +177,9 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                 ) : (
                   <div className="space-y-3">
                     {studentMissedPickups.map((record: any) => {
-                      const pickupDetails = typeof record.pickupDetails === 'string' 
-                        ? JSON.parse(record.pickupDetails) 
-                        : record.pickupDetails;
+                      if (!Array.isArray(record.pickupDetails)) return null;
                       
-                      const studentPickup = pickupDetails.find((pickup: any) => pickup.studentId === studentId);
+                      const studentPickup = record.pickupDetails.find((pickup: any) => pickup.studentId === studentId);
                       
                       return (
                         <div key={record.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -195,7 +193,7 @@ export default function StudentHistoryModal({ isOpen, onClose, studentId, studen
                           </div>
                           <div className="flex items-center gap-2">
                             {getStatusBadge(studentPickup?.status || 'no_show')}
-                            {record.completedAt && (
+                            {record.completedAt && !isNaN(new Date(record.completedAt).getTime()) && (
                               <div className="text-xs text-gray-500">
                                 <Clock className="h-3 w-3 inline mr-1" />
                                 {format(new Date(record.completedAt), 'h:mm a')}

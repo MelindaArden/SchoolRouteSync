@@ -98,7 +98,7 @@ export default function StudentAbsenceManagement() {
   const getTodaysAbsences = () => {
     try {
       const targetDate = selectedDate; // Use the selected date from the date picker
-      return absences.filter(absence => {
+      return filteredAbsences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
           return absenceDate === targetDate;
@@ -119,7 +119,7 @@ export default function StudentAbsenceManagement() {
       return absences.filter(absence => {
         try {
           const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
-          // Only show future absences, automatically filter out past dates
+          // Only show future absences (after today)
           return absenceDate > todayStr;
         } catch (error) {
           console.error('Error filtering upcoming absences:', error, absence);
@@ -132,11 +132,24 @@ export default function StudentAbsenceManagement() {
     }
   };
 
+  // Now absences is already filtered to only show current and future dates
+  const filteredAbsences = absences;
+
   // FIX #5: ABSENCES NOT SHOWING - ENHANCED REAL-TIME REFRESH
-  const { data: absences = [], isLoading } = useQuery({
+  const { data: allAbsences = [], isLoading } = useQuery({
     queryKey: ['/api/student-absences'],
     refetchInterval: 5000, // Faster refresh every 5 seconds
     staleTime: 0, // Always refetch for immediate updates
+  });
+
+  // Filter absences to only show today and future dates (past absences are available in student history)
+  const absences = allAbsences.filter((absence: any) => {
+    try {
+      const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
+      return absenceDate >= currentDate; // Only show today and future
+    } catch (error) {
+      return false;
+    }
   });
 
   const { data: todaysAbsences = [], refetch: refetchTodaysAbsences } = useQuery({
@@ -322,7 +335,7 @@ export default function StudentAbsenceManagement() {
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{absences.filter(absence => {
+            <div className="text-2xl font-bold">{filteredAbsences.filter(absence => {
               try {
                 const absenceDate = new Date(absence.absenceDate).toISOString().split('T')[0];
                 return absenceDate === currentDate;
@@ -381,9 +394,7 @@ export default function StudentAbsenceManagement() {
               onChange={(e) => setSelectedDate(e.target.value)}
               className="w-auto"
             />
-            <div className="text-xs text-gray-500 mt-1">
-              Server date: {serverDate?.date || 'Loading...'} | Selected: {selectedDate}
-            </div>
+
           </div>
           
           {getTodaysAbsences().length === 0 ? (
