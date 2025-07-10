@@ -117,6 +117,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     if (!currentActiveSession || !sessionPickups.data) return;
 
     // Check if all students are marked as either picked up, not present, or absent
+    // Note: Students marked as absent in the absence system should be automatically handled
     const unhandledStudents = sessionPickups.data.filter((pickup: any) => 
       pickup.status === 'pending'
     );
@@ -124,16 +125,57 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     console.log('Route completion check:', {
       totalPickups: sessionPickups.data.length,
       unhandledStudents: unhandledStudents.length,
-      statuses: sessionPickups.data.map((p: any) => ({ studentId: p.studentId, status: p.status }))
+      unhandledStudentDetails: unhandledStudents.map((p: any) => ({ id: p.id, studentId: p.studentId, status: p.status })),
+      allStatuses: sessionPickups.data.map((p: any) => ({ id: p.id, studentId: p.studentId, status: p.status }))
     });
-
+    
+    // Check if any pending students are marked absent today - they should be allowed to complete
     if (unhandledStudents.length > 0) {
-      toast({
-        title: "Cannot Complete Route",
-        description: `Please mark all students as either "Picked Up" or "Not Present" before completing the route. ${unhandledStudents.length} students still pending.`,
-        variant: "destructive",
-      });
-      return;
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        const response = await fetch(`/api/student-absences/date/${today}`);
+        const todaysAbsences = await response.json();
+        
+        // Filter out students who are marked absent today
+        const nonAbsentPending = unhandledStudents.filter((pickup: any) => 
+          !todaysAbsences.some((absence: any) => absence.studentId === pickup.studentId)
+        );
+
+        if (nonAbsentPending.length > 0) {
+          toast({
+            title: "Cannot Complete Route", 
+            description: `Please mark all students as either "Picked Up" or "Not Present" before completing the route. ${nonAbsentPending.length} students still pending (excluding absent students).`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Auto-mark any absent students as "absent" status for completion
+        for (const pickup of unhandledStudents) {
+          const isAbsent = todaysAbsences.some((absence: any) => absence.studentId === pickup.studentId);
+          if (isAbsent) {
+            console.log('Auto-marking absent student:', pickup.studentId);
+            try {
+              await apiRequest("PATCH", `/api/student-pickups/${pickup.id}`, {
+                status: "absent", 
+                driverNotes: "Student marked absent for today",
+              });
+            } catch (error) {
+              console.error('Failed to auto-mark absent student:', error);
+            }
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error checking absences:', error);
+        // If we can't check absences, require all to be manually marked
+        toast({
+          title: "Cannot Complete Route",
+          description: `Please mark all students as either "Picked Up" or "Not Present" before completing the route. ${unhandledStudents.length} students still pending.`,
+          variant: "destructive", 
+        });
+        return;
+      }
     }
 
     try {
