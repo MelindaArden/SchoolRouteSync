@@ -116,10 +116,16 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const handleCompleteRoute = async () => {
     if (!currentActiveSession || !sessionPickups.data) return;
 
-    // Check if all students are marked as either picked up or not present
+    // Check if all students are marked as either picked up, not present, or absent
     const unhandledStudents = sessionPickups.data.filter((pickup: any) => 
       pickup.status === 'pending'
     );
+    
+    console.log('Route completion check:', {
+      totalPickups: sessionPickups.data.length,
+      unhandledStudents: unhandledStudents.length,
+      statuses: sessionPickups.data.map((p: any) => ({ studentId: p.studentId, status: p.status }))
+    });
 
     if (unhandledStudents.length > 0) {
       toast({
