@@ -118,8 +118,20 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
 
   const startTime = sessionDetails.startTime ? new Date(sessionDetails.startTime) : null;
   const completedTime = sessionDetails.completedTime ? new Date(sessionDetails.completedTime) : null;
-  const routeDuration = sessionDetails.durationMinutes || 
-    (startTime && completedTime ? Math.round((completedTime.getTime() - startTime.getTime()) / (1000 * 60)) : null);
+  
+  // Use durationMinutes from session, or calculate from pickup times if available
+  let routeDuration = sessionDetails.durationMinutes;
+  
+  if (!routeDuration && sessionDetails.pickups) {
+    const firstPickupTime = sessionDetails.pickups
+      .filter(p => p.pickedUpAt)
+      .map(p => new Date(p.pickedUpAt!))
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+    
+    if (firstPickupTime && completedTime) {
+      routeDuration = Math.round((completedTime.getTime() - firstPickupTime.getTime()) / (1000 * 60));
+    }
+  }
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 

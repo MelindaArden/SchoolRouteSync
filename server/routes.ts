@@ -766,7 +766,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           durationMinutes 
         });
       } else {
-        console.log('Warning: No start time found for session', sessionId);
+        // If no start time, estimate duration based on first pickup time
+        const firstPickupTime = pickups
+          .filter(p => p.pickedUpAt)
+          .map(p => new Date(p.pickedUpAt!))
+          .sort((a, b) => a.getTime() - b.getTime())[0];
+        
+        if (firstPickupTime) {
+          durationMinutes = Math.round((endTime.getTime() - firstPickupTime.getTime()) / (1000 * 60));
+          console.log('Route duration estimated from first pickup:', { 
+            firstPickupTime: firstPickupTime.toISOString(), 
+            endTime: endTime.toISOString(), 
+            durationMinutes 
+          });
+        } else {
+          // Default to 30 minutes if no pickup times available
+          durationMinutes = 30;
+          console.log('No pickup times found, using default 30 minutes duration');
+        }
       }
 
       // Update session to completed with duration
@@ -778,6 +795,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (durationMinutes !== null) {
         updateData.durationMinutes = durationMinutes;
       }
+      
+      console.log('Final update data for session:', updateData);
 
       await storage.updatePickupSession(sessionId, updateData);
       console.log('Session updated with completion data:', updateData);
