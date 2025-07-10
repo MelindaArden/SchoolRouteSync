@@ -194,30 +194,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Mobile Safari specific login test endpoint
+  // T-Mobile Safari diagnostic endpoint
+  app.post("/api/tmobile-debug", async (req, res) => {
+    console.log('T-Mobile Debug Request:', {
+      method: req.method,
+      url: req.url,
+      headers: req.headers,
+      body: req.body,
+      ip: req.ip,
+      sessionId: req.sessionID,
+      cookies: req.headers.cookie
+    });
+    
+    res.json({
+      received: true,
+      method: req.method,
+      headers: req.headers,
+      body: req.body,
+      timestamp: new Date().toISOString(),
+      sessionId: req.sessionID
+    });
+  });
+
+  // Enhanced mobile login endpoint with T-Mobile specific handling
   app.post("/api/mobile-login", async (req, res) => {
     try {
+      console.log('Mobile login attempt:', {
+        body: req.body,
+        headers: {
+          userAgent: req.headers['user-agent'],
+          origin: req.headers.origin,
+          referer: req.headers.referer,
+          host: req.headers.host
+        },
+        ip: req.ip,
+        sessionId: req.sessionID
+      });
+      
       const { username, password } = loginSchema.parse(req.body);
       
       const user = await storage.getUserByUsername(username);
       if (!user || user.password !== password) {
+        console.log(`Mobile login failed for ${username}:`, {
+          userFound: !!user,
+          passwordMatch: user ? user.password === password : false,
+          userAgent: req.headers['user-agent']
+        });
+        
         return res.status(401).json({ 
           message: "Invalid credentials",
-          userAgent: req.headers['user-agent'],
-          isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || '')
+          debug: {
+            userAgent: req.headers['user-agent'],
+            isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+            isTMobile: req.headers['user-agent']?.includes('T-Mobile') || false,
+            timestamp: new Date().toISOString(),
+            sessionId: req.sessionID
+          }
         });
       }
 
-      // Create a simple token-based authentication for mobile Safari
-      const token = Buffer.from(`${user.id}:${user.username}:${Date.now()}`).toString('base64');
+      // Create enhanced token for T-Mobile compatibility
+      const authToken = createAuthToken(user.id, user.username, user.role);
+      const simpleToken = Buffer.from(`${user.id}:${user.username}:${Date.now()}`).toString('base64');
       
-      // Store in session and also return token
+      // Enhanced session creation for T-Mobile
       req.session.userId = user.id;
       req.session.username = user.username;
       req.session.role = user.role;
-      req.session.mobileToken = token;
+      req.session.mobileToken = simpleToken;
+      
+      // Force session save for T-Mobile compatibility
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+        }
+      });
 
-      console.log(`Mobile login successful for ${username}, session: ${req.sessionID}, token: ${token}`);
+      console.log(`Mobile login successful for ${username}:`, {
+        sessionId: req.sessionID,
+        authToken: authToken.substring(0, 16) + '...',
+        userAgent: req.headers['user-agent'],
+        isTMobile: req.headers['user-agent']?.includes('T-Mobile') || false
+      });
 
       res.json({
         id: user.id,
@@ -225,13 +283,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
-        token: token, // Include token for mobile Safari backup
+        authToken: authToken, // Primary token for modern browsers
+        token: simpleToken, // Backup token for compatibility
         sessionId: req.sessionID,
-        isMobileUser: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
-        userAgent: req.headers['user-agent']
+        debug: {
+          isMobileUser: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+          isTMobile: req.headers['user-agent']?.includes('T-Mobile') || false,
+          userAgent: req.headers['user-agent'],
+          tokenCreated: true,
+          sessionCreated: true,
+          loginMethod: 'mobile-enhanced'
+        }
       });
     } catch (error) {
-      res.status(400).json({ message: "Invalid request data" });
+      console.error('Mobile login error:', error);
+      res.status(400).json({ 
+        message: "Invalid request data",
+        error: error.message,
+        debug: {
+          userAgent: req.headers['user-agent'],
+          timestamp: new Date().toISOString()
+        }
+      });
     }
   });
 

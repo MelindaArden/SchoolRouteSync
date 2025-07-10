@@ -33,21 +33,26 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
 
     try {
-      // Enhanced mobile detection for deployment
+      // Enhanced mobile detection for deployment and T-Mobile
       const isMobileSafari = /iPhone|iPad/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
       const isMobile = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
       const isDeployment = window.location.hostname.includes('.replit.app') || window.location.hostname.includes('.replit.dev');
+      const isTMobile = navigator.userAgent.includes('T-Mobile');
       
-      console.log("Mobile detection:", {
+      console.log("Enhanced mobile detection:", {
         isMobileSafari,
         isMobile,
         isDeployment,
+        isTMobile,
         hostname: window.location.hostname,
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        cookiesEnabled: navigator.cookieEnabled,
+        onlineStatus: navigator.onLine
       });
       
-      // Use mobile-specific endpoint for Safari on iOS or deployment environments
-      const loginEndpoint = (isMobileSafari || (isMobile && isDeployment)) ? "/api/mobile-login" : "/api/login";
+      // Use mobile-specific endpoint for mobile browsers or deployment environments
+      const loginEndpoint = (isMobile || isDeployment || isTMobile) ? "/api/mobile-login" : "/api/login";
+      console.log("Selected endpoint:", loginEndpoint);
       
       const response = await fetch(loginEndpoint, {
         method: "POST",
@@ -59,8 +64,8 @@ export default function Login({ onLogin }: LoginProps) {
       });
 
       if (!response.ok) {
-        // If mobile endpoint fails, try regular login
-        if ((isMobileSafari || (isMobile && isDeployment)) && loginEndpoint === "/api/mobile-login") {
+        // If mobile endpoint fails, try regular login and enhanced fallback for T-Mobile
+        if (loginEndpoint === "/api/mobile-login") {
           console.log("Mobile login failed, trying regular login");
           const fallbackResponse = await fetch("/api/login", {
             method: "POST",
@@ -74,7 +79,25 @@ export default function Login({ onLogin }: LoginProps) {
           if (!fallbackResponse.ok) {
             const errorData = await fallbackResponse.json();
             console.log("Fallback login error:", errorData);
-            throw new Error(errorData.message || "Login failed");
+            
+            // For T-Mobile, provide specific debugging
+            if (isTMobile) {
+              console.error("T-Mobile login issue detected. Running diagnostics...");
+              try {
+                const debugResponse = await fetch("/api/tmobile-debug", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ username, test: true, timestamp: Date.now() })
+                });
+                const debugData = await debugResponse.json();
+                console.log("T-Mobile debug data:", debugData);
+              } catch (debugError) {
+                console.error("Debug test failed:", debugError);
+              }
+            }
+            
+            throw new Error(errorData.message || "Login failed - please check your credentials");
           }
           
           const userData = await fallbackResponse.json();
@@ -82,8 +105,15 @@ export default function Login({ onLogin }: LoginProps) {
           onLogin(userData);
         } else {
           const errorData = await response.json();
-          console.log("Login error:", errorData);
-          throw new Error(errorData.message || "Login failed");
+          console.log("Login error:", {
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+            endpoint: loginEndpoint,
+            userAgent: navigator.userAgent,
+            hostname: window.location.hostname
+          });
+          throw new Error(errorData.message || `Login failed (${response.status})`);
         }
       } else {
         const userData = await response.json();

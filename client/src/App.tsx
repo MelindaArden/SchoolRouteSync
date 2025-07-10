@@ -11,6 +11,7 @@ import LeadershipDashboard from "@/pages/leadership-dashboard";
 import RouteSummary from "@/pages/route-summary";
 import MobileDebug from "@/pages/mobile-debug";
 import DebugAuth from "@/pages/debug-auth";
+import TMobileTest from "@/pages/tmobile-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -160,6 +161,9 @@ function Router() {
       </Route>
       <Route path="/debug-auth">
         <DebugAuth />
+      </Route>
+      <Route path="/tmobile-test">
+        <TMobileTest />
       </Route>
       <Route component={NotFound} />
     </Switch>
