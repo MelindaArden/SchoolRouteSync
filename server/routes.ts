@@ -277,6 +277,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Mobile connectivity diagnostic endpoint
+  app.get("/api/mobile-test", async (req, res) => {
+    console.log('Mobile connectivity test:', {
+      method: req.method,
+      url: req.url,
+      headers: req.headers,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      timestamp: new Date().toISOString()
+    });
+    
+    res.json({
+      status: 'connected',
+      message: 'Mobile connectivity successful',
+      serverTime: new Date().toISOString(),
+      clientIP: req.ip,
+      userAgent: req.headers['user-agent'],
+      headers: req.headers,
+      isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+      connection: 'established'
+    });
+  });
+
   // T-Mobile Safari diagnostic endpoint
   app.post("/api/tmobile-debug", async (req, res) => {
     console.log('T-Mobile Debug Request:', {
