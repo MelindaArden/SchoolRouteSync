@@ -774,15 +774,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (firstPickupTime) {
           durationMinutes = Math.round((endTime.getTime() - firstPickupTime.getTime()) / (1000 * 60));
+          // Ensure minimum duration of 1 minute for very quick routes
+          if (durationMinutes < 1) {
+            durationMinutes = Math.max(1, Math.round((endTime.getTime() - firstPickupTime.getTime()) / (1000 * 60 * 60) * 60));
+            if (durationMinutes < 1) durationMinutes = 1;
+          }
           console.log('Route duration estimated from first pickup:', { 
             firstPickupTime: firstPickupTime.toISOString(), 
             endTime: endTime.toISOString(), 
-            durationMinutes 
+            durationMinutes,
+            actualSeconds: (endTime.getTime() - firstPickupTime.getTime()) / 1000
           });
         } else {
-          // Default to 30 minutes if no pickup times available
-          durationMinutes = 30;
-          console.log('No pickup times found, using default 30 minutes duration');
+          // Default to 5 minutes if no pickup times available
+          durationMinutes = 5;
+          console.log('No pickup times found, using default 5 minutes duration');
         }
       }
 

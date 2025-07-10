@@ -122,14 +122,19 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
   // Use durationMinutes from session, or calculate from pickup times if available
   let routeDuration = sessionDetails.durationMinutes;
   
-  if (!routeDuration && sessionDetails.pickups) {
-    const firstPickupTime = sessionDetails.pickups
-      .filter(p => p.pickedUpAt)
-      .map(p => new Date(p.pickedUpAt!))
-      .sort((a, b) => a.getTime() - b.getTime())[0];
-    
-    if (firstPickupTime && completedTime) {
-      routeDuration = Math.round((completedTime.getTime() - firstPickupTime.getTime()) / (1000 * 60));
+  // Check for null/undefined specifically, not falsy (since 0 is a valid duration)
+  if (routeDuration === null || routeDuration === undefined) {
+    if (sessionDetails.pickups) {
+      const firstPickupTime = sessionDetails.pickups
+        .filter(p => p.pickedUpAt)
+        .map(p => new Date(p.pickedUpAt!))
+        .sort((a, b) => a.getTime() - b.getTime())[0];
+      
+      if (firstPickupTime && completedTime) {
+        routeDuration = Math.round((completedTime.getTime() - firstPickupTime.getTime()) / (1000 * 60));
+        // Ensure minimum 1 minute for very quick routes
+        if (routeDuration < 1) routeDuration = 1;
+      }
     }
   }
 
@@ -169,7 +174,7 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
             <CardContent className="p-4 text-center">
               <Clock className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-gray-900">
-                {routeDuration ? `${routeDuration}m` : '--'}
+                {routeDuration !== null && routeDuration !== undefined ? `${routeDuration}m` : '--'}
               </div>
               <div className="text-sm text-gray-600">Route Duration</div>
             </CardContent>
@@ -212,7 +217,7 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
               </div>
             )}
             
-            {routeDuration && (
+            {(routeDuration !== null && routeDuration !== undefined) && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Route Duration:</span>
                 <span className="font-medium">{routeDuration} minutes</span>
