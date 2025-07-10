@@ -84,19 +84,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Token-based authentication for mobile Safari compatibility
+  // Enhanced login endpoint for production deployment and mobile Safari
   app.post("/api/login", async (req, res) => {
     try {
+      console.log('Production login attempt:', {
+        body: req.body,
+        headers: {
+          userAgent: req.headers['user-agent'],
+          origin: req.headers.origin,
+          referer: req.headers.referer,
+          host: req.headers.host
+        },
+        ip: req.ip,
+        sessionId: req.sessionID
+      });
+      
       const { username, password } = loginSchema.parse(req.body);
       
       const user = await storage.getUserByUsername(username);
       if (!user || user.password !== password) {
+        console.log(`Login failed for username "${username}":`, {
+          userFound: !!user,
+          storedPassword: user?.password,
+          providedPassword: password,
+          passwordMatch: user ? user.password === password : false,
+          userAgent: req.headers['user-agent']
+        });
+        
         return res.status(401).json({ 
-          message: "Invalid credentials",
+          message: "Invalid username or password",
           debug: {
-            userFound: !!user,
             userAgent: req.headers['user-agent'],
-            timestamp: new Date().toISOString()
+            isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+            timestamp: new Date().toISOString(),
+            sessionId: req.sessionID,
+            providedUsername: username,
+            userFound: !!user
           }
         });
       }
@@ -112,12 +135,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authToken = `fallback_${user.id}_${Date.now()}`;
       }
       
-      // Also store in session as backup
+      // Enhanced session creation for production
       req.session.userId = user.id;
       req.session.username = user.username;
       req.session.role = user.role;
+      
+      // Force session save for mobile browsers
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+        }
+      });
 
-      console.log(`Login successful for ${username}, token created: ${authToken.substring(0, 8)}...`);
+      console.log(`Production login successful for ${username}:`, {
+        userId: user.id,
+        sessionId: req.sessionID,
+        authToken: authToken.substring(0, 8) + '...',
+        userAgent: req.headers['user-agent'],
+        isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || '')
+      });
 
       res.json({
         id: user.id,
@@ -132,11 +168,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sessionId: req.sessionID,
           userAgent: req.headers['user-agent'],
           isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
-          loginMethod: 'token-based'
+          loginMethod: 'production-enhanced',
+          timestamp: new Date().toISOString()
         }
       });
     } catch (error) {
-      res.status(400).json({ message: "Invalid request data" });
+      console.error('Login error:', error);
+      res.status(400).json({ 
+        message: "Invalid request data",
+        error: error.message,
+        debug: {
+          userAgent: req.headers['user-agent'],
+          timestamp: new Date().toISOString()
+        }
+      });
     }
   });
 
