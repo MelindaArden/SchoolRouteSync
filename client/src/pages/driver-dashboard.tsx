@@ -114,7 +114,21 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   };
 
   const handleCompleteRoute = async () => {
-    if (!currentActiveSession) return;
+    if (!currentActiveSession || !sessionPickups.data) return;
+
+    // Check if all students are marked as either picked up or not present
+    const unhandledStudents = sessionPickups.data.filter((pickup: any) => 
+      pickup.status === 'pending'
+    );
+
+    if (unhandledStudents.length > 0) {
+      toast({
+        title: "Cannot Complete Route",
+        description: `Please mark all students as either "Picked Up" or "Not Present" before completing the route. ${unhandledStudents.length} students still pending.`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       // Use the new completion endpoint that saves to history
@@ -234,9 +248,6 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold">{currentRoute.name}</h3>
-                    <p className="text-sm text-gray-600">
-                      {currentRoute.schools?.length || 0} schools • {currentRoute.schools?.reduce((total: number, school: any) => total + (school.students?.length || 0), 0) || 0} students
-                    </p>
                   </div>
                   {!hasActiveSession ? (
                     <Button onClick={handleStartRoute} className="bg-green-600 hover:bg-green-700">

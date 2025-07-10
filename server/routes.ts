@@ -701,15 +701,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/student-pickups/:id", async (req, res) => {
     try {
       const pickupId = parseInt(req.params.id);
-      const { status, driverNotes, pickedUpAt } = updatePickupSchema.parse(req.body);
+      console.log('Updating pickup:', { pickupId, body: req.body });
       
-      const updates: any = { status, driverNotes };
+      const { status, driverNotes, pickedUpAt } = req.body;
+      
+      if (!['pending', 'picked_up', 'absent', 'no_show'].includes(status)) {
+        console.error('Invalid status:', status);
+        return res.status(400).json({ message: "Invalid pickup status" });
+      }
+      
+      const updates: any = { status };
+      
+      if (driverNotes) {
+        updates.driverNotes = driverNotes;
+      }
+      
       if (status === "picked_up" && pickedUpAt) {
         updates.pickedUpAt = new Date(pickedUpAt);
       } else if (status === "picked_up") {
         updates.pickedUpAt = new Date();
+      } else if (status === "no_show" || status === "pending") {
+        updates.pickedUpAt = null;
       }
 
+      console.log('Applying updates:', updates);
       const pickup = await storage.updateStudentPickup(pickupId, updates);
       
       broadcast({
@@ -719,7 +734,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(pickup);
     } catch (error) {
-      res.status(400).json({ message: "Invalid pickup data" });
+      console.error('Pickup update error:', error);
+      res.status(400).json({ message: "Invalid pickup data", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -737,20 +753,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pickups = await storage.getStudentPickups(sessionId);
       const pickedUpCount = pickups.filter(p => p.status === "picked_up").length;
       
-      // Calculate duration if session has start time
+      // Calculate duration properly
       let durationMinutes = null;
+      const endTime = new Date();
+      
       if (session.startTime) {
         const startTime = new Date(session.startTime);
-        const endTime = new Date();
         durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+        console.log('Route duration calculated:', { 
+          startTime: startTime.toISOString(), 
+          endTime: endTime.toISOString(), 
+          durationMinutes 
+        });
+      } else {
+        console.log('Warning: No start time found for session', sessionId);
       }
 
       // Update session to completed with duration
-      await storage.updatePickupSession(sessionId, {
+      const updateData: any = {
         status: "completed",
-        completedTime: new Date(),
-        durationMinutes
-      });
+        completedTime: endTime
+      };
+      
+      if (durationMinutes !== null) {
+        updateData.durationMinutes = durationMinutes;
+      }
+
+      await storage.updatePickupSession(sessionId, updateData);
+      console.log('Session updated with completion data:', updateData);
 
       // Save to pickup history
       await storage.createPickupHistory({
@@ -758,7 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         routeId: session.routeId,
         driverId: session.driverId,
         date: session.date,
-        completedAt: new Date(),
+        completedAt: endTime,
         totalStudents: pickups.length,
         studentsPickedUp: pickedUpCount,
         pickupDetails: JSON.stringify(pickups),
@@ -771,10 +801,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId,
         routeId: session.routeId,
         driverId: session.driverId,
-        completedAt: new Date().toISOString()
+        completedAt: endTime.toISOString()
       });
 
-      res.json({ message: "Route completed and saved to history" });
+      res.json({ 
+        message: "Route completed and saved to history", 
+        durationMinutes,
+        completedAt: endTime.toISOString()
+      });
     } catch (error) {
       console.error('Error completing route:', error);
       res.status(500).json({ message: "Failed to complete route" });
