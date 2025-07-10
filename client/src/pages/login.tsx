@@ -171,8 +171,8 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
             <div className="bg-primary rounded-full p-3">
@@ -187,41 +187,79 @@ export default function Login({ onLogin }: LoginProps) {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-base font-medium">Username</Label>
               <Input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
+                className="h-12 text-lg px-4 border-2 border-gray-300 focus:border-primary"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 disabled={loading}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-base font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
+                className="h-12 text-lg px-4 border-2 border-gray-300 focus:border-primary"
+                autoComplete="current-password"
                 disabled={loading}
               />
             </div>
             <Button
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90"
+              className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
               disabled={loading}
             >
               {loading ? (
                 <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   <span>Signing in...</span>
                 </div>
               ) : (
                 "Sign In"
               )}
             </Button>
+            
+            {/* Mobile testing credentials */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm font-medium text-blue-900 mb-2">Test Credentials:</p>
+              <div className="space-y-2 text-sm">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setUsername("ma1313");
+                    setPassword("Dietdew13!");
+                  }}
+                  className="block w-full text-left p-3 bg-white rounded-lg border hover:bg-gray-50 touch-manipulation"
+                  disabled={loading}
+                >
+                  <div className="font-medium text-blue-800">Driver Account</div>
+                  <div className="text-blue-600">ma1313 / Dietdew13!</div>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setUsername("ChadW");
+                    setPassword("Password123");
+                  }}
+                  className="block w-full text-left p-3 bg-white rounded-lg border hover:bg-gray-50 touch-manipulation"
+                  disabled={loading}
+                >
+                  <div className="font-medium text-blue-800">Admin Account</div>
+                  <div className="text-blue-600">ChadW / Password123</div>
+                </button>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>

@@ -43,10 +43,11 @@ app.use(session({
   saveUninitialized: false, // Keep false to avoid unnecessary sessions
   rolling: true, // Reset expiry on each request
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    secure: false, // Disable secure cookies for mobile compatibility
     httpOnly: false, // Allow JavaScript access for mobile Safari
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Enhanced mobile compatibility
+    sameSite: 'lax', // Use lax for better mobile Safari compatibility
+    domain: undefined // Don't set domain to allow all subdomains
   }
 }));
 
