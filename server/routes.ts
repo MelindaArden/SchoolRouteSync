@@ -185,47 +185,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check session endpoint - supports both session and token auth
-  app.get("/api/session", (req, res) => {
-    // Try session first
-    if (req.session.userId) {
-      res.json({
-        userId: req.session.userId,
-        username: req.session.username,
-        role: req.session.role,
-        isAuthenticated: true,
-        authMethod: 'session'
-      });
-      return;
-    }
-
-    // Try token authentication
-    const authToken = req.headers.authorization?.replace('Bearer ', '') || req.query.token as string;
-    if (authToken) {
-      const tokenData = validateAuthToken(authToken);
-      if (tokenData) {
-        res.json({
-          userId: tokenData.userId,
-          username: tokenData.username,
-          role: tokenData.role,
-          isAuthenticated: true,
-          authMethod: 'token'
+  // Enhanced session endpoint with mobile Safari compatibility and comprehensive token validation
+  app.get("/api/session", async (req, res) => {
+    try {
+      // Check for authorization header first (mobile Safari compatibility)
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        console.log('Session check with authorization header:', {
+          tokenPrefix: token.substring(0, 8) + '...',
+          userAgent: req.headers['user-agent']
         });
-        return;
+        
+        try {
+          const tokenData = validateAuthToken(token);
+          if (tokenData) {
+            console.log('Valid token found for user:', tokenData.username);
+            return res.json({
+              isAuthenticated: true,
+              userId: tokenData.userId,
+              username: tokenData.username,
+              role: tokenData.role,
+              debug: {
+                authMethod: 'token',
+                tokenValid: true,
+                userAgent: req.headers['user-agent'],
+                sessionId: req.sessionID
+              }
+            });
+          }
+        } catch (error) {
+          console.log('Token validation failed:', error.message);
+        }
       }
-    }
-
-    res.status(401).json({ 
-      isAuthenticated: false,
-      sessionInfo: {
-        sessionExists: !!req.session,
+      
+      // Fallback to session-based authentication  
+      if (req.session && req.session.userId) {
+        console.log('Session found for user:', req.session.username);
+        return res.json({
+          isAuthenticated: true,
+          userId: req.session.userId,
+          username: req.session.username,
+          role: req.session.role,
+          debug: {
+            authMethod: 'session',
+            sessionId: req.sessionID,
+            userAgent: req.headers['user-agent']
+          }
+        });
+      }
+      
+      console.log('No valid authentication found - session data:', {
+        hasSession: !!req.session,
         sessionId: req.sessionID,
-        cookies: req.headers.cookie || 'none',
-        userAgent: req.headers['user-agent'],
-        hasAuthHeader: !!req.headers.authorization,
-        hasTokenParam: !!req.query.token
-      }
-    });
+        sessionUserId: req.session?.userId,
+        sessionUsername: req.session?.username,
+        authHeader: !!authHeader,
+        userAgent: req.headers['user-agent']
+      });
+      
+      res.json({
+        isAuthenticated: false,
+        debug: {
+          hasSession: !!req.session,
+          hasAuthHeader: !!authHeader,
+          sessionId: req.sessionID,
+          userAgent: req.headers['user-agent']
+        }
+      });
+    } catch (error) {
+      console.error('Session check error:', error);
+      res.json({
+        isAuthenticated: false,
+        error: error.message,
+        debug: {
+          userAgent: req.headers['user-agent'],
+          sessionId: req.sessionID
+        }
+      });
+    }
   });
 
   // Logout endpoint
@@ -298,28 +336,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create enhanced token for T-Mobile compatibility
-      const authToken = createAuthToken(user.id, user.username, user.role);
-      const simpleToken = Buffer.from(`${user.id}:${user.username}:${Date.now()}`).toString('base64');
+      // Create authentication token for mobile compatibility
+      console.log(`Creating mobile auth token for ${username}`);
+      let authToken;
+      try {
+        authToken = createAuthToken(user.id, user.username, user.role);
+        console.log(`Mobile auth token created for ${username}: ${authToken.substring(0, 16)}...`);
+      } catch (error) {
+        console.error(`Mobile token creation failed for ${username}:`, error);
+        authToken = `mobile_${user.id}_${Date.now()}`;
+      }
       
-      // Enhanced session creation for T-Mobile
+      // Enhanced session creation for mobile
       req.session.userId = user.id;
       req.session.username = user.username;
       req.session.role = user.role;
-      req.session.mobileToken = simpleToken;
+      req.session.mobileToken = authToken;
       
-      // Force session save for T-Mobile compatibility
+      // Force session save for mobile browsers
       req.session.save((err) => {
         if (err) {
-          console.error('Session save error:', err);
+          console.error('Mobile session save error:', err);
+        } else {
+          console.log('Mobile session saved successfully');
         }
       });
 
       console.log(`Mobile login successful for ${username}:`, {
+        userId: user.id,
         sessionId: req.sessionID,
-        authToken: authToken.substring(0, 16) + '...',
+        authToken: authToken.substring(0, 8) + '...',
         userAgent: req.headers['user-agent'],
-        isTMobile: req.headers['user-agent']?.includes('T-Mobile') || false
+        isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || '')
       });
 
       res.json({
@@ -328,16 +376,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
-        authToken: authToken, // Primary token for modern browsers
-        token: simpleToken, // Backup token for compatibility
-        sessionId: req.sessionID,
+        authToken: authToken, // Mobile Safari will use this token
+        token: authToken, // Backward compatibility
         debug: {
-          isMobileUser: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
-          isTMobile: req.headers['user-agent']?.includes('T-Mobile') || false,
-          userAgent: req.headers['user-agent'],
           tokenCreated: true,
           sessionCreated: true,
-          loginMethod: 'mobile-enhanced'
+          sessionId: req.sessionID,
+          userAgent: req.headers['user-agent'],
+          isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+          loginMethod: 'mobile-enhanced',
+          timestamp: new Date().toISOString()
         }
       });
     } catch (error) {

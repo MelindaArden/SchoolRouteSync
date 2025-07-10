@@ -39,14 +39,14 @@ app.use((req, res, next) => {
 app.use(session({
   secret: process.env.SESSION_SECRET || 'school-bus-management-secret',
   name: 'schoolbus.sid', // Custom session name
-  resave: false,
-  saveUninitialized: false, // Keep false to avoid unnecessary sessions
+  resave: true, // Changed to true for mobile compatibility
+  saveUninitialized: true, // Changed to true for mobile Safari
   rolling: true, // Reset expiry on each request
   cookie: {
     secure: false, // Disable secure cookies for mobile compatibility
     httpOnly: false, // Allow JavaScript access for mobile Safari
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax', // Use lax for better mobile Safari compatibility
+    sameSite: 'lax', // Changed back to 'lax' for mobile Safari compatibility
     domain: undefined // Don't set domain to allow all subdomains
   }
 }));

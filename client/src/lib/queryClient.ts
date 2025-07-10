@@ -12,9 +12,18 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<any> {
+  // Get auth token for mobile compatibility
+  const authToken = localStorage.getItem("authToken");
+  const headers: any = data ? { "Content-Type": "application/json" } : {};
+  
+  // Add authorization header if token exists (mobile Safari support)
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -36,7 +45,17 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Get auth token for mobile compatibility
+    const authToken = localStorage.getItem("authToken");
+    const headers: any = {};
+    
+    // Add authorization header if token exists (mobile Safari support)
+    if (authToken) {
+      headers.Authorization = `Bearer ${authToken}`;
+    }
+    
     const res = await fetch(queryKey[0] as string, {
+      headers,
       credentials: "include",
     });
 
