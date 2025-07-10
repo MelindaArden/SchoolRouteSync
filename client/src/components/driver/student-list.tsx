@@ -22,7 +22,7 @@ interface StudentListProps {
 }
 
 export default function StudentList({ students, isActive, sessionId }: StudentListProps) {
-  const [pickupStates, setPickupStates] = useState<Record<number, boolean>>({});
+  const [pickupStates, setPickupStates] = useState<Record<number, string>>({});
   const { toast } = useToast();
 
   console.log('StudentList - Session debug:', { 
@@ -50,9 +50,9 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
   // Update pickup states when student pickups data changes
   useEffect(() => {
     if (studentPickups && Array.isArray(studentPickups) && studentPickups.length > 0) {
-      const newStates: Record<number, boolean> = {};
+      const newStates: Record<number, string> = {};
       studentPickups.forEach((pickup: StudentPickup) => {
-        newStates[pickup.studentId] = pickup.status === "picked_up";
+        newStates[pickup.studentId] = pickup.status || "pending";
       });
       setPickupStates(newStates);
     }
@@ -86,8 +86,8 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
       return;
     }
 
-    const isPickedUp = pickupStates[student.id];
-    const newStatus = isPickedUp ? "pending" : "picked_up";
+    const currentStatus = pickupStates[student.id] || "pending";
+    const newStatus = currentStatus === "picked_up" ? "pending" : "picked_up";
 
     try {
       // Find the pickup record for this student and session
@@ -103,18 +103,19 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
 
         setPickupStates(prev => ({
           ...prev,
-          [student.id]: !isPickedUp
+          [student.id]: newStatus
         }));
 
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: [`/api/student-pickups?sessionId=${sessionId}`] });
 
         toast({
-          title: isPickedUp ? "Student marked as not picked up" : "Student picked up",
+          title: newStatus === "picked_up" ? "Student picked up" : "Student marked as pending",
           description: `${student.firstName} ${student.lastName}`,
         });
       }
     } catch (error) {
+      console.error('Toggle pickup error:', error);
       toast({
         title: "Error",
         description: "Failed to update pickup status",
@@ -138,7 +139,7 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
 
         setPickupStates(prev => ({
           ...prev,
-          [student.id]: false
+          [student.id]: "no_show"
         }));
 
         queryClient.invalidateQueries({ queryKey: [`/api/student-pickups?sessionId=${sessionId}`] });
@@ -149,6 +150,7 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
         });
       }
     } catch (error) {
+      console.error('Mark not present error:', error);
       toast({
         title: "Error",
         description: "Failed to mark student as not present",
@@ -164,7 +166,9 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
   return (
     <div className="space-y-2">
       {students.map((student) => {
-        const isPickedUp = pickupStates[student.id];
+        const currentStatus = pickupStates[student.id] || "pending";
+        const isPickedUp = currentStatus === "picked_up";
+        const isNotPresent = currentStatus === "no_show";
         const pickup = getStudentPickup(student.id);
         const pickupTime = pickup?.pickedUpAt ? formatPickupTime(pickup.pickedUpAt) : null;
         const isAbsent = isStudentAbsent(student.id);
@@ -200,6 +204,11 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
                     Picked up at {pickupTime}
                   </p>
                 )}
+                {isNotPresent && !isAbsent && (
+                  <p className="text-xs text-red-600 font-medium">
+                    Marked as not present
+                  </p>
+                )}
               </div>
             </div>
             {isAbsent ? (
@@ -228,17 +237,19 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
                     "Pick Up"
                   )}
                 </Button>
-                {!isPickedUp && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleMarkNotPresent(student)}
-                    disabled={!isActive}
-                    className="text-xs px-2 py-1 border-red-600 text-red-600 hover:bg-red-50"
-                  >
-                    Not Present
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant={isNotPresent ? "default" : "outline"}
+                  onClick={() => handleMarkNotPresent(student)}
+                  disabled={!isActive}
+                  className={`text-xs px-2 py-1 ${
+                    isNotPresent
+                      ? "bg-red-600 text-white hover:bg-red-700"
+                      : "border-red-600 text-red-600 hover:bg-red-50"
+                  }`}
+                >
+                  {isNotPresent ? "Not Present" : "Not Present"}
+                </Button>
               </div>
             )}
           </div>

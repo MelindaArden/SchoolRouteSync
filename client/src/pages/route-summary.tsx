@@ -176,13 +176,7 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Date:</span>
               <span className="font-medium">
-                {sessionDetails.date ? new Date(sessionDetails.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  timeZone: 'America/New_York'
-                }) : new Date().toLocaleDateString('en-US', {
+                {new Date().toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',

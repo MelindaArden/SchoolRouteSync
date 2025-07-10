@@ -15,6 +15,7 @@ export default function PickupHistory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [expandedRoutes, setExpandedRoutes] = useState<Set<number>>(new Set());
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const { toast } = useToast();
 
   const toggleRouteExpansion = (routeId: number) => {
@@ -201,11 +202,17 @@ export default function PickupHistory() {
 
 
 
-  const filteredHistory = history.filter((record: any) =>
-    record.driver?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.driver?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.route?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredHistory = history.filter((record: any) => {
+    const matchesSearch = record.driver?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.driver?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.route?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDate = selectedDate ? 
+      new Date(record.date).toISOString().split('T')[0] === selectedDate :
+      true;
+    
+    return matchesSearch && matchesDate;
+  });
 
   const formatTime = (date: string | Date) => {
     return format(new Date(date), "MMM d, yyyy 'at' h:mm a");
@@ -608,6 +615,44 @@ export default function PickupHistory() {
           </Badge>
         </div>
       </div>
+
+      {/* Date and Search Filter */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-600" />
+                <label className="text-sm font-medium text-gray-700">Filter by Date:</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="border rounded px-3 py-1 text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedDate("")}
+                  className="text-xs"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-gray-600" />
+              <Input
+                type="text"
+                placeholder="Search routes, drivers..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Active Sessions Management */}
       {activeSessions.length > 0 && (
