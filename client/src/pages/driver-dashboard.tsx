@@ -296,6 +296,16 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold">{currentRoute.name}</h3>
+                    <div className="flex items-center space-x-4 mt-1">
+                      <div className="flex items-center space-x-1 text-sm text-gray-600">
+                        <RouteIcon className="h-4 w-4" />
+                        <span>{currentRoute.schools?.length || 0} schools</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-sm text-gray-600">
+                        <Users className="h-4 w-4" />
+                        <span>{currentRoute.totalStudents || 0} students</span>
+                      </div>
+                    </div>
                   </div>
                   {!hasActiveSession ? (
                     <Button onClick={handleStartRoute} className="bg-green-600 hover:bg-green-700">
