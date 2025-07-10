@@ -242,6 +242,24 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
       <div className="pb-20">
         {activeTab === "dashboard" && (
           <div className="p-2 sm:p-4 space-y-6">
+            {/* Date Filter */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Dashboard Overview</h3>
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-600">Date:</label>
+                    <input
+                      type="date"
+                      value={new Date().toISOString().split('T')[0]}
+                      className="border rounded px-2 py-1 text-sm"
+                      readOnly
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Dashboard Overview */}
             <div className="grid grid-cols-2 gap-4">
               <Card>

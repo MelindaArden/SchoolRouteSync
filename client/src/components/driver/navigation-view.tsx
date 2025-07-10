@@ -164,6 +164,45 @@ export default function NavigationView({ route, currentLocation, activeSession }
 
   return (
     <div className="p-4 space-y-4">
+      {/* Route Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <MapPin className="h-5 w-5" />
+            <span>Route Details</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Date:</span>
+            <span className="font-medium">
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                timeZone: 'America/New_York'
+              })}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Started Time:</span>
+            <span className="font-medium">
+              {activeSession?.startTime ? new Date(activeSession.startTime).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: 'America/New_York'
+              }) : '--'}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Total Schools:</span>
+            <span className="font-medium">{orderedSchools.length}</span>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Current Navigation */}
       {nextSchool && (
         <Card className="border-primary">

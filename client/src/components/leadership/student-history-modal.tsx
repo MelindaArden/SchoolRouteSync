@@ -14,14 +14,23 @@ interface StudentHistoryModalProps {
 }
 
 export default function StudentHistoryModal({ isOpen, onClose, studentId, studentName }: StudentHistoryModalProps) {
-  // Fetch student absences
-  const { data: absences = [], isLoading: absencesLoading } = useQuery({
+  // Fetch ONLY valid student absences with proper date filtering
+  const { data: rawAbsences = [], isLoading: absencesLoading } = useQuery({
     queryKey: ['/api/students', studentId, 'absences'],
     enabled: isOpen && studentId > 0,
   });
 
-  // Only fetch actual absences - no pickup history placeholders
-  const studentMissedPickups: any[] = []; // Remove pickup history filtering as it creates placeholder entries
+  // Filter to only show valid absences with actual dates
+  const absences = rawAbsences.filter((absence: any) => {
+    return absence && 
+           absence.absenceDate && 
+           absence.absenceDate !== '' && 
+           absence.absenceDate !== null &&
+           !isNaN(new Date(absence.absenceDate).getTime());
+  });
+
+  // No missed pickups - only show real absences
+  const studentMissedPickups: any[] = [];
 
   const formatDate = (dateStr: string) => {
     try {

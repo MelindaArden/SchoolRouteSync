@@ -506,15 +506,33 @@ export class DatabaseStorage implements IStorage {
 
   // Student Absences
   async getStudentAbsences(): Promise<StudentAbsence[]> {
-    return await db.select().from(studentAbsences).orderBy(desc(studentAbsences.createdAt));
+    const results = await db.select().from(studentAbsences).orderBy(desc(studentAbsences.createdAt));
+    // Filter out any absences with invalid or null dates
+    return results.filter(absence => 
+      absence.absenceDate && 
+      absence.absenceDate !== '' && 
+      !isNaN(new Date(absence.absenceDate).getTime())
+    );
   }
 
   async getStudentAbsencesByDate(date: string): Promise<StudentAbsence[]> {
-    return await db.select().from(studentAbsences).where(eq(studentAbsences.absenceDate, date));
+    const results = await db.select().from(studentAbsences).where(eq(studentAbsences.absenceDate, date));
+    // Filter out any absences with invalid or null dates
+    return results.filter(absence => 
+      absence.absenceDate && 
+      absence.absenceDate !== '' && 
+      !isNaN(new Date(absence.absenceDate).getTime())
+    );
   }
 
   async getStudentAbsencesByStudent(studentId: number): Promise<StudentAbsence[]> {
-    return await db.select().from(studentAbsences).where(eq(studentAbsences.studentId, studentId));
+    const results = await db.select().from(studentAbsences).where(eq(studentAbsences.studentId, studentId));
+    // Filter out any absences with invalid or null dates
+    return results.filter(absence => 
+      absence.absenceDate && 
+      absence.absenceDate !== '' && 
+      !isNaN(new Date(absence.absenceDate).getTime())
+    );
   }
 
   async createStudentAbsence(insertAbsence: InsertStudentAbsence): Promise<StudentAbsence> {

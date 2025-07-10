@@ -180,8 +180,15 @@ export default function RouteSummary({ user, onLogout, sessionId }: RouteSummary
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
-                  day: 'numeric'
-                }) : '--'}
+                  day: 'numeric',
+                  timeZone: 'America/New_York'
+                }) : new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  timeZone: 'America/New_York'
+                })}
               </span>
             </div>
             

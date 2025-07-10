@@ -235,7 +235,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                   <div>
                     <h3 className="text-lg font-semibold">{currentRoute.name}</h3>
                     <p className="text-sm text-gray-600">
-                      {currentRoute.schools?.length || 0} schools • {currentRoute.totalStudents || 0} students
+                      {currentRoute.schools?.length || 0} schools • {currentRoute.schools?.reduce((total: number, school: any) => total + (school.students?.length || 0), 0) || 0} students
                     </p>
                   </div>
                   {!hasActiveSession ? (
@@ -330,7 +330,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="text-center p-3 bg-gray-50 rounded">
-                        <div className="text-2xl font-bold text-gray-800">{totalStudents}</div>
+                        <div className="text-2xl font-bold text-gray-800">{sessionPickupStats.total || 0}</div>
                         <div className="text-sm text-gray-600">Total Students</div>
                       </div>
                       <div className="text-center p-3 bg-gray-50 rounded">

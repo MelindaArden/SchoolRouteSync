@@ -123,6 +123,40 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
     }
   };
 
+  const handleMarkNotPresent = async (student: any) => {
+    if (!isActive || !sessionId) return;
+
+    try {
+      const pickup = studentPickups.find((p: StudentPickup) => p.studentId === student.id && p.sessionId === sessionId);
+      
+      if (pickup) {
+        await apiRequest("PATCH", `/api/student-pickups/${pickup.id}`, {
+          status: "no_show",
+          pickedUpAt: null,
+          driverNotes: "Student not present at pickup time",
+        });
+
+        setPickupStates(prev => ({
+          ...prev,
+          [student.id]: false
+        }));
+
+        queryClient.invalidateQueries({ queryKey: [`/api/student-pickups?sessionId=${sessionId}`] });
+
+        toast({
+          title: "Student marked as not present",
+          description: `${student.firstName} ${student.lastName}`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to mark student as not present",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
@@ -173,23 +207,39 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
                 Absent
               </div>
             ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => handleTogglePickup(student)}
-                disabled={!isActive}
-                className={`w-8 h-8 rounded-full p-0 ${
-                  isPickedUp
-                    ? "bg-green-600 text-white hover:bg-green-700"
-                    : "border-2 border-gray-300 text-gray-400 hover:border-gray-400"
-                }`}
-              >
-                {isPickedUp ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Plus className="h-4 w-4" />
+              <div className="flex items-center space-x-2">
+                <Button
+                  size="sm"
+                  variant={isPickedUp ? "default" : "outline"}
+                  onClick={() => handleTogglePickup(student)}
+                  disabled={!isActive}
+                  className={`text-xs px-2 py-1 ${
+                    isPickedUp
+                      ? "bg-green-600 text-white hover:bg-green-700"
+                      : "border-green-600 text-green-600 hover:bg-green-50"
+                  }`}
+                >
+                  {isPickedUp ? (
+                    <>
+                      <Check className="h-3 w-3 mr-1" />
+                      Picked Up
+                    </>
+                  ) : (
+                    "Pick Up"
+                  )}
+                </Button>
+                {!isPickedUp && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleMarkNotPresent(student)}
+                    disabled={!isActive}
+                    className="text-xs px-2 py-1 border-red-600 text-red-600 hover:bg-red-50"
+                  >
+                    Not Present
+                  </Button>
                 )}
-              </Button>
+              </div>
             )}
           </div>
         );
