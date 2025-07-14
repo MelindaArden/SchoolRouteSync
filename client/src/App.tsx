@@ -18,6 +18,7 @@ import DeploymentTest from "@/pages/deployment-test";
 import MobileLogin from "@/pages/mobile-login";
 import MasterLogin from "@/pages/master-login";
 import MasterDashboard from "@/pages/master-dashboard";
+import PWATest from "@/pages/pwa-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -208,6 +209,7 @@ function Router() {
           <Route path="/debug-auth" component={DebugAuth} />
           <Route path="/tmobile-test" component={TMobileTest} />
           <Route path="/deployment-test" component={DeploymentTest} />
+          <Route path="/pwa-test" component={PWATest} />
         </>
       )}
       <Route component={NotFound} />
