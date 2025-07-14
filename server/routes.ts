@@ -2434,6 +2434,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Test endpoint to simulate GPS tracking for testing
+  app.post("/api/gps/simulate-tracking/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      // Get session details
+      const session = await storage.getPickupSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      // Generate test GPS points around Georgia area
+      const baseLatitude = 33.9519;
+      const baseLongitude = -84.1776;
+      const testPoints = [];
+      
+      // Create 10 test GPS points with slight variations
+      for (let i = 0; i < 10; i++) {
+        const latVariation = (Math.random() - 0.5) * 0.01; // +/- 0.005 degrees
+        const lngVariation = (Math.random() - 0.5) * 0.01;
+        
+        const testTrack = await storage.createGpsRouteTrack({
+          sessionId: sessionId,
+          driverId: session.driverId,
+          routeId: session.routeId,
+          latitude: (baseLatitude + latVariation).toString(),
+          longitude: (baseLongitude + lngVariation).toString(),
+          speed: Math.random() * 30 + 10, // 10-40 mph
+          bearing: Math.random() * 360,
+          accuracy: Math.random() * 10 + 5,
+          eventType: 'location_update'
+        });
+        
+        testPoints.push(testTrack);
+      }
+      
+      console.log(`🧪 Generated ${testPoints.length} test GPS points for session ${sessionId}`);
+      res.json({ success: true, pointsGenerated: testPoints.length, testPoints });
+    } catch (error) {
+      console.error('Error simulating GPS tracking:', error);
+      res.status(500).json({ message: "Failed to simulate GPS tracking" });
+    }
+  });
+
   // Update GPS route history when route completes
   app.patch("/api/gps/route-history/:sessionId", async (req, res) => {
     try {
@@ -2482,9 +2526,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const route = await storage.getRoute(session.routeId);
       console.log(`Found route:`, route?.name);
       
-      // Get GPS tracking data
+      // Get GPS tracking data from both sources
       const driverLocations = await storage.getDriverLocationsBySession(sessionId);
-      console.log(`Found ${driverLocations.length} GPS locations`);
+      console.log(`Found ${driverLocations.length} driver locations`);
+      
+      // Get GPS route tracks (more detailed tracking data)
+      const gpsRouteTracks = await storage.getGpsRouteTracksBySession(sessionId);
+      console.log(`Found ${gpsRouteTracks.length} GPS route tracks`);
       
       // Get student pickups for this session
       const allStudentPickups = await storage.getStudentPickups(sessionId);
@@ -2519,12 +2567,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current location from latest driver location
       const currentLocation = driverLocations.length > 0 ? driverLocations[driverLocations.length - 1] : null;
       
-      // Build route path from GPS tracking
-      const routePath = driverLocations.map(loc => ({
-        latitude: parseFloat(loc.latitude),
-        longitude: parseFloat(loc.longitude),
-        timestamp: loc.timestamp
-      }));
+      // Build route path from GPS tracking data - prioritize GPS route tracks over driver locations
+      let routePath = [];
+      if (gpsRouteTracks.length > 0) {
+        routePath = gpsRouteTracks.map(track => ({
+          latitude: parseFloat(track.latitude),
+          longitude: parseFloat(track.longitude),
+          timestamp: track.timestamp || track.createdAt,
+          eventType: track.eventType,
+          speed: track.speed,
+          bearing: track.bearing,
+          accuracy: track.accuracy
+        }));
+      } else if (driverLocations.length > 0) {
+        routePath = driverLocations.map(loc => ({
+          latitude: parseFloat(loc.latitude),
+          longitude: parseFloat(loc.longitude),
+          timestamp: loc.timestamp
+        }));
+      }
       
       const detailData = {
         sessionId: sessionId,
