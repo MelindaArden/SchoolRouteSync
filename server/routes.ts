@@ -831,6 +831,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all student pickups for today
+  app.get('/api/student-pickups/today', async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const todaysSessions = await storage.getPickupSessionsToday();
+      
+      let allPickups: any[] = [];
+      for (const session of todaysSessions) {
+        const pickups = await storage.getStudentPickups(session.id);
+        allPickups = [...allPickups, ...pickups];
+      }
+      
+      res.json(allPickups);
+    } catch (error) {
+      console.error('Error fetching today\'s student pickups:', error);
+      res.status(500).json({ error: 'Failed to fetch today\'s student pickups' });
+    }
+  });
+
   // Update student pickup status
   app.patch("/api/student-pickups/:id", async (req, res) => {
     try {

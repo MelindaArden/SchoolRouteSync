@@ -153,8 +153,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   // Fetch today's sessions for overview
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['/api/pickup-sessions/today'],
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
     retry: false,
-    refetchInterval: 10000, // Refresh every 10 seconds for real-time stats
+  });
+
+  // Fetch real-time student pickups for today
+  const { data: allStudentPickups = [] } = useQuery({
+    queryKey: ['/api/student-pickups/today'],
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time pickup updates
+    retry: false,
   });
 
   // Fetch active issues for alerts
@@ -184,17 +191,11 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   const sessionsData = Array.isArray(sessions) ? (sessions as any[]) : [];
   const activeRoutes = sessionsData.filter((s: any) => s.status === "in_progress").length;
   
-  // Calculate total students and pickups from sessions
-  let totalStudents = 0;
-  let completedPickups = 0;
+  // Calculate total students and pickups from real-time pickup data
+  const pickupsData = Array.isArray(allStudentPickups) ? (allStudentPickups as any[]) : [];
+  const totalStudents = pickupsData.length;
+  const completedPickups = pickupsData.filter((p: any) => p.status === 'picked_up').length;
   
-  sessionsData.forEach((session: any) => {
-    if (session.pickupDetails && Array.isArray(session.pickupDetails)) {
-      totalStudents += session.pickupDetails.length;
-      completedPickups += session.pickupDetails.filter((p: any) => p.status === 'picked_up').length;
-    }
-  });
-
   // Calculate on-time percentage based on completed pickups
   const onTimePercentage = totalStudents > 0 ? Math.round((completedPickups / totalStudents) * 100) : 0;
   

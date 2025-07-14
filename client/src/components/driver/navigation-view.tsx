@@ -19,14 +19,26 @@ interface NavigationViewProps {
   route: any;
   currentLocation: any;
   activeSession: any;
+  studentPickups?: any[];
 }
 
-export default function NavigationView({ route, currentLocation, activeSession }: NavigationViewProps) {
+export default function NavigationView({ route, currentLocation, activeSession, studentPickups = [] }: NavigationViewProps) {
   const [currentSchoolIndex, setCurrentSchoolIndex] = useState(0);
   const [directions, setDirections] = useState<any[]>([]);
 
   // Get ordered schools for the route
   const orderedSchools = route?.schools?.sort((a: any, b: any) => a.orderIndex - b.orderIndex) || [];
+
+  // Function to check if all students are picked up from a school
+  const areAllStudentsPickedUp = (schoolId: number) => {
+    const schoolStudents = route?.students?.filter((s: any) => s.schoolId === schoolId) || [];
+    if (schoolStudents.length === 0) return true;
+    
+    return schoolStudents.every((student: any) => {
+      const pickup = studentPickups.find((p: any) => p.studentId === student.id);
+      return pickup && (pickup.status === 'picked_up' || pickup.status === 'absent' || pickup.status === 'no_show');
+    });
+  };
 
   // Calculate distance between two coordinates
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -45,23 +57,20 @@ export default function NavigationView({ route, currentLocation, activeSession }
     return Math.round((distance / 25) * 60); // Convert to minutes
   };
 
-  // Get next school to visit
+  // Get next school to visit based on pickup completion
   const getNextSchool = () => {
     if (!orderedSchools.length) return null;
     
-    // Find next unvisited school based on current time
-    const now = new Date();
-    const currentTime = now.toTimeString().slice(0, 5);
-    
+    // Find first school where not all students are picked up
     for (let i = 0; i < orderedSchools.length; i++) {
       const school = orderedSchools[i];
-      if (school.estimatedArrivalTime > currentTime) {
+      if (!areAllStudentsPickedUp(school.schoolId)) {
         return { school, index: i };
       }
     }
     
-    // If all times have passed, return first school
-    return { school: orderedSchools[0], index: 0 };
+    // If all schools are completed, return null to indicate route completion
+    return null;
   };
 
   const nextSchool = getNextSchool();
@@ -193,7 +202,7 @@ export default function NavigationView({ route, currentLocation, activeSession }
                 minute: '2-digit',
                 hour12: true,
                 timeZone: 'America/New_York'
-              }) : '--'}
+              }) : 'Not Started'}
             </span>
           </div>
           <div className="flex justify-between items-center">

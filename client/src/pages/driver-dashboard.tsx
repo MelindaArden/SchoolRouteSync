@@ -424,6 +424,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
             route={currentRoute} 
             currentLocation={location}
             activeSession={currentActiveSession}
+            studentPickups={sessionPickups.data || []}
           />
         )}
 
