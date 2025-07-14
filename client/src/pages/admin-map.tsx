@@ -63,12 +63,6 @@ export default function AdminMap() {
     refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
-  // Debug logging
-  console.log('Admin Map - Raw data:', routeMapsRaw);
-  console.log('Admin Map - Loading:', loadingMaps);
-  console.log('Admin Map - Error:', mapsError);
-  console.log('Admin Map - Route maps length:', routeMaps?.length);
-
   // Transform snake_case API response to camelCase for frontend
   const routeMaps = routeMapsRaw.map((map: any) => ({
     id: map.id,
@@ -93,6 +87,12 @@ export default function AdminMap() {
     currentLongitude: map.current_longitude,
     lastLocationUpdate: map.last_location_update,
   }));
+
+  // Debug logging
+  console.log('Admin Map - Raw data:', routeMapsRaw);
+  console.log('Admin Map - Loading:', loadingMaps);
+  console.log('Admin Map - Error:', mapsError);
+  console.log('Admin Map - Route maps length:', routeMaps?.length);
 
   const { data: routeStopsRaw = [], isLoading: loadingStops } = useQuery({
     queryKey: ['/api/route-stops', selectedRoute],
