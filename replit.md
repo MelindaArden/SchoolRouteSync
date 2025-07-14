@@ -112,6 +112,19 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 14, 2025 - Progressive Web App (PWA) Setup & Mobile Installation
+- Implemented comprehensive PWA configuration with manifest.json and service worker (sw.js)
+- Added PWA meta tags for mobile installation including iOS and Android support
+- Created PWAInstallButton component with automatic install prompt detection and handling
+- Added PWANotifications component for push notifications and offline status management
+- Enhanced mobile experience with app icons (192x192 and 512x512 px) and theme configuration
+- Configured service worker for offline caching, background sync, and push notification support
+- Added PWA install button to login page for easy mobile app installation
+- App now installable on home screens as standalone application with app-like behavior
+- Service worker provides offline functionality and automatic updates when connection restored
+- PWA supports push notifications, background sync, and native mobile app shortcuts
+- Complete mobile optimization with touch-friendly interface and offline-first architecture
+
 ### July 14, 2025 - Complete Admin Dashboard Enhancement with Date-Filtered Stats & Real-time Alert System
 - Implemented comprehensive date filtering for admin history stats with dynamic calculation based on selected date ranges
 - Enhanced pickup history component with stats positioning above active route sessions as requested

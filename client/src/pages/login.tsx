@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { User } from "@/lib/types";
 import { Bus, Shield } from "lucide-react";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -185,6 +186,9 @@ export default function Login({ onLogin }: LoginProps) {
           </CardTitle>
           <p className="text-gray-600">Afterschool Pickup Management</p>
           
+          <div className="flex justify-center mt-4">
+            <PWAInstallButton />
+          </div>
 
         </CardHeader>
         <CardContent>
