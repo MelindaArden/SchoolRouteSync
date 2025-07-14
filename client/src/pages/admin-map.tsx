@@ -58,15 +58,56 @@ export default function AdminMap() {
   const [selectedRoute, setSelectedRoute] = useState<number | null>(null);
   const [viewFilter, setViewFilter] = useState<'all' | 'active' | 'completed'>('all');
 
-  const { data: routeMaps = [], isLoading: loadingMaps } = useQuery({
+  const { data: routeMapsRaw = [], isLoading: loadingMaps } = useQuery({
     queryKey: ['/api/route-maps'],
     refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
-  const { data: routeStops = [], isLoading: loadingStops } = useQuery({
+  // Transform snake_case API response to camelCase for frontend
+  const routeMaps = routeMapsRaw.map((map: any) => ({
+    id: map.id,
+    sessionId: map.session_id,
+    routeId: map.route_id,
+    driverId: map.driver_id,
+    startTime: map.start_time,
+    endTime: map.end_time,
+    totalDurationMinutes: map.total_duration_minutes,
+    totalDistanceMiles: map.total_distance_miles,
+    routePath: map.route_path || [],
+    schoolStops: map.school_stops || [],
+    completionStatus: map.completion_status || 'in_progress',
+    routeName: map.route_name,
+    firstName: map.first_name,
+    lastName: map.last_name,
+    pathPointsCount: map.path_points_count || 0,
+    stopsCount: map.stops_count || 0,
+    sessionDate: map.session_date || map.created_at,
+    sessionStatus: map.session_status || 'in_progress',
+    currentLatitude: map.current_latitude,
+    currentLongitude: map.current_longitude,
+    lastLocationUpdate: map.last_location_update,
+  }));
+
+  const { data: routeStopsRaw = [], isLoading: loadingStops } = useQuery({
     queryKey: ['/api/route-stops', selectedRoute],
     enabled: !!selectedRoute,
   });
+
+  // Transform snake_case API response to camelCase for route stops
+  const routeStops = routeStopsRaw.map((stop: any) => ({
+    id: stop.id,
+    sessionId: stop.session_id,
+    schoolId: stop.school_id,
+    arrivalTime: stop.arrival_time,
+    departureTime: stop.departure_time,
+    latitude: stop.latitude,
+    longitude: stop.longitude,
+    studentsPickedUp: stop.students_picked_up,
+    totalStudents: stop.total_students,
+    notes: stop.notes,
+    schoolName: stop.school_name,
+    schoolAddress: stop.school_address,
+  }));
 
   const filteredMaps = routeMaps.filter((map: RouteMap) => {
     if (viewFilter === 'active') return map.sessionStatus === 'in_progress';
