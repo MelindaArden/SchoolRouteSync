@@ -63,7 +63,7 @@ export default function AdminMap() {
     refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
-  // Transform snake_case API response to camelCase for frontend
+  // Transform snake_case API response to camelCase for frontend with proper null handling
   const routeMaps = routeMapsRaw.map((map: any) => ({
     id: map.id,
     sessionId: map.session_id,
@@ -88,11 +88,27 @@ export default function AdminMap() {
     lastLocationUpdate: map.last_location_update,
   }));
 
-  // Debug logging
+  // Debug logging for mobile users
   console.log('Admin Map - Raw data:', routeMapsRaw);
   console.log('Admin Map - Loading:', loadingMaps);
   console.log('Admin Map - Error:', mapsError);
   console.log('Admin Map - Route maps length:', routeMaps?.length);
+  console.log('Admin Map - Transformed data:', routeMaps.slice(0, 2));
+  
+  // Handle errors early
+  if (mapsError) {
+    console.error('Route maps error:', mapsError);
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardContent className="text-center py-8">
+            <div className="text-red-500 mb-4">Error loading route data</div>
+            <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const { data: routeStopsRaw = [], isLoading: loadingStops } = useQuery({
     queryKey: ['/api/route-stops', selectedRoute],
@@ -215,12 +231,48 @@ export default function AdminMap() {
     );
   }
 
+  // Mobile-friendly route summary if complex view fails
+  if (routeMaps.length === 0 && !loadingMaps) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Route Maps & Real-time Tracking
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">No route data available.</p>
+              <p className="text-sm text-gray-500 mb-4">
+                Routes will appear here once drivers begin pickup sessions.
+              </p>
+              <div className="text-xs text-gray-400 mt-4 p-2 bg-gray-50 rounded">
+                Debug: Raw data count: {routeMapsRaw.length}
+              </div>
+              <Button 
+                className="mt-4" 
+                onClick={() => window.location.reload()}
+              >
+                Refresh Data
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Route Tracking Map</h1>
           <p className="text-gray-600">Comprehensive driver route tracking with timestamps and stops</p>
+          <div className="text-xs text-gray-400 mt-1">
+            Showing {routeMaps.length} routes | Refreshing every 10 seconds
+          </div>
         </div>
         
         <div className="flex gap-4 items-center">
@@ -331,7 +383,7 @@ export default function AdminMap() {
                                 <div className="flex items-center gap-2">
                                   <Target className="w-3 h-3 text-green-600" />
                                   <span className="text-xs text-green-700">
-                                    Live: {route.currentLatitude ? Number(route.currentLatitude).toFixed(4) : 'N/A'}, {route.currentLongitude ? Number(route.currentLongitude).toFixed(4) : 'N/A'}
+                                    Live: {typeof route.currentLatitude === 'number' ? route.currentLatitude.toFixed(4) : Number(route.currentLatitude || 0).toFixed(4)}, {typeof route.currentLongitude === 'number' ? route.currentLongitude.toFixed(4) : Number(route.currentLongitude || 0).toFixed(4)}
                                   </span>
                                 </div>
                                 {route.lastLocationUpdate && (
@@ -387,8 +439,8 @@ export default function AdminMap() {
                         </div>
                         <p className="text-sm text-gray-600 mb-1">{driver.routeName}</p>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>Lat: {driver.currentLatitude ? Number(driver.currentLatitude).toFixed(4) : 'N/A'}</div>
-                          <div>Lng: {driver.currentLongitude ? Number(driver.currentLongitude).toFixed(4) : 'N/A'}</div>
+                          <div>Lat: {typeof driver.currentLatitude === 'number' ? driver.currentLatitude.toFixed(4) : Number(driver.currentLatitude || 0).toFixed(4)}</div>
+                          <div>Lng: {typeof driver.currentLongitude === 'number' ? driver.currentLongitude.toFixed(4) : Number(driver.currentLongitude || 0).toFixed(4)}</div>
                         </div>
                         {driver.lastLocationUpdate && (
                           <p className="text-xs text-gray-500 mt-1">
