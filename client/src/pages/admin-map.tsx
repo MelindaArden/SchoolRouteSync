@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Clock, Route, Users, Navigation, Calendar, Timer, School } from 'lucide-react';
-import { format } from 'date-fns';
+import { MapPin, Clock, Route, Users, Navigation, Calendar, Timer, School, Activity, Target } from 'lucide-react';
+import { format, isToday, isYesterday, isThisWeek, differenceInDays } from 'date-fns';
 
 interface RouteMap {
   id: number;
@@ -32,6 +32,11 @@ interface RouteMap {
   lastName: string;
   pathPointsCount: number;
   stopsCount: number;
+  sessionDate: string;
+  sessionStatus: string;
+  currentLatitude?: number;
+  currentLongitude?: number;
+  lastLocationUpdate?: string;
 }
 
 interface RouteStop {
@@ -55,7 +60,7 @@ export default function AdminMap() {
 
   const { data: routeMaps = [], isLoading: loadingMaps } = useQuery({
     queryKey: ['/api/route-maps'],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
   const { data: routeStops = [], isLoading: loadingStops } = useQuery({
@@ -64,10 +69,39 @@ export default function AdminMap() {
   });
 
   const filteredMaps = routeMaps.filter((map: RouteMap) => {
-    if (viewFilter === 'active') return map.completionStatus === 'in_progress';
-    if (viewFilter === 'completed') return map.completionStatus === 'completed';
+    if (viewFilter === 'active') return map.sessionStatus === 'in_progress';
+    if (viewFilter === 'completed') return map.sessionStatus === 'completed';
     return true;
   });
+
+  // Group maps by date for historical organization
+  const groupedMaps = filteredMaps.reduce((groups: any, map: RouteMap) => {
+    const date = new Date(map.sessionDate);
+    let groupKey = '';
+    
+    if (isToday(date)) {
+      groupKey = 'Today';
+    } else if (isYesterday(date)) {
+      groupKey = 'Yesterday';
+    } else if (isThisWeek(date)) {
+      groupKey = 'This Week';
+    } else {
+      const daysAgo = differenceInDays(new Date(), date);
+      if (daysAgo <= 7) {
+        groupKey = 'This Week';
+      } else if (daysAgo <= 30) {
+        groupKey = `${Math.ceil(daysAgo / 7)} weeks ago`;
+      } else {
+        groupKey = 'Older';
+      }
+    }
+    
+    if (!groups[groupKey]) {
+      groups[groupKey] = [];
+    }
+    groups[groupKey].push(map);
+    return groups;
+  }, {});
 
   const formatDuration = (minutes: number | null | undefined) => {
     if (!minutes) return 'N/A';
@@ -137,6 +171,10 @@ export default function AdminMap() {
               <CardTitle className="flex items-center gap-2">
                 <Route className="w-5 h-5" />
                 Route History
+                <Badge variant="outline" className="ml-2">
+                  <Activity className="w-3 h-3 mr-1" />
+                  30-Day View
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -152,53 +190,137 @@ export default function AdminMap() {
                   <p className="text-sm text-gray-400">Routes will appear here when drivers start pickup sessions</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {filteredMaps.map((route: RouteMap) => (
-                    <div
-                      key={route.id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        selectedRoute === route.sessionId
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => setSelectedRoute(route.sessionId)}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-medium text-gray-900">{route.routeName}</p>
-                          <p className="text-sm text-gray-600">{route.firstName} {route.lastName}</p>
-                        </div>
-                        <Badge className={`${getStatusColor(route.completionStatus)} text-white`}>
-                          {getStatusText(route.completionStatus)}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatTime(route.startTime)}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Timer className="w-3 h-3" />
-                          {formatDuration(route.totalDurationMinutes)}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {route.pathPointsCount || 0} points
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <School className="w-3 h-3" />
-                          {route.stopsCount || 0} stops
-                        </div>
-                      </div>
-                      
-                      <div className="mt-2 text-xs text-gray-400">
-                        {formatDate(route.startTime)}
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {Object.entries(groupedMaps).map(([groupKey, routes]) => (
+                    <div key={groupKey} className="space-y-2">
+                      <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                        <Calendar className="w-3 h-3" />
+                        {groupKey} ({(routes as RouteMap[]).length})
+                      </h3>
+                      <div className="space-y-2">
+                        {(routes as RouteMap[]).map((route: RouteMap) => (
+                          <div
+                            key={route.id}
+                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                              selectedRoute === route.sessionId
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => setSelectedRoute(route.sessionId)}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex items-center gap-2">
+                                <Users className="w-4 h-4 text-gray-600" />
+                                <span className="font-medium text-sm">{route.firstName} {route.lastName}</span>
+                                {route.currentLatitude && route.currentLongitude && (
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div>
+                                    Live
+                                  </Badge>
+                                )}
+                              </div>
+                              <Badge 
+                                variant={route.sessionStatus === 'completed' ? 'default' : 'secondary'}
+                                className={getStatusColor(route.sessionStatus)}
+                              >
+                                {getStatusText(route.sessionStatus)}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-gray-600 mb-2">{route.routeName}</p>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatTime(route.startTime)}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Timer className="w-3 h-3" />
+                                {formatDuration(route.totalDurationMinutes)}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {route.pathPointsCount} pts
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <School className="w-3 h-3" />
+                                {route.stopsCount} stops
+                              </div>
+                            </div>
+                            
+                            {/* Real-time location indicator */}
+                            {route.currentLatitude && route.currentLongitude && (
+                              <div className="mt-2 p-2 bg-green-50 rounded-md">
+                                <div className="flex items-center gap-2">
+                                  <Target className="w-3 h-3 text-green-600" />
+                                  <span className="text-xs text-green-700">
+                                    Live: {route.currentLatitude.toFixed(4)}, {route.currentLongitude.toFixed(4)}
+                                  </span>
+                                </div>
+                                {route.lastLocationUpdate && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Updated: {formatTime(route.lastLocationUpdate)}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Real-time Active Drivers Summary */}
+        <div className="lg:col-span-2">
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-green-600" />
+                Real-time Driver Tracking
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const activeDrivers = filteredMaps.filter(route => 
+                  route.sessionStatus === 'in_progress' && route.currentLatitude && route.currentLongitude
+                );
+                
+                if (activeDrivers.length === 0) {
+                  return (
+                    <div className="text-center py-4">
+                      <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500">No active drivers with live location</p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {activeDrivers.map((driver) => (
+                      <div key={driver.id} className="p-3 border rounded-lg bg-green-50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="font-medium">{driver.firstName} {driver.lastName}</span>
+                          <Badge variant="outline" className="text-xs">Live</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-1">{driver.routeName}</p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>Lat: {driver.currentLatitude?.toFixed(4)}</div>
+                          <div>Lng: {driver.currentLongitude?.toFixed(4)}</div>
+                        </div>
+                        {driver.lastLocationUpdate && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Updated: {formatTime(driver.lastLocationUpdate)}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>

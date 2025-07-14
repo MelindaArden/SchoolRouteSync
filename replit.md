@@ -112,6 +112,20 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 14, 2025 - GPS Section Removal & Enhanced Admin Map with Real-time 30-Day Historical Tracking
+- Removed GPS section from admin login/leadership dashboard as requested by user
+- Updated admin map tab to provide real-time driver tracking with 30-day historical data view
+- Enhanced route maps API to include current driver locations and last location update timestamps
+- Implemented real-time location indicators showing live GPS coordinates for active drivers
+- Added 30-day historical data filtering with organized date groupings (Today, Yesterday, This Week, weeks ago)
+- Created real-time active drivers summary section showing live location data with animated indicators
+- Updated admin map refresh intervals to 10 seconds for immediate real-time updates
+- Enhanced route visualization with live location badges and timestamp information
+- Organized historical routes by date categories for better navigation and analysis
+- Added comprehensive driver location tracking with precise coordinate display
+- Real-time location updates now show in green with pulsing indicators for active drivers
+- Admin map provides complete 30-day route history with enhanced filtering and live tracking capabilities
+
 ### July 14, 2025 - Complete Admin Map View with Route Tracking, Timestamps & Comprehensive History
 - Implemented comprehensive admin map view with detailed route tracking, timestamps, stops, and total route times as requested
 - Created new admin map page (admin-map.tsx) displaying driver routes with complete GPS path data and school stop information

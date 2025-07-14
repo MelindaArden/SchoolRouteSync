@@ -2488,7 +2488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Route Maps API for Admin Dashboard with Comprehensive Tracking
+  // Enhanced Route Maps API for Admin Dashboard with 30-Day Historical Data and Real-Time Tracking
   app.get("/api/route-maps", async (req, res) => {
     try {
       const routeMaps = await pool.query(`
@@ -2496,13 +2496,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rm.*,
           r.name as route_name,
           u.first_name, u.last_name,
+          ps.date as session_date,
+          ps.status as session_status,
           jsonb_array_length(rm.route_path) as path_points_count,
-          jsonb_array_length(rm.school_stops) as stops_count
+          jsonb_array_length(rm.school_stops) as stops_count,
+          dl.latitude as current_latitude,
+          dl.longitude as current_longitude,
+          dl.updated_at as last_location_update
         FROM route_maps rm
         JOIN routes r ON rm.route_id = r.id  
         JOIN users u ON rm.driver_id = u.id
+        LEFT JOIN pickup_sessions ps ON rm.session_id = ps.id
+        LEFT JOIN driver_locations dl ON rm.driver_id = dl.driver_id AND dl.session_id = rm.session_id
+        WHERE rm.created_at >= NOW() - INTERVAL '30 days'
         ORDER BY rm.created_at DESC
-        LIMIT 50
+        LIMIT 200
       `);
       
       res.json(routeMaps.rows || []);

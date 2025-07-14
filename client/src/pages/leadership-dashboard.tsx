@@ -52,7 +52,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "map" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "map" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
   const [absenceView, setAbsenceView] = useState<"management" | "export">("management");
@@ -703,11 +703,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
 
 
-        {activeTab === "gps" && (
-          <div className="p-2 sm:p-4">
-            <DriverLocationMap userId={user.id} />
-          </div>
-        )}
+
 
         {activeTab === "map" && (
           <div className="p-2 sm:p-4">
@@ -800,15 +796,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <span className="text-xs">Route Setup</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("gps")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "gps" ? "text-primary" : "text-gray-500"
-            }`}
-          >
-            <MapPin className="h-6 w-6 mb-1" />
-            <span className="text-xs">GPS</span>
-          </button>
+
           <button
             onClick={() => setActiveTab("map")}
             className={`flex flex-col items-center py-2 px-4 ${
