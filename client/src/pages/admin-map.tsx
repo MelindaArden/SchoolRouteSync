@@ -63,6 +63,18 @@ export default function AdminMap() {
     refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
+  // Fetch active pickup sessions for real-time tracking
+  const { data: activeSessions = [] } = useQuery({
+    queryKey: ['/api/pickup-sessions/today'],
+    refetchInterval: 5000, // Refresh every 5 seconds for active session updates
+  });
+
+  // Fetch driver locations for real-time positioning
+  const { data: driverLocations = [] } = useQuery({
+    queryKey: ['/api/driver-locations'],
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time location updates
+  });
+
   // Transform snake_case API response to camelCase for frontend with proper null handling
   const routeMaps = routeMapsRaw.map((map: any) => ({
     id: map.id,
@@ -94,6 +106,8 @@ export default function AdminMap() {
   console.log('Admin Map - Error:', mapsError);
   console.log('Admin Map - Route maps length:', routeMaps?.length);
   console.log('Admin Map - Transformed data:', routeMaps.slice(0, 2));
+  console.log('Admin Map - Active sessions:', activeSessions?.filter((s: any) => s.status === 'in_progress'));
+  console.log('Admin Map - Driver locations:', driverLocations);
   
   // Handle errors early
   if (mapsError) {
@@ -131,11 +145,83 @@ export default function AdminMap() {
     schoolAddress: stop.school_address,
   }));
 
-  const filteredMaps = routeMaps.filter((map: RouteMap) => {
-    if (viewFilter === 'active') return map.sessionStatus === 'in_progress';
-    if (viewFilter === 'completed') return map.sessionStatus === 'completed';
+  // Merge route maps with active sessions and driver locations for real-time tracking
+  const mergedRouteData = [...routeMaps];
+  
+  // Add active sessions that don't have corresponding route maps yet
+  const activeSessionsData = Array.isArray(activeSessions) ? activeSessions : [];
+  const activeInProgress = activeSessionsData.filter((session: any) => session.status === 'in_progress');
+  
+  activeInProgress.forEach((session: any) => {
+    const existingRoute = mergedRouteData.find(r => r.sessionId === session.id);
+    if (!existingRoute) {
+      // Add current active session as a route map entry
+      const driverLocation = Array.isArray(driverLocations) ? driverLocations.find((loc: any) => loc.driverId === session.driverId) : null;
+      
+      mergedRouteData.push({
+        id: session.id + 1000, // Temporary ID for active session
+        sessionId: session.id,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        startTime: session.startTime || new Date().toISOString(),
+        endTime: undefined,
+        totalDurationMinutes: undefined,
+        totalDistanceMiles: undefined,
+        routePath: driverLocation ? [{
+          latitude: driverLocation.latitude,
+          longitude: driverLocation.longitude,
+          timestamp: driverLocation.timestamp || new Date().toISOString()
+        }] : [],
+        schoolStops: [],
+        completionStatus: 'in_progress',
+        routeName: session.route?.name || `Route ${session.routeId}`,
+        firstName: session.driver?.firstName || 'Unknown',
+        lastName: session.driver?.lastName || 'Driver',
+        pathPointsCount: driverLocation ? 1 : 0,
+        stopsCount: 0,
+        sessionDate: session.date || new Date().toISOString().split('T')[0],
+        sessionStatus: 'in_progress',
+        currentLatitude: driverLocation?.latitude,
+        currentLongitude: driverLocation?.longitude,
+        lastLocationUpdate: driverLocation?.timestamp,
+      });
+    } else {
+      // Update existing route with current driver location
+      const driverLocation = Array.isArray(driverLocations) ? driverLocations.find((loc: any) => loc.driverId === session.driverId) : null;
+      if (driverLocation) {
+        existingRoute.currentLatitude = driverLocation.latitude;
+        existingRoute.currentLongitude = driverLocation.longitude;
+        existingRoute.lastLocationUpdate = driverLocation.timestamp;
+        existingRoute.sessionStatus = 'in_progress';
+      }
+    }
+  });
+
+  // Enhanced filtering with detailed logging for debugging
+  const filteredMaps = mergedRouteData.filter((map: RouteMap) => {
+    const isActive = map.sessionStatus === 'in_progress' || map.completionStatus === 'in_progress';
+    const isCompleted = map.sessionStatus === 'completed' || map.completionStatus === 'completed';
+    
+    if (viewFilter === 'active') {
+      console.log(`Route ${map.id}: sessionStatus=${map.sessionStatus}, completionStatus=${map.completionStatus}, isActive=${isActive}`);
+      return isActive;
+    }
+    if (viewFilter === 'completed') return isCompleted;
     return true;
   });
+
+  console.log('Admin Map - Merged route data:', mergedRouteData.length);
+  console.log('Admin Map - Filtered maps:', filteredMaps.length);
+  console.log('Admin Map - Active in progress sessions:', activeInProgress.length);
+  console.log('Admin Map - Current view filter:', viewFilter);
+  console.log('Admin Map - Full merged data:', mergedRouteData.map(r => ({
+    id: r.id,
+    sessionId: r.sessionId,
+    sessionStatus: r.sessionStatus,
+    completionStatus: r.completionStatus,
+    driverName: `${r.firstName} ${r.lastName}`,
+    hasGPS: !!(r.currentLatitude && r.currentLongitude)
+  })));
 
   // Group maps by date for historical organization
   const groupedMaps = filteredMaps.reduce((groups: any, map: RouteMap) => {
@@ -294,6 +380,56 @@ export default function AdminMap() {
         </div>
       </div>
 
+      {/* Real-time Active Drivers Section */}
+      {activeInProgress.length > 0 && (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Navigation className="w-5 h-5 text-green-600" />
+              <span className="text-green-700">Live Active Drivers ({activeInProgress.length})</span>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {activeInProgress.map((session: any) => {
+                const driverLocation = Array.isArray(driverLocations) ? driverLocations.find((loc: any) => loc.driverId === session.driverId) : null;
+                return (
+                  <div key={session.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <div>
+                        <div className="font-medium text-green-800">
+                          {session.driver?.firstName || 'Unknown'} {session.driver?.lastName || 'Driver'}
+                        </div>
+                        <div className="text-sm text-green-600">
+                          Route: {session.route?.name || `Route ${session.routeId}`}
+                        </div>
+                        {driverLocation && (
+                          <div className="text-xs text-green-500">
+                            Live GPS: {driverLocation.latitude?.toFixed(4)}, {driverLocation.longitude?.toFixed(4)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                        Active Now
+                      </Badge>
+                      {driverLocation?.timestamp && (
+                        <div className="text-xs text-green-500 mt-1">
+                          Updated: {formatTime(driverLocation.timestamp)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Mobile-First Route Display */}
       <div className="space-y-4">
         <Card>
@@ -338,10 +474,16 @@ export default function AdminMap() {
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-gray-600" />
                         <span className="font-medium">{route.firstName} {route.lastName}</span>
-                        {route.sessionStatus === 'in_progress' && (
+                        {(route.sessionStatus === 'in_progress' || route.completionStatus === 'in_progress') && (
                           <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                             <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-                            Live
+                            Live Active
+                          </Badge>
+                        )}
+                        {route.currentLatitude && route.currentLongitude && (
+                          <Badge variant="outline" className="bg-blue-100 text-blue-700 text-xs ml-1">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            GPS Live
                           </Badge>
                         )}
                       </div>
