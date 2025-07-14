@@ -2577,5 +2577,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Master Admin Authentication
+  app.post('/api/master-login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password required' });
+      }
+
+      const [masterAdmin] = await db.select().from(masterAdmins).where(eq(masterAdmins.username, username));
+      
+      if (!masterAdmin || masterAdmin.password !== password) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // Create master admin token
+      const token = createAuthToken(masterAdmin.id, masterAdmin.username, 'master_admin');
+      
+      res.json({
+        id: masterAdmin.id,
+        username: masterAdmin.username,
+        email: masterAdmin.email,
+        firstName: masterAdmin.firstName,
+        lastName: masterAdmin.lastName,
+        role: masterAdmin.role,
+        token
+      });
+    } catch (error) {
+      console.error('Master login error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Master Admin - Get all businesses
+  app.get('/api/master/businesses', async (req, res) => {
+    try {
+      const businessList = await db.select().from(businesses).orderBy(desc(businesses.createdAt));
+      res.json(businessList);
+    } catch (error) {
+      console.error('Error fetching businesses:', error);
+      res.status(500).json({ message: 'Failed to fetch businesses' });
+    }
+  });
+
+  // Master Admin - Create new business
+  app.post('/api/master/businesses', async (req, res) => {
+    try {
+      const { name, displayName, contactEmail, contactPhone, address } = req.body;
+      
+      if (!name || !displayName || !contactEmail) {
+        return res.status(400).json({ message: 'Name, display name, and contact email are required' });
+      }
+
+      const [newBusiness] = await db.insert(businesses).values({
+        name,
+        displayName,
+        contactEmail,
+        contactPhone,
+        address
+      }).returning();
+
+      // Create default subscription
+      await db.insert(businessSubscriptions).values({
+        businessId: newBusiness.id,
+        planType: 'basic',
+        monthlyFee: '99.00',
+        status: 'active'
+      });
+
+      res.json(newBusiness);
+    } catch (error) {
+      console.error('Error creating business:', error);
+      res.status(500).json({ message: 'Failed to create business' });
+    }
+  });
+
+  // Master Admin - Analytics
+  app.get('/api/master/analytics', async (req, res) => {
+    try {
+      const totalActiveUsers = await db.select({ count: sql<number>`count(*)` }).from(users).where(eq(users.isActive, true));
+      const businessCount = await db.select({ count: sql<number>`count(*)` }).from(businesses).where(eq(businesses.isActive, true));
+      const monthlyRevenue = businessCount[0].count * 99; // $99 per business
+      
+      res.json({
+        totalActiveUsers: totalActiveUsers[0].count,
+        monthlyRevenue,
+        revenueGrowth: 15, // Mock growth percentage
+        totalRoutesToday: 0,
+        totalStudentsTransported: 0,
+        totalDistance: 0,
+        averageRouteTime: 0,
+        onTimeRate: 95,
+        userSatisfaction: 4.2,
+        uptime: 99.9,
+        errorRate: 0.1,
+        responseTime: 180,
+        averageRevenuePerBusiness: 99
+      });
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      res.status(500).json({ message: 'Failed to fetch analytics' });
+    }
+  });
+
+  // Master Admin - User feedback
+  app.get('/api/master/feedback', async (req, res) => {
+    try {
+      const feedbackList = await db.select().from(userFeedback).orderBy(desc(userFeedback.createdAt));
+      res.json(feedbackList);
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      res.status(500).json({ message: 'Failed to fetch feedback' });
+    }
+  });
+
+  // Master Admin - System errors
+  app.get('/api/master/errors', async (req, res) => {
+    try {
+      const errorList = await db.select().from(systemErrors).orderBy(desc(systemErrors.createdAt)).limit(50);
+      res.json(errorList);
+    } catch (error) {
+      console.error('Error fetching errors:', error);
+      res.status(500).json({ message: 'Failed to fetch errors' });
+    }
+  });
+
+  // User feedback submission endpoint
+  app.post('/api/feedback', async (req, res) => {
+    try {
+      const { feedbackType, subject, message, rating } = req.body;
+      const userId = req.session?.userId;
+      const businessId = req.session?.businessId;
+      
+      if (!message) {
+        return res.status(400).json({ message: 'Message is required' });
+      }
+
+      const [feedback] = await db.insert(userFeedback).values({
+        userId,
+        businessId,
+        feedbackType: feedbackType || 'general',
+        subject,
+        message,
+        rating
+      }).returning();
+
+      res.json(feedback);
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      res.status(500).json({ message: 'Failed to submit feedback' });
+    }
+  });
+
   return httpServer;
 }

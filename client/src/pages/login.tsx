@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { User } from "@/lib/types";
-import { Bus } from "lucide-react";
+import { Bus, Shield } from "lucide-react";
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -257,6 +257,16 @@ export default function Login({ onLogin }: LoginProps) {
             
 
           </form>
+          
+          <div className="mt-6 text-center">
+            <a 
+              href="/master-login" 
+              className="text-purple-600 hover:text-purple-800 text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <Shield className="h-4 w-4" />
+              Master Admin Access
+            </a>
+          </div>
         </CardContent>
       </Card>
     </div>

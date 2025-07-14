@@ -6,6 +6,7 @@ import Navigation from "@/components/shared/navigation";
 import StudentList from "@/components/driver/student-list";
 import NavigationView from "@/components/driver/navigation-view";
 import IssueForm from "@/components/driver/issue-form";
+import FeedbackForm from "@/components/shared/feedback-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -500,6 +501,14 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                         <Wrench className="h-4 w-4" />
                         <span>Van Maintenance</span>
                       </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Feedback Section */}
+                  <div className="pt-4 border-t">
+                    <h4 className="text-md font-medium text-gray-800 mb-3">Feedback</h4>
+                    <div className="flex justify-center">
+                      <FeedbackForm />
                     </div>
                   </div>
                   
