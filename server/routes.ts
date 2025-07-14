@@ -2461,6 +2461,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get detailed route data for admin map modal
+  app.get("/api/route-details/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      // Get session details
+      const session = await storage.getPickupSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      // Get driver info
+      const driver = await storage.getUser(session.driverId);
+      
+      // Get route info
+      const route = await storage.getRoute(session.routeId);
+      
+      // Get GPS tracking data
+      const driverLocations = await storage.getDriverLocationsBySession(sessionId);
+      
+      // Get school stops data
+      const routeSchools = await storage.getRouteSchools(session.routeId);
+      const schoolStops = await Promise.all(
+        routeSchools.map(async (rs) => {
+          const school = await storage.getSchool(rs.schoolId);
+          const studentPickups = await storage.getStudentPickupsBySchool(sessionId, rs.schoolId);
+          
+          return {
+            id: rs.id,
+            sessionId: sessionId,
+            schoolId: rs.schoolId,
+            schoolName: school?.name || 'Unknown School',
+            schoolAddress: school?.address || '',
+            latitude: school?.latitude || 0,
+            longitude: school?.longitude || 0,
+            arrivalTime: studentPickups.length > 0 ? studentPickups[0]?.pickedUpAt : null,
+            departureTime: null, // We could calculate this from next pickup time
+            studentsPickedUp: studentPickups.filter(p => p.status === 'picked_up').length,
+            totalStudents: studentPickups.length,
+            notes: studentPickups.map(p => p.driverNotes).filter(Boolean).join('; ') || null
+          };
+        })
+      );
+      
+      // Get current location from latest driver location
+      const currentLocation = driverLocations.length > 0 ? driverLocations[driverLocations.length - 1] : null;
+      
+      // Build route path from GPS tracking
+      const routePath = driverLocations.map(loc => ({
+        latitude: parseFloat(loc.latitude),
+        longitude: parseFloat(loc.longitude),
+        timestamp: loc.timestamp
+      }));
+      
+      const detailData = {
+        sessionId: sessionId,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        driverName: driver ? `${driver.firstName} ${driver.lastName}` : 'Unknown Driver',
+        routeName: route?.name || `Route ${session.routeId}`,
+        status: session.status,
+        startTime: session.startTime,
+        endTime: session.completedTime,
+        durationMinutes: session.durationMinutes,
+        routePath: routePath,
+        schoolStops: schoolStops,
+        currentLatitude: currentLocation ? parseFloat(currentLocation.latitude) : null,
+        currentLongitude: currentLocation ? parseFloat(currentLocation.longitude) : null,
+        lastLocationUpdate: currentLocation?.timestamp
+      };
+      
+      res.json(detailData);
+    } catch (error) {
+      console.error('Error getting route details:', error);
+      res.status(500).json({ message: "Failed to get route details" });
+    }
+  });
+
   // Get GPS route history for admin dashboard
   app.get("/api/gps/route-history", async (req, res) => {
     try {

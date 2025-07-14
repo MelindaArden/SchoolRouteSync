@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Clock, Route, Users, Navigation, Calendar, Timer, School, Activity, Target } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { MapPin, Clock, Route, Users, Navigation, Calendar, Timer, School, Activity, Target, X, Eye, Map } from 'lucide-react';
 import { format, isToday, isYesterday, isThisWeek, differenceInDays } from 'date-fns';
 
 interface RouteMap {
@@ -57,6 +58,8 @@ interface RouteStop {
 export default function AdminMap() {
   const [selectedRoute, setSelectedRoute] = useState<number | null>(null);
   const [viewFilter, setViewFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [showRouteDetails, setShowRouteDetails] = useState(false);
+  const [detailRouteId, setDetailRouteId] = useState<number | null>(null);
 
   const { data: routeMapsRaw = [], isLoading: loadingMaps, error: mapsError } = useQuery({
     queryKey: ['/api/route-maps'],
@@ -127,6 +130,12 @@ export default function AdminMap() {
   const { data: routeStopsRaw = [], isLoading: loadingStops } = useQuery({
     queryKey: ['/api/route-stops', selectedRoute],
     enabled: !!selectedRoute,
+  });
+
+  // Fetch detailed route data for the modal
+  const { data: detailRouteData, isLoading: loadingDetailRoute } = useQuery({
+    queryKey: ['/api/route-details', detailRouteId],
+    enabled: !!detailRouteId,
   });
 
   // Transform snake_case API response to camelCase for route stops
@@ -295,9 +304,21 @@ export default function AdminMap() {
     }
   };
 
+
+
+  const openRouteDetails = (sessionId: number) => {
+    setDetailRouteId(sessionId);
+    setShowRouteDetails(true);
+  };
+
+  const closeRouteDetails = () => {
+    setShowRouteDetails(false);
+    setDetailRouteId(null);
+  };
+
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'in_progress': return 'Active';
+      case 'in_progress': return 'In Progress';
       case 'completed': return 'Completed';
       case 'cancelled': return 'Cancelled';
       default: return 'Unknown';
@@ -533,8 +554,22 @@ export default function AdminMap() {
                       </div>
                     )}
                     
-                    <div className="mt-3 text-xs text-blue-600">
-                      {selectedRoute === route.sessionId ? 'Tap to collapse details' : 'Tap to view detailed tracking info'}
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="text-xs text-blue-600">
+                        {selectedRoute === route.sessionId ? 'Tap to collapse details' : 'Tap to view detailed tracking info'}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRouteDetails(route.sessionId);
+                        }}
+                        className="text-xs px-2 py-1 h-auto"
+                      >
+                        <Map className="w-3 h-3 mr-1" />
+                        View Route Map
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -905,6 +940,205 @@ export default function AdminMap() {
           )}
         </div>
       </div>
+
+      {/* Detailed Route View Modal */}
+      <Dialog open={showRouteDetails} onOpenChange={closeRouteDetails}>
+        <DialogContent className="max-w-4xl h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Navigation className="w-5 h-5" />
+              Detailed Route Tracking
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeRouteDetails}
+                className="ml-auto"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto space-y-4">
+            {loadingDetailRoute ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading detailed route data...</p>
+              </div>
+            ) : detailRouteData ? (
+              <div className="space-y-6">
+                {/* Route Summary Header */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5" />
+                        {detailRouteData.driverName || 'Unknown Driver'}
+                      </div>
+                      <Badge variant={detailRouteData.status === 'in_progress' ? 'default' : 'secondary'}>
+                        {getStatusText(detailRouteData.status)}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="text-gray-500">Route Name</div>
+                        <div className="font-medium">{detailRouteData.routeName}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500">Start Time</div>
+                        <div className="font-medium">{detailRouteData.startTime ? formatTime(detailRouteData.startTime) : 'Not started'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500">Duration</div>
+                        <div className="font-medium">{formatDuration(detailRouteData.durationMinutes)}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500">GPS Points</div>
+                        <div className="font-medium">{detailRouteData.routePath?.length || 0} coordinates</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Live GPS Location */}
+                {detailRouteData.currentLatitude && detailRouteData.currentLongitude && (
+                  <Card className="border-green-200 bg-green-50">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-green-700">
+                        <Target className="w-5 h-5" />
+                        Current Live Location
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <div className="text-green-600">Latitude</div>
+                          <div className="font-mono">{parseFloat(detailRouteData.currentLatitude).toFixed(6)}</div>
+                        </div>
+                        <div>
+                          <div className="text-green-600">Longitude</div>
+                          <div className="font-mono">{parseFloat(detailRouteData.currentLongitude).toFixed(6)}</div>
+                        </div>
+                        <div>
+                          <div className="text-green-600">Last Updated</div>
+                          <div className="font-medium">{detailRouteData.lastLocationUpdate ? formatTime(detailRouteData.lastLocationUpdate) : 'Unknown'}</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* GPS Route Path Timeline */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      GPS Route Timeline
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {detailRouteData.routePath && detailRouteData.routePath.length > 0 ? (
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {detailRouteData.routePath.map((point: any, index: number) => (
+                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                            <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-medium">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                              <div>
+                                <span className="text-gray-500">Lat:</span> {parseFloat(point.latitude).toFixed(6)}
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Lng:</span> {parseFloat(point.longitude).toFixed(6)}
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Time:</span> {formatTime(point.timestamp)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <p>No GPS tracking data available</p>
+                        <p className="text-sm">GPS points will appear here as the driver travels the route</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* School Stops Timeline */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <School className="w-5 h-5" />
+                      School Stops & Arrivals
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {detailRouteData.schoolStops && detailRouteData.schoolStops.length > 0 ? (
+                      <div className="space-y-4">
+                        {detailRouteData.schoolStops.map((stop: any, index: number) => (
+                          <div key={stop.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                            <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center font-medium">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium text-lg">{stop.schoolName}</h4>
+                              <p className="text-gray-600 text-sm mb-3">{stop.schoolAddress}</p>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                                <div>
+                                  <span className="text-gray-500">Arrival:</span>
+                                  <div className="font-medium">{stop.arrivalTime ? formatTime(stop.arrivalTime) : 'Not arrived'}</div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Departure:</span>
+                                  <div className="font-medium">{stop.departureTime ? formatTime(stop.departureTime) : 'Not departed'}</div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Students:</span>
+                                  <div className="font-medium">{stop.studentsPickedUp}/{stop.totalStudents} picked up</div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Location:</span>
+                                  <div className="font-mono text-xs">{parseFloat(stop.latitude).toFixed(4)}, {parseFloat(stop.longitude).toFixed(4)}</div>
+                                </div>
+                              </div>
+                              
+                              {stop.notes && (
+                                <div className="mt-3 p-2 bg-yellow-50 rounded text-sm">
+                                  <span className="text-gray-500">Notes:</span> {stop.notes}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <School className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <p>No school stops recorded</p>
+                        <p className="text-sm">School arrival and departure times will appear here</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No detailed route data available</p>
+                <p className="text-sm text-gray-400">Unable to load route tracking information</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
