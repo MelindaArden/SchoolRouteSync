@@ -5,8 +5,8 @@ import { storage } from "./storage";
 import "./types"; // Import session type declarations
 import { createAuthToken, validateAuthToken, deleteAuthToken } from "./auth-tokens";
 import { db, pool } from "./db";
-import { pickupSessions, notifications, PickupSession, routeSchools, schools } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { pickupSessions, notifications, PickupSession, routeSchools, schools, masterAdmins, businesses, businessSubscriptions, userFeedback, systemErrors } from "@shared/schema";
+import { eq, desc, sql } from "drizzle-orm";
 import { 
   insertPickupSessionSchema, 
   insertStudentPickupSchema, 

@@ -185,14 +185,7 @@ export default function Login({ onLogin }: LoginProps) {
           </CardTitle>
           <p className="text-gray-600">Afterschool Pickup Management</p>
           
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
-            <p className="font-medium text-blue-800 mb-2">Login Credentials:</p>
-            <p className="text-blue-700">
-              <strong>Business Name:</strong> tnt-gymnastics<br/>
-              <strong>Admin:</strong> ma1313 / Dietdew13!<br/>
-              <strong>Drivers:</strong> ChadW or DeShaun / Password123
-            </p>
-          </div>
+
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
