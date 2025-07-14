@@ -112,6 +112,19 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 14, 2025 - Expo Mobile App Creation & Dual Platform Admin Support
+- Created comprehensive Expo React Native mobile app connecting to existing Express.js backend
+- Implemented both driver and admin interfaces ensuring full functionality on mobile and web platforms
+- Built native GPS tracking with enhanced accuracy and battery-efficient background location services
+- Added secure token-based authentication using existing user credentials and database
+- Created mobile-optimized admin dashboard with route management, driver monitoring, and issue handling
+- Developed driver-specific mobile interface with route navigation, student pickup tracking, and issue reporting
+- Integrated push notifications for real-time alerts and route updates
+- Added offline data caching and mobile-specific UI optimizations for touch interfaces
+- Maintained complete feature parity with web dashboard while adding mobile-enhanced capabilities
+- Admin views now available on both web and mobile platforms for maximum flexibility
+- Mobile app connects seamlessly to existing API endpoints and database without backend changes
+
 ### July 14, 2025 - Production Deployment Authentication & GPS Route Tracking System
 - Fixed critical production deployment authentication issues with enhanced session configuration for deployed environments
 - Updated session settings with proper cross-origin support (sameSite: 'none') and proxy trust for Replit deployment
