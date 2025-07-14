@@ -133,10 +133,16 @@ export default function AdminMap() {
   });
 
   // Fetch detailed route data for the modal
-  const { data: detailRouteData, isLoading: loadingDetailRoute } = useQuery({
-    queryKey: ['/api/route-details', detailRouteId],
+  const { data: detailRouteData, isLoading: loadingDetailRoute, error: detailRouteError } = useQuery({
+    queryKey: [`/api/route-details/${detailRouteId}`],
     enabled: !!detailRouteId,
   });
+
+  // Log the detailed route data for debugging
+  console.log('Detail route ID:', detailRouteId);
+  console.log('Detail route data:', detailRouteData);
+  console.log('Detail route loading:', loadingDetailRoute);
+  console.log('Detail route error:', detailRouteError);
 
   // Transform snake_case API response to camelCase for route stops
   const routeStops = routeStopsRaw.map((stop: any) => ({

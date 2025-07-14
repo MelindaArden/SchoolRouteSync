@@ -2465,45 +2465,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/route-details/:sessionId", async (req, res) => {
     try {
       const sessionId = parseInt(req.params.sessionId);
+      console.log(`Fetching route details for session ${sessionId}`);
       
       // Get session details
       const session = await storage.getPickupSession(sessionId);
       if (!session) {
         return res.status(404).json({ message: "Session not found" });
       }
+      console.log(`Found session:`, session);
       
       // Get driver info
       const driver = await storage.getUser(session.driverId);
+      console.log(`Found driver:`, driver?.firstName, driver?.lastName);
       
       // Get route info
       const route = await storage.getRoute(session.routeId);
+      console.log(`Found route:`, route?.name);
       
       // Get GPS tracking data
       const driverLocations = await storage.getDriverLocationsBySession(sessionId);
+      console.log(`Found ${driverLocations.length} GPS locations`);
       
-      // Get school stops data
+      // Get student pickups for this session
+      const allStudentPickups = await storage.getStudentPickups(sessionId);
+      console.log(`Found ${allStudentPickups.length} student pickups`);
+      
+      // Get route schools
       const routeSchools = await storage.getRouteSchools(session.routeId);
-      const schoolStops = await Promise.all(
-        routeSchools.map(async (rs) => {
-          const school = await storage.getSchool(rs.schoolId);
-          const studentPickups = await storage.getStudentPickupsBySchool(sessionId, rs.schoolId);
-          
-          return {
-            id: rs.id,
-            sessionId: sessionId,
-            schoolId: rs.schoolId,
-            schoolName: school?.name || 'Unknown School',
-            schoolAddress: school?.address || '',
-            latitude: school?.latitude || 0,
-            longitude: school?.longitude || 0,
-            arrivalTime: studentPickups.length > 0 ? studentPickups[0]?.pickedUpAt : null,
-            departureTime: null, // We could calculate this from next pickup time
-            studentsPickedUp: studentPickups.filter(p => p.status === 'picked_up').length,
-            totalStudents: studentPickups.length,
-            notes: studentPickups.map(p => p.driverNotes).filter(Boolean).join('; ') || null
-          };
-        })
-      );
+      console.log(`Found ${routeSchools.length} route schools`);
+      
+      // Build school stops data
+      const schoolStops = [];
+      for (const rs of routeSchools) {
+        const school = await storage.getSchool(rs.schoolId);
+        const schoolPickups = allStudentPickups.filter(p => p.schoolId === rs.schoolId);
+        
+        schoolStops.push({
+          id: rs.id,
+          sessionId: sessionId,
+          schoolId: rs.schoolId,
+          schoolName: school?.name || 'Unknown School',
+          schoolAddress: school?.address || '',
+          latitude: school?.latitude || 0,
+          longitude: school?.longitude || 0,
+          arrivalTime: schoolPickups.length > 0 ? schoolPickups[0]?.pickedUpAt : null,
+          departureTime: null,
+          studentsPickedUp: schoolPickups.filter(p => p.status === 'picked_up').length,
+          totalStudents: schoolPickups.length,
+          notes: schoolPickups.map(p => p.driverNotes).filter(Boolean).join('; ') || null
+        });
+      }
       
       // Get current location from latest driver location
       const currentLocation = driverLocations.length > 0 ? driverLocations[driverLocations.length - 1] : null;
@@ -2532,10 +2543,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastLocationUpdate: currentLocation?.timestamp
       };
       
+      console.log(`Returning route details with ${routePath.length} GPS points and ${schoolStops.length} school stops`);
       res.json(detailData);
     } catch (error) {
       console.error('Error getting route details:', error);
-      res.status(500).json({ message: "Failed to get route details" });
+      res.status(500).json({ message: "Failed to get route details", error: error.message });
     }
   });
 
