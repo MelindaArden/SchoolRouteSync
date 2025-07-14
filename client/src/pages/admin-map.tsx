@@ -168,8 +168,8 @@ export default function AdminMap() {
         totalDurationMinutes: undefined,
         totalDistanceMiles: undefined,
         routePath: driverLocation ? [{
-          latitude: driverLocation.latitude,
-          longitude: driverLocation.longitude,
+          latitude: parseFloat(driverLocation.latitude || 0),
+          longitude: parseFloat(driverLocation.longitude || 0),
           timestamp: driverLocation.timestamp || new Date().toISOString()
         }] : [],
         schoolStops: [],
@@ -181,16 +181,16 @@ export default function AdminMap() {
         stopsCount: 0,
         sessionDate: session.date || new Date().toISOString().split('T')[0],
         sessionStatus: 'in_progress',
-        currentLatitude: driverLocation?.latitude,
-        currentLongitude: driverLocation?.longitude,
+        currentLatitude: driverLocation ? parseFloat(driverLocation.latitude || 0) : undefined,
+        currentLongitude: driverLocation ? parseFloat(driverLocation.longitude || 0) : undefined,
         lastLocationUpdate: driverLocation?.timestamp,
       });
     } else {
       // Update existing route with current driver location
       const driverLocation = Array.isArray(driverLocations) ? driverLocations.find((loc: any) => loc.driverId === session.driverId) : null;
       if (driverLocation) {
-        existingRoute.currentLatitude = driverLocation.latitude;
-        existingRoute.currentLongitude = driverLocation.longitude;
+        existingRoute.currentLatitude = parseFloat(driverLocation.latitude || 0);
+        existingRoute.currentLongitude = parseFloat(driverLocation.longitude || 0);
         existingRoute.lastLocationUpdate = driverLocation.timestamp;
         existingRoute.sessionStatus = 'in_progress';
       }
@@ -407,7 +407,7 @@ export default function AdminMap() {
                         </div>
                         {driverLocation && (
                           <div className="text-xs text-green-500">
-                            Live GPS: {driverLocation.latitude?.toFixed(4)}, {driverLocation.longitude?.toFixed(4)}
+                            Live GPS: {parseFloat(driverLocation.latitude || 0).toFixed(4)}, {parseFloat(driverLocation.longitude || 0).toFixed(4)}
                           </div>
                         )}
                       </div>
@@ -522,8 +522,8 @@ export default function AdminMap() {
                           <span className="text-sm font-medium text-green-700">Live GPS Location</span>
                         </div>
                         <div className="text-xs text-gray-600 space-y-1">
-                          <div>Lat: {typeof route.currentLatitude === 'number' ? route.currentLatitude.toFixed(6) : Number(route.currentLatitude || 0).toFixed(6)}</div>
-                          <div>Lng: {typeof route.currentLongitude === 'number' ? route.currentLongitude.toFixed(6) : Number(route.currentLongitude || 0).toFixed(6)}</div>
+                          <div>Lat: {parseFloat(route.currentLatitude || 0).toFixed(6)}</div>
+                          <div>Lng: {parseFloat(route.currentLongitude || 0).toFixed(6)}</div>
                           {route.lastLocationUpdate && (
                             <div className="text-gray-500">
                               Updated: {formatTime(route.lastLocationUpdate)}
