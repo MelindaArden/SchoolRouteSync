@@ -25,6 +25,22 @@ import {
   Wrench
 } from "lucide-react";
 
+// Helper function to get current GPS location
+const getCurrentLocation = (): Promise<GeolocationPosition> => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is not supported by this browser.'));
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      resolve,
+      reject,
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+};
+
 interface DriverDashboardProps {
   user: User;
   onLogout: () => void;
@@ -88,12 +104,27 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     if (!currentRoute) return;
 
     try {
+      // Get current GPS location for route tracking
+      let gpsCoords = null;
+      try {
+        const position = await getCurrentLocation();
+        gpsCoords = {
+          startLatitude: position.coords.latitude,
+          startLongitude: position.coords.longitude
+        };
+        console.log('📍 GPS location captured for route start:', gpsCoords);
+      } catch (gpsError) {
+        console.warn('⚠️ Could not get GPS location for route start:', gpsError);
+        // Continue without GPS - it's optional
+      }
+
       const session = await apiRequest("POST", `/api/pickup-sessions`, {
         routeId: currentRoute.id,
         driverId: user.id,
         date: new Date().toISOString().split('T')[0],
         status: "in_progress",
         startTime: new Date().toISOString(),
+        ...gpsCoords // Include GPS coordinates if available
       });
 
       setActiveSession(session);
@@ -179,9 +210,24 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     }
 
     try {
+      // Get current GPS location for route completion tracking
+      let gpsCoords = null;
+      try {
+        const position = await getCurrentLocation();
+        gpsCoords = {
+          endLatitude: position.coords.latitude,
+          endLongitude: position.coords.longitude
+        };
+        console.log('📍 GPS location captured for route completion:', gpsCoords);
+      } catch (gpsError) {
+        console.warn('⚠️ Could not get GPS location for route completion:', gpsError);
+        // Continue without GPS - it's optional
+      }
+
       // Use the new completion endpoint that saves to history
       await apiRequest("POST", `/api/pickup-sessions/${currentActiveSession.id}/complete`, {
-        notes: "Route completed successfully"
+        notes: "Route completed successfully",
+        ...gpsCoords // Include GPS coordinates if available
       });
 
       setActiveSession(null);

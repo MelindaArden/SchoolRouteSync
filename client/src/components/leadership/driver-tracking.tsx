@@ -70,6 +70,19 @@ export default function DriverTracking() {
     refetchInterval: 15000, // Refresh every 15 seconds
   });
 
+  // Fetch GPS route history for comprehensive tracking
+  const { data: gpsRouteHistory = [], refetch: refetchGpsHistory } = useQuery({
+    queryKey: ['/api/gps/route-history'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Fetch GPS tracks for selected driver if any
+  const { data: selectedDriverTracks = [] } = useQuery({
+    queryKey: [`/api/gps/drivers/${selectedDriver}/tracks`],
+    enabled: !!selectedDriver,
+    refetchInterval: 15000,
+  });
+
   // Enhanced filtering to show only active drivers with in-progress sessions
   const inProgressSessions = (activeSessions as ActiveSession[]).filter((session: ActiveSession) => 
     session.status === "in_progress"
@@ -172,6 +185,7 @@ export default function DriverTracking() {
             onClick={() => {
               refetchSessions();
               refetchLocations();
+              refetchGpsHistory();
             }}
           >
             <Navigation className="h-4 w-4 mr-2" />
@@ -399,6 +413,140 @@ export default function DriverTracking() {
           </div>
         </div>
       )}
+
+      {/* GPS Route Tracking Section */}
+      <div>
+        <h4 className="text-md font-medium mb-3 flex items-center">
+          <Navigation className="h-4 w-4 mr-2 text-green-600" />
+          Route Tracking History ({gpsRouteHistory.length})
+        </h4>
+
+        {gpsRouteHistory.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No GPS History</h3>
+              <p className="text-gray-600">GPS route tracking data will appear here once drivers complete routes.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {gpsRouteHistory.slice(0, 10).map((history: any) => (
+              <Card key={history.id} className="border-l-4 border-l-green-500">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">
+                      {history.driver?.firstName} {history.driver?.lastName}
+                    </CardTitle>
+                    <div className="flex space-x-2">
+                      <Badge variant={history.endTime ? "default" : "secondary"}>
+                        {history.endTime ? "Completed" : "In Progress"}
+                      </Badge>
+                      {history.routeDuration && (
+                        <Badge variant="outline">
+                          {history.routeDuration} min
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600">{history.route?.name}</p>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Start/End Times & Distance */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-green-600" />
+                        <span className="font-medium">Start:</span>
+                        <span>{new Date(history.startTime).toLocaleTimeString()}</span>
+                      </div>
+                      {history.endTime && (
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="font-medium">End:</span>
+                          <span>{new Date(history.endTime).toLocaleTimeString()}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {history.totalDistance && (
+                        <div className="flex items-center space-x-2">
+                          <Navigation className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium">Distance:</span>
+                          <span>{parseFloat(history.totalDistance).toFixed(1)} miles</span>
+                        </div>
+                      )}
+                      {history.startLatitude && history.startLongitude && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-1 text-left justify-start"
+                          onClick={() => openGoogleMaps(history.startLatitude, history.startLongitude)}
+                        >
+                          <MapPin className="h-3 w-3 mr-1 text-blue-600" />
+                          <span className="text-xs">Start Location</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* View Track Details */}
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-xs text-gray-500">
+                      Session #{history.sessionId}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedDriver(selectedDriver === history.driverId ? null : history.driverId)}
+                    >
+                      {selectedDriver === history.driverId ? 'Hide' : 'View'} Track Details
+                    </Button>
+                  </div>
+
+                  {/* Selected Driver GPS Tracks */}
+                  {selectedDriver === history.driverId && selectedDriverTracks.length > 0 && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <h5 className="font-medium mb-3 flex items-center">
+                        <MapPin className="h-4 w-4 mr-2 text-blue-600" />
+                        GPS School Arrivals ({selectedDriverTracks.length})
+                      </h5>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {selectedDriverTracks.map((track: any) => (
+                          <div key={track.id} className="flex items-center justify-between text-sm p-2 bg-white rounded border">
+                            <div className="flex items-center space-x-2">
+                              <MapPin className="h-3 w-3 text-green-600" />
+                              <span>School ID: {track.schoolId}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {track.eventType}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-500">
+                                {new Date(track.timestamp).toLocaleTimeString()}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => openGoogleMaps(track.latitude, track.longitude)}
+                              >
+                                <MapPin className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

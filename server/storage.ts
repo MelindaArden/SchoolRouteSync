@@ -1,6 +1,7 @@
 import {
   users, schools, routes, routeSchools, students, routeAssignments,
   pickupSessions, studentPickups, notifications, driverLocations, issues, pickupHistory, missedSchoolAlerts, studentAbsences,
+  gpsRouteTracks, gpsRouteHistory,
   type User, type InsertUser, type School, type InsertSchool,
   type Route, type InsertRoute, type RouteSchool, type InsertRouteSchool,
   type Student, type InsertStudent, type RouteAssignment, type InsertRouteAssignment,
@@ -8,7 +9,9 @@ import {
   type Notification, type InsertNotification, type DriverLocation, type InsertDriverLocation,
   type Issue, type InsertIssue, type PickupHistory, type InsertPickupHistory,
   type MissedSchoolAlert, type InsertMissedSchoolAlert,
-  type StudentAbsence, type InsertStudentAbsence
+  type StudentAbsence, type InsertStudentAbsence,
+  type GpsRouteTrack, type InsertGpsRouteTrack,
+  type GpsRouteHistory, type InsertGpsRouteHistory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -104,6 +107,19 @@ export interface IStorage {
   createStudentAbsence(absence: InsertStudentAbsence): Promise<StudentAbsence>;
   deleteStudentAbsence(id: number): Promise<void>;
   checkStudentAbsence(studentId: number, date: string): Promise<boolean>;
+  
+  // GPS Route Tracking
+  createGpsRouteTrack(track: InsertGpsRouteTrack): Promise<GpsRouteTrack>;
+  getGpsRouteTracksBySession(sessionId: number): Promise<GpsRouteTrack[]>;
+  getGpsRouteTracksByDriver(driverId: number): Promise<GpsRouteTrack[]>;
+  updateGpsRouteTrack(id: number, updates: Partial<GpsRouteTrack>): Promise<GpsRouteTrack>;
+  
+  // GPS Route History
+  createGpsRouteHistory(history: InsertGpsRouteHistory): Promise<GpsRouteHistory>;
+  getGpsRouteHistory(): Promise<GpsRouteHistory[]>;
+  getGpsRouteHistoryByDriver(driverId: number): Promise<GpsRouteHistory[]>;
+  getGpsRouteHistoryBySession(sessionId: number): Promise<GpsRouteHistory | undefined>;
+  updateGpsRouteHistory(id: number, updates: Partial<GpsRouteHistory>): Promise<GpsRouteHistory>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -554,6 +570,75 @@ export class DatabaseStorage implements IStorage {
       ))
       .limit(1);
     return result.length > 0;
+  }
+
+  // GPS Route Tracking
+  async createGpsRouteTrack(insertTrack: InsertGpsRouteTrack): Promise<GpsRouteTrack> {
+    const [track] = await db.insert(gpsRouteTracks).values(insertTrack).returning();
+    return track;
+  }
+
+  async getGpsRouteTracksBySession(sessionId: number): Promise<GpsRouteTrack[]> {
+    return await db
+      .select()
+      .from(gpsRouteTracks)
+      .where(eq(gpsRouteTracks.sessionId, sessionId))
+      .orderBy(asc(gpsRouteTracks.timestamp));
+  }
+
+  async getGpsRouteTracksByDriver(driverId: number): Promise<GpsRouteTrack[]> {
+    return await db
+      .select()
+      .from(gpsRouteTracks)
+      .where(eq(gpsRouteTracks.driverId, driverId))
+      .orderBy(desc(gpsRouteTracks.timestamp));
+  }
+
+  async updateGpsRouteTrack(id: number, updates: Partial<GpsRouteTrack>): Promise<GpsRouteTrack> {
+    const [track] = await db
+      .update(gpsRouteTracks)
+      .set(updates)
+      .where(eq(gpsRouteTracks.id, id))
+      .returning();
+    return track;
+  }
+
+  // GPS Route History
+  async createGpsRouteHistory(insertHistory: InsertGpsRouteHistory): Promise<GpsRouteHistory> {
+    const [history] = await db.insert(gpsRouteHistory).values(insertHistory).returning();
+    return history;
+  }
+
+  async getGpsRouteHistory(): Promise<GpsRouteHistory[]> {
+    return await db
+      .select()
+      .from(gpsRouteHistory)
+      .orderBy(desc(gpsRouteHistory.startTime));
+  }
+
+  async getGpsRouteHistoryByDriver(driverId: number): Promise<GpsRouteHistory[]> {
+    return await db
+      .select()
+      .from(gpsRouteHistory)
+      .where(eq(gpsRouteHistory.driverId, driverId))
+      .orderBy(desc(gpsRouteHistory.startTime));
+  }
+
+  async getGpsRouteHistoryBySession(sessionId: number): Promise<GpsRouteHistory | undefined> {
+    const [history] = await db
+      .select()
+      .from(gpsRouteHistory)
+      .where(eq(gpsRouteHistory.sessionId, sessionId));
+    return history || undefined;
+  }
+
+  async updateGpsRouteHistory(id: number, updates: Partial<GpsRouteHistory>): Promise<GpsRouteHistory> {
+    const [history] = await db
+      .update(gpsRouteHistory)
+      .set(updates)
+      .where(eq(gpsRouteHistory.id, id))
+      .returning();
+    return history;
   }
 }
 

@@ -112,6 +112,47 @@ export const driverLocations = pgTable("driver_locations", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// GPS Route Tracking table for recording driver paths with school timestamps
+export const gpsRouteTracks = pgTable("gps_route_tracks", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => pickupSessions.id),
+  driverId: integer("driver_id").notNull().references(() => users.id),
+  routeId: integer("route_id").notNull().references(() => routes.id),
+  schoolId: integer("school_id").references(() => schools.id),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  speed: decimal("speed", { precision: 5, scale: 2 }),
+  bearing: decimal("bearing", { precision: 5, scale: 2 }),
+  accuracy: decimal("accuracy", { precision: 6, scale: 2 }),
+  eventType: varchar("event_type", { length: 50 }).default("location_update"), // location_update, school_arrival, school_departure, route_start, route_end
+  arrivalTime: timestamp("arrival_time"),
+  departureTime: timestamp("departure_time"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// GPS Route History table for storing completed route paths
+export const gpsRouteHistory = pgTable("gps_route_history", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => pickupSessions.id),
+  driverId: integer("driver_id").notNull().references(() => users.id),
+  routeId: integer("route_id").notNull().references(() => routes.id),
+  routeName: varchar("route_name", { length: 255 }).notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  totalDistance: decimal("total_distance", { precision: 8, scale: 2 }), // in kilometers
+  averageSpeed: decimal("average_speed", { precision: 5, scale: 2 }), // in km/h
+  maxSpeed: decimal("max_speed", { precision: 5, scale: 2 }), // in km/h
+  schoolsVisited: integer("schools_visited").default(0),
+  totalStudentsPickedUp: integer("total_students_picked_up").default(0),
+  routePath: jsonb("route_path").$type<{
+    coordinates: { lat: number; lng: number; timestamp: string; speed?: number }[];
+    schoolTimestamps: { schoolId: number; schoolName: string; arrivalTime: string; departureTime?: string }[];
+  }>(),
+  completionStatus: varchar("completion_status", { length: 20 }).default("completed"), // completed, incomplete, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const issues = pgTable("issues", {
   id: serial("id").primaryKey(),
   driverId: integer("driver_id").notNull().references(() => users.id),
@@ -401,6 +442,53 @@ export const insertStudentAbsenceSchema = createInsertSchema(studentAbsences).om
   createdAt: true,
 });
 
+export const insertGpsRouteTrackSchema = createInsertSchema(gpsRouteTracks).omit({
+  id: true,
+  timestamp: true,
+  createdAt: true,
+});
+
+export const insertGpsRouteHistorySchema = createInsertSchema(gpsRouteHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+// GPS Route Tracking Relations
+export const gpsRouteTracksRelations = relations(gpsRouteTracks, ({ one }) => ({
+  session: one(pickupSessions, {
+    fields: [gpsRouteTracks.sessionId],
+    references: [pickupSessions.id],
+  }),
+  driver: one(users, {
+    fields: [gpsRouteTracks.driverId],
+    references: [users.id],
+  }),
+  route: one(routes, {
+    fields: [gpsRouteTracks.routeId],
+    references: [routes.id],
+  }),
+  school: one(schools, {
+    fields: [gpsRouteTracks.schoolId],
+    references: [schools.id],
+  }),
+}));
+
+// GPS Route History Relations
+export const gpsRouteHistoryRelations = relations(gpsRouteHistory, ({ one }) => ({
+  session: one(pickupSessions, {
+    fields: [gpsRouteHistory.sessionId],
+    references: [pickupSessions.id],
+  }),
+  driver: one(users, {
+    fields: [gpsRouteHistory.driverId],
+    references: [users.id],
+  }),
+  route: one(routes, {
+    fields: [gpsRouteHistory.routeId],
+    references: [routes.id],
+  }),
+}));
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -430,3 +518,7 @@ export type MissedSchoolAlert = typeof missedSchoolAlerts.$inferSelect;
 export type InsertMissedSchoolAlert = z.infer<typeof insertMissedSchoolAlertSchema>;
 export type StudentAbsence = typeof studentAbsences.$inferSelect;
 export type InsertStudentAbsence = z.infer<typeof insertStudentAbsenceSchema>;
+export type GpsRouteTrack = typeof gpsRouteTracks.$inferSelect;
+export type InsertGpsRouteTrack = z.infer<typeof insertGpsRouteTrackSchema>;
+export type GpsRouteHistory = typeof gpsRouteHistory.$inferSelect;
+export type InsertGpsRouteHistory = z.infer<typeof insertGpsRouteHistorySchema>;
