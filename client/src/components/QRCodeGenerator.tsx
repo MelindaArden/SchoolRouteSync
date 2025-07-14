@@ -11,8 +11,14 @@ export function QRCodeGenerator({ url, size = 200, className = "" }: QRCodeGener
 
   useEffect(() => {
     // Generate QR code using QR Server API (free service)
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
-    setQrCodeUrl(qrUrl);
+    try {
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
+      setQrCodeUrl(qrUrl);
+    } catch (error) {
+      console.error('QR Code generation error:', error);
+      // Fallback to a simple text display if QR generation fails
+      setQrCodeUrl("");
+    }
   }, [url, size]);
 
   return (
