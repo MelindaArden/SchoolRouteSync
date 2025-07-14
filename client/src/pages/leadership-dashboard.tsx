@@ -23,6 +23,7 @@ import MultiDriverRouteOptimizer from "@/components/leadership/multi-driver-rout
 import AdvancedRouteCreator from "@/components/leadership/advanced-route-creator";
 import StudentAbsenceManagement from "@/components/leadership/student-absence-management";
 import AbsenceExport from "@/components/leadership/absence-export";
+import AdminMap from "@/pages/admin-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -707,12 +708,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
         {activeTab === "map" && (
           <div className="p-2 sm:p-4">
-            <iframe
-              src="/admin-map"
-              className="w-full h-screen border-0 rounded-lg"
-              title="Admin Map View"
-              style={{ minHeight: '80vh' }}
-            />
+            <AdminMap />
           </div>
         )}
 
