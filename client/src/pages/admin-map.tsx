@@ -331,7 +331,7 @@ export default function AdminMap() {
                                 <div className="flex items-center gap-2">
                                   <Target className="w-3 h-3 text-green-600" />
                                   <span className="text-xs text-green-700">
-                                    Live: {route.currentLatitude?.toFixed(4) || 'N/A'}, {route.currentLongitude?.toFixed(4) || 'N/A'}
+                                    Live: {route.currentLatitude ? Number(route.currentLatitude).toFixed(4) : 'N/A'}, {route.currentLongitude ? Number(route.currentLongitude).toFixed(4) : 'N/A'}
                                   </span>
                                 </div>
                                 {route.lastLocationUpdate && (
@@ -387,8 +387,8 @@ export default function AdminMap() {
                         </div>
                         <p className="text-sm text-gray-600 mb-1">{driver.routeName}</p>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>Lat: {driver.currentLatitude?.toFixed(4) || 'N/A'}</div>
-                          <div>Lng: {driver.currentLongitude?.toFixed(4) || 'N/A'}</div>
+                          <div>Lat: {driver.currentLatitude ? Number(driver.currentLatitude).toFixed(4) : 'N/A'}</div>
+                          <div>Lng: {driver.currentLongitude ? Number(driver.currentLongitude).toFixed(4) : 'N/A'}</div>
                         </div>
                         {driver.lastLocationUpdate && (
                           <p className="text-xs text-gray-500 mt-1">
@@ -436,7 +436,7 @@ export default function AdminMap() {
                         <div className="bg-purple-50 p-3 rounded-lg">
                           <p className="text-sm font-medium text-purple-600">Distance</p>
                           <p className="text-lg font-bold text-purple-900">
-                            {route.totalDistanceMiles ? `${route.totalDistanceMiles.toFixed(1)} mi` : 'N/A'}
+                            {route.totalDistanceMiles ? `${Number(route.totalDistanceMiles).toFixed(1)} mi` : 'N/A'}
                           </p>
                         </div>
                         
@@ -498,7 +498,7 @@ export default function AdminMap() {
                             <div>
                               <p className="text-xs font-medium text-gray-500">Coordinates</p>
                               <p className="text-sm text-gray-900 font-mono">
-                                {stop.latitude?.toFixed(4) || 'N/A'}, {stop.longitude?.toFixed(4) || 'N/A'}
+                                {stop.latitude ? Number(stop.latitude).toFixed(4) : 'N/A'}, {stop.longitude ? Number(stop.longitude).toFixed(4) : 'N/A'}
                               </p>
                             </div>
                             
@@ -578,8 +578,8 @@ export default function AdminMap() {
                               {route.routePath.slice(0, 50).map((point, index) => (
                                 <tr key={index} className="border-t">
                                   <td className="p-2">{formatTime(point.timestamp)}</td>
-                                  <td className="p-2 font-mono">{point.latitude?.toFixed(6) || 'N/A'}</td>
-                                  <td className="p-2 font-mono">{point.longitude?.toFixed(6) || 'N/A'}</td>
+                                  <td className="p-2 font-mono">{point.latitude ? Number(point.latitude).toFixed(6) : 'N/A'}</td>
+                                  <td className="p-2 font-mono">{point.longitude ? Number(point.longitude).toFixed(6) : 'N/A'}</td>
                                 </tr>
                               ))}
                             </tbody>
