@@ -84,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Enhanced login endpoint for production deployment and mobile Safari
+  // Production deployment login endpoint with enhanced error handling
   app.post("/api/login", async (req, res) => {
     try {
       console.log('Production login attempt:', {
@@ -96,82 +96,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
           host: req.headers.host
         },
         ip: req.ip,
-        sessionId: req.sessionID
+        sessionId: req.sessionID,
+        nodeEnv: process.env.NODE_ENV,
+        replitDomain: process.env.REPLIT_DOMAIN
       });
       
       const { username, password } = loginSchema.parse(req.body);
       
-      const user = await storage.getUserByUsername(username);
-      if (!user || user.password !== password) {
-        console.log(`Login failed for username "${username}":`, {
+      // Check database connection first
+      try {
+        const user = await storage.getUserByUsername(username);
+        console.log(`User lookup for "${username}":`, {
           userFound: !!user,
-          storedPassword: user?.password,
-          providedPassword: password,
-          passwordMatch: user ? user.password === password : false,
-          userAgent: req.headers['user-agent']
+          hasPassword: user ? !!user.password : false,
+          userRole: user?.role,
+          userId: user?.id
         });
         
-        return res.status(401).json({ 
-          message: "Invalid username or password",
+        if (!user || user.password !== password) {
+          console.log(`Login failed for username "${username}":`, {
+            userFound: !!user,
+            passwordMatch: user ? user.password === password : false,
+            userAgent: req.headers['user-agent']
+          });
+          
+          return res.status(401).json({ 
+            message: "Invalid username or password",
+            debug: {
+              userAgent: req.headers['user-agent'],
+              isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+              timestamp: new Date().toISOString(),
+              sessionId: req.sessionID,
+              providedUsername: username,
+              userFound: !!user,
+              environment: process.env.NODE_ENV || 'development'
+            }
+          });
+        }
+        
+        // Authentication successful - create both session and token for maximum compatibility
+
+        // Create authentication token for deployment compatibility
+        console.log(`Creating auth token for ${username}`);
+        let authToken;
+        try {
+          authToken = createAuthToken(user.id, user.username, user.role);
+          console.log(`Auth token created for ${username}: ${authToken.substring(0, 8)}...`);
+        } catch (error) {
+          console.error(`Token creation failed for ${username}:`, error);
+          authToken = `fallback_${user.id}_${Date.now()}`;
+        }
+        
+        // Create session for browsers that support it
+        req.session.userId = user.id;
+        req.session.username = user.username;
+        req.session.role = user.role;
+        
+        // Force session save
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) {
+              console.error('Session save error:', err);
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        });
+
+        console.log(`Login successful for ${username}:`, {
+          userId: user.id,
+          sessionId: req.sessionID,
+          authToken: authToken.substring(0, 8) + '...',
+          userAgent: req.headers['user-agent'],
+          environment: process.env.NODE_ENV || 'development'
+        });
+
+        res.json({
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          authToken: authToken,
           debug: {
+            tokenCreated: true,
+            sessionCreated: true,
+            sessionId: req.sessionID,
             userAgent: req.headers['user-agent'],
             isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+            loginMethod: 'production-deployment',
             timestamp: new Date().toISOString(),
-            sessionId: req.sessionID,
-            providedUsername: username,
-            userFound: !!user
+            environment: process.env.NODE_ENV || 'development'
+          }
+        });
+        
+      } catch (dbError) {
+        console.error('Database error during login:', dbError);
+        return res.status(500).json({
+          message: "Database connection error",
+          debug: {
+            error: dbError.message,
+            timestamp: new Date().toISOString(),
+            userAgent: req.headers['user-agent']
           }
         });
       }
-
-      // Create authentication token for mobile compatibility
-      console.log(`About to create auth token for ${username}`);
-      let authToken;
-      try {
-        authToken = createAuthToken(user.id, user.username, user.role);
-        console.log(`Created auth token for ${username}: ${authToken.substring(0, 16)}...`);
-      } catch (error) {
-        console.error(`Token creation failed for ${username}:`, error);
-        authToken = `fallback_${user.id}_${Date.now()}`;
-      }
-      
-      // Enhanced session creation for production
-      req.session.userId = user.id;
-      req.session.username = user.username;
-      req.session.role = user.role;
-      
-      // Force session save for mobile browsers
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-        }
-      });
-
-      console.log(`Production login successful for ${username}:`, {
-        userId: user.id,
-        sessionId: req.sessionID,
-        authToken: authToken.substring(0, 8) + '...',
-        userAgent: req.headers['user-agent'],
-        isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || '')
-      });
-
-      res.json({
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        authToken: authToken, // Mobile Safari will use this token
-        debug: {
-          tokenCreated: true,
-          sessionCreated: true,
-          sessionId: req.sessionID,
-          userAgent: req.headers['user-agent'],
-          isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
-          loginMethod: 'production-enhanced',
-          timestamp: new Date().toISOString()
-        }
-      });
     } catch (error) {
       console.error('Login error:', error);
       res.status(400).json({ 
@@ -277,25 +307,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Mobile connectivity diagnostic endpoint
-  app.get("/api/mobile-test", async (req, res) => {
-    console.log('Mobile connectivity test:', {
+  // Deployment connectivity and authentication test endpoint
+  app.get("/api/deployment-test", async (req, res) => {
+    console.log('Deployment connectivity test:', {
       method: req.method,
       url: req.url,
       headers: req.headers,
       ip: req.ip,
       userAgent: req.headers['user-agent'],
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      replitDomain: process.env.REPLIT_DOMAIN
     });
+    
+    // Test database connection
+    let dbConnected = false;
+    let dbUsers = [];
+    let testLoginResult = null;
+    try {
+      dbUsers = await storage.getAllUsers();
+      dbConnected = true;
+      
+      // Test login with admin credentials
+      if (dbUsers.length > 0) {
+        const adminUser = dbUsers.find(u => u.username === 'ma1313');
+        if (adminUser) {
+          testLoginResult = {
+            userFound: true,
+            username: adminUser.username,
+            role: adminUser.role,
+            passwordSet: !!adminUser.password,
+            expectedPassword: 'Dietdew13!'
+          };
+        }
+      }
+    } catch (dbError) {
+      console.error('Database test failed:', dbError);
+    }
     
     res.json({
       status: 'connected',
-      message: 'Mobile connectivity successful',
+      message: 'Deployment connectivity successful',
       serverTime: new Date().toISOString(),
       clientIP: req.ip,
       userAgent: req.headers['user-agent'],
-      headers: req.headers,
       isMobile: /Mobile|Android|iPhone|iPad/.test(req.headers['user-agent'] || ''),
+      environment: process.env.NODE_ENV || 'development',
+      replitDomain: process.env.REPLIT_DOMAIN,
+      database: {
+        connected: dbConnected,
+        userCount: dbUsers.length,
+        availableUsers: dbUsers.map(u => ({ username: u.username, role: u.role, hasPassword: !!u.password }))
+      },
+      testLogin: testLoginResult,
+      instructions: {
+        loginEndpoint: '/api/login',
+        testCredentials: {
+          admin: { username: 'ma1313', password: 'Dietdew13!' },
+          driver: { username: 'ChadW', password: 'Password123' }
+        }
+      },
       connection: 'established'
     });
   });

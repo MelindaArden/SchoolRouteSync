@@ -35,20 +35,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Enhanced session configuration for mobile Safari and deployment
+// Production deployment session configuration 
+const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DOMAIN;
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'school-bus-management-secret',
-  name: 'schoolbus.sid', // Custom session name
-  resave: true, // Changed to true for mobile compatibility
-  saveUninitialized: true, // Changed to true for mobile Safari
-  rolling: true, // Reset expiry on each request
+  secret: process.env.SESSION_SECRET || 'school-bus-management-secret-key-2025',
+  name: 'schoolbus.sid',
+  resave: true,
+  saveUninitialized: true,
+  rolling: true,
   cookie: {
-    secure: false, // Disable secure cookies for mobile compatibility
-    httpOnly: false, // Allow JavaScript access for mobile Safari
+    secure: false, // Must be false for HTTP and mixed environments
+    httpOnly: false, // Allow JavaScript access for token fallback
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax', // Changed back to 'lax' for mobile Safari compatibility
-    domain: undefined // Don't set domain to allow all subdomains
-  }
+    sameSite: 'none', // Required for cross-origin deployment environments
+    domain: undefined // Let browser decide the domain
+  },
+  proxy: true // Trust proxy for deployment environments
 }));
 
 app.use(express.json());
