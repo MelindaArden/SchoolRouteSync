@@ -58,10 +58,16 @@ export default function AdminMap() {
   const [selectedRoute, setSelectedRoute] = useState<number | null>(null);
   const [viewFilter, setViewFilter] = useState<'all' | 'active' | 'completed'>('all');
 
-  const { data: routeMapsRaw = [], isLoading: loadingMaps } = useQuery({
+  const { data: routeMapsRaw = [], isLoading: loadingMaps, error: mapsError } = useQuery({
     queryKey: ['/api/route-maps'],
     refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
+
+  // Debug logging
+  console.log('Admin Map - Raw data:', routeMapsRaw);
+  console.log('Admin Map - Loading:', loadingMaps);
+  console.log('Admin Map - Error:', mapsError);
+  console.log('Admin Map - Route maps length:', routeMaps?.length);
 
   // Transform snake_case API response to camelCase for frontend
   const routeMaps = routeMapsRaw.map((map: any) => ({
@@ -117,30 +123,39 @@ export default function AdminMap() {
 
   // Group maps by date for historical organization
   const groupedMaps = filteredMaps.reduce((groups: any, map: RouteMap) => {
-    const date = new Date(map.sessionDate);
-    let groupKey = '';
-    
-    if (isToday(date)) {
-      groupKey = 'Today';
-    } else if (isYesterday(date)) {
-      groupKey = 'Yesterday';
-    } else if (isThisWeek(date)) {
-      groupKey = 'This Week';
-    } else {
-      const daysAgo = differenceInDays(new Date(), date);
-      if (daysAgo <= 7) {
+    try {
+      const date = new Date(map.sessionDate || map.startTime);
+      let groupKey = '';
+      
+      if (isToday(date)) {
+        groupKey = 'Today';
+      } else if (isYesterday(date)) {
+        groupKey = 'Yesterday';
+      } else if (isThisWeek(date)) {
         groupKey = 'This Week';
-      } else if (daysAgo <= 30) {
-        groupKey = `${Math.ceil(daysAgo / 7)} weeks ago`;
       } else {
-        groupKey = 'Older';
+        const daysAgo = differenceInDays(new Date(), date);
+        if (daysAgo <= 7) {
+          groupKey = 'This Week';
+        } else if (daysAgo <= 30) {
+          groupKey = `${Math.ceil(daysAgo / 7)} weeks ago`;
+        } else {
+          groupKey = 'Older';
+        }
       }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(map);
+    } catch (error) {
+      console.error('Error processing route map date:', error, map);
+      // Put in "Older" category as fallback
+      if (!groups['Older']) {
+        groups['Older'] = [];
+      }
+      groups['Older'].push(map);
     }
-    
-    if (!groups[groupKey]) {
-      groups[groupKey] = [];
-    }
-    groups[groupKey].push(map);
     return groups;
   }, {});
 
@@ -152,11 +167,21 @@ export default function AdminMap() {
   };
 
   const formatTime = (timestamp: string) => {
-    return format(new Date(timestamp), 'h:mm a');
+    try {
+      return format(new Date(timestamp), 'h:mm a');
+    } catch (error) {
+      console.error('Error formatting time:', error, timestamp);
+      return 'Invalid time';
+    }
   };
 
   const formatDate = (timestamp: string) => {
-    return format(new Date(timestamp), 'MMM d, yyyy');
+    try {
+      return format(new Date(timestamp), 'MMM d, yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', error, timestamp);
+      return 'Invalid date';
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -176,6 +201,19 @@ export default function AdminMap() {
       default: return 'Unknown';
     }
   };
+
+  // Add error handling for the entire component
+  if (mapsError) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="text-center py-12">
+          <div className="text-red-500 text-lg mb-4">Error Loading Route Maps</div>
+          <p className="text-gray-600 mb-4">There was an error loading the route tracking data.</p>
+          <pre className="text-sm bg-gray-100 p-4 rounded text-left">{JSON.stringify(mapsError, null, 2)}</pre>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
