@@ -216,13 +216,13 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
                 Absent
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
                 <Button
                   size="sm"
                   variant={isPickedUp ? "default" : "outline"}
                   onClick={() => handleTogglePickup(student)}
                   disabled={!isActive}
-                  className={`text-xs px-2 py-1 ${
+                  className={`text-xs px-3 py-2 w-full sm:w-auto ${
                     isPickedUp
                       ? "bg-green-600 text-white hover:bg-green-700"
                       : "border-green-600 text-green-600 hover:bg-green-50"
@@ -242,7 +242,7 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
                   variant={isNotPresent ? "default" : "outline"}
                   onClick={() => handleMarkNotPresent(student)}
                   disabled={!isActive}
-                  className={`text-xs px-2 py-1 ${
+                  className={`text-xs px-3 py-2 w-full sm:w-auto ${
                     isNotPresent
                       ? "bg-red-600 text-white hover:bg-red-700"
                       : "border-red-600 text-red-600 hover:bg-red-50"

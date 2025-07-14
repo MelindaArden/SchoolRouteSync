@@ -339,8 +339,8 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
           <div className="p-2 sm:p-4 space-y-4">
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
+                  <div className="flex-1">
                     <h3 className="text-lg font-semibold">{currentRoute.name}</h3>
                     <div className="flex items-center space-x-4 mt-1">
                       <div className="flex items-center space-x-1 text-sm text-gray-600">
@@ -354,11 +354,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                     </div>
                   </div>
                   {!hasActiveSession ? (
-                    <Button onClick={handleStartRoute} className="bg-green-600 hover:bg-green-700">
+                    <Button onClick={handleStartRoute} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
                       Start Route
                     </Button>
                   ) : (
-                    <Button onClick={handleCompleteRoute} variant="outline">
+                    <Button onClick={handleCompleteRoute} variant="outline" className="w-full sm:w-auto">
                       Complete Route
                     </Button>
                   )}
@@ -368,25 +368,25 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                   <div className="space-y-3">
                     {currentRoute.schools.map((schoolData: any, index: number) => (
                       <div key={schoolData.id} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
                           <div className="flex items-center space-x-3">
                             <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full text-sm font-medium">
                               {index + 1}
                             </div>
-                            <div>
+                            <div className="flex-1">
                               <h4 className="font-medium">{schoolData.school?.name}</h4>
                               <div className="flex items-center space-x-1 text-sm text-gray-600">
                                 <MapPin className="h-3 w-3" />
-                                <span>{schoolData.school?.address}</span>
+                                <span className="truncate">{schoolData.school?.address}</span>
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="flex flex-col sm:text-right space-y-1">
                             <div className="flex items-center space-x-1 text-sm text-gray-600">
                               <Clock className="h-3 w-3" />
                               <span>Dismissal: {schoolData.school?.dismissalTime}</span>
                             </div>
-                            <div className="flex items-center space-x-1 text-sm text-gray-600 mt-1">
+                            <div className="flex items-center space-x-1 text-sm text-gray-600">
                               <Users className="h-3 w-3" />
                               <span>{schoolData.students?.length || 0} students</span>
                             </div>
@@ -445,11 +445,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-gray-50 rounded">
+                      <div className="text-center p-4 bg-gray-50 rounded">
                         <div className="text-2xl font-bold text-gray-800">{sessionPickupStats.total || 0}</div>
                         <div className="text-sm text-gray-600">Total Students</div>
                       </div>
-                      <div className="text-center p-3 bg-gray-50 rounded">
+                      <div className="text-center p-4 bg-gray-50 rounded">
                         <div className="text-2xl font-bold text-green-600">{sessionPickupStats.pickedUp}</div>
                         <div className="text-sm text-gray-600">Picked Up</div>
                       </div>

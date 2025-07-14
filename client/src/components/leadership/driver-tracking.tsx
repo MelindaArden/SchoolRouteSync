@@ -176,8 +176,8 @@ export default function DriverTracking() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">GPS Driver Tracking</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+        <h3 className="text-base sm:text-lg font-semibold">GPS Driver Tracking</h3>
         <div className="flex space-x-2">
           <Button 
             variant="outline" 
@@ -187,6 +187,7 @@ export default function DriverTracking() {
               refetchLocations();
               refetchGpsHistory();
             }}
+            className="w-full sm:w-auto"
           >
             <Navigation className="h-4 w-4 mr-2" />
             Refresh
@@ -196,7 +197,7 @@ export default function DriverTracking() {
 
       {/* Active Drivers Section - Only In-Progress Routes */}
       <div>
-        <h4 className="text-md font-medium mb-3 flex items-center">
+        <h4 className="text-sm sm:text-md font-medium mb-3 flex items-center">
           <Users className="h-4 w-4 mr-2 text-blue-600" />
           Active Drivers ({inProgressSessions.length})
         </h4>
@@ -210,7 +211,7 @@ export default function DriverTracking() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
             {inProgressSessions.map((session: ActiveSession) => {
             const location = getDriverLocation(session.driverId);
             const nextSchool = getNextSchool(session);

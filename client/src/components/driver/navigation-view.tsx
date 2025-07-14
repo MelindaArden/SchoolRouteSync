@@ -222,12 +222,12 @@ export default function NavigationView({ route, currentLocation, activeSession, 
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
               <div className="flex-1">
                 <h3 className="font-semibold text-lg">{nextSchool.school.school?.name}</h3>
                 <p className="text-sm text-gray-600 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  {nextSchool.school.school?.address}
+                  <span className="truncate">{nextSchool.school.school?.address}</span>
                 </p>
                 <div className="flex items-center gap-4 mt-2">
                   <Badge variant="outline" className="text-xs">
@@ -241,7 +241,7 @@ export default function NavigationView({ route, currentLocation, activeSession, 
               </div>
               <Button 
                 onClick={() => openInMaps(nextSchool.school.school)}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
                 size="sm"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
@@ -251,7 +251,7 @@ export default function NavigationView({ route, currentLocation, activeSession, 
 
             {currentLocation && nextSchool.school.school?.latitude && (
               <div className="bg-blue-50 rounded-lg p-3">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm space-y-2 sm:space-y-0">
                   <div className="flex items-center gap-2">
                     <Compass className="h-4 w-4 text-blue-600" />
                     <span className="font-medium">

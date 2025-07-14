@@ -246,7 +246,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             {/* Date Filter */}
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                   <h3 className="text-lg font-semibold">Dashboard Overview</h3>
                   <div className="flex items-center space-x-2">
                     <label className="text-sm text-gray-600">Date:</label>
@@ -262,13 +262,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             </Card>
 
             {/* Dashboard Overview */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">Active Routes</p>
-                      <p className="text-2xl font-bold text-primary">{activeRoutes}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-primary">{activeRoutes}</p>
                     </div>
                     <RouteIcon className="h-8 w-8 text-primary" />
                   </div>
@@ -280,7 +280,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">On Time %</p>
-                      <p className="text-2xl font-bold text-green-600">{onTimePercentage}%</p>
+                      <p className="text-xl sm:text-2xl font-bold text-green-600">{onTimePercentage}%</p>
                     </div>
                     <Clock className="h-8 w-8 text-green-600" />
                   </div>
@@ -313,7 +313,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">Pickups</p>
-                      <p className="text-2xl font-bold text-gray-800">{completedPickups}/{totalStudents}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-gray-800">{completedPickups}/{totalStudents}</p>
                     </div>
                     <Users className="h-8 w-8 text-gray-600" />
                   </div>
@@ -325,7 +325,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">Alerts</p>
-                      <p className="text-2xl font-bold text-red-600">{activeAlerts}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-red-600">{activeAlerts}</p>
                     </div>
                     <AlertTriangle className="h-8 w-8 text-red-600" />
                   </div>
@@ -337,7 +337,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
             {/* Route Status Overview */}
             <div>
-              <h3 className="text-lg font-medium text-gray-800 mb-3">Active Route Status</h3>
+              <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-3">Active Route Status</h3>
               <div className="space-y-3">
                 {sessionsData
                   .filter((session: any) => session.status === "in_progress")
