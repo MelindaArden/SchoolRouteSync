@@ -175,6 +175,7 @@ function Router() {
         <>
           <Route path="/" component={() => <MasterDashboard masterAdmin={masterAdmin} onLogout={handleMasterLogout} />} />
           <Route path="/master" component={() => <MasterDashboard masterAdmin={masterAdmin} onLogout={handleMasterLogout} />} />
+          <Route path="/master-dashboard" component={() => <MasterDashboard masterAdmin={masterAdmin} onLogout={handleMasterLogout} />} />
         </>
       ) : user ? (
         <>

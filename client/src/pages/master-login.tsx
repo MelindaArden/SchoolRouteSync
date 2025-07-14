@@ -87,8 +87,8 @@ export default function MasterLogin({ onLogin }: MasterLoginProps) {
           <div className="mt-4 p-3 bg-purple-50 rounded-lg text-sm">
             <p className="font-medium text-purple-800 mb-2">Master Admin Access:</p>
             <p className="text-purple-700">
-              <strong>Username:</strong> master<br/>
-              <strong>Password:</strong> MasterAdmin2025!
+              <strong>Username:</strong> master-admin<br/>
+              <strong>Password:</strong> MasterPass2024!
             </p>
           </div>
         </CardHeader>
