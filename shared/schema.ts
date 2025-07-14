@@ -3,6 +3,19 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Master Admin table for platform management
+export const masterAdmins = pgTable("master_admins", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  email: text("email").notNull().unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  role: text("role").notNull().default("master_admin"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Business/Company table for multi-tenancy
 export const businesses = pgTable("businesses", {
   id: serial("id").primaryKey(),
@@ -12,6 +25,60 @@ export const businesses = pgTable("businesses", {
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
   isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Business subscriptions and billing
+export const businessSubscriptions = pgTable("business_subscriptions", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
+  planType: text("plan_type").notNull().default("basic"), // basic, pro, enterprise
+  monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull().default("99.00"),
+  status: text("status").notNull().default("active"), // active, suspended, cancelled
+  trialEndDate: timestamp("trial_end_date"),
+  billingCycleDay: integer("billing_cycle_day").notNull().default(1),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// App analytics and usage tracking
+export const appAnalytics = pgTable("app_analytics", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
+  date: timestamp("date").notNull().defaultNow(),
+  activeUsers: integer("active_users").notNull().default(0),
+  routesCompleted: integer("routes_completed").notNull().default(0),
+  studentsTransported: integer("students_transported").notNull().default(0),
+  totalDistanceMiles: decimal("total_distance_miles", { precision: 10, scale: 2 }).notNull().default("0"),
+  totalRuntimeMinutes: integer("total_runtime_minutes").notNull().default(0),
+  errorCount: integer("error_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// User feedback system
+export const userFeedback = pgTable("user_feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
+  feedbackType: text("feedback_type").notNull().default("general"), // bug, feature, general, complaint
+  subject: text("subject"),
+  message: text("message").notNull(),
+  rating: integer("rating"), // 1-5 star rating
+  status: text("status").notNull().default("pending"), // pending, reviewed, resolved
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+// System error tracking
+export const systemErrors = pgTable("system_errors", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").references(() => businesses.id),
+  userId: integer("user_id"),
+  errorType: text("error_type"),
+  errorMessage: text("error_message"),
+  stackTrace: text("stack_trace"),
+  url: text("url"),
+  userAgent: text("user_agent"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
