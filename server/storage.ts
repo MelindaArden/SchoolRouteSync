@@ -1,8 +1,8 @@
 import {
-  users, schools, routes, routeSchools, students, routeAssignments,
+  businesses, users, schools, routes, routeSchools, students, routeAssignments,
   pickupSessions, studentPickups, notifications, driverLocations, issues, pickupHistory, missedSchoolAlerts, studentAbsences,
   gpsRouteTracks, gpsRouteHistory,
-  type User, type InsertUser, type School, type InsertSchool,
+  type Business, type InsertBusiness, type User, type InsertUser, type School, type InsertSchool,
   type Route, type InsertRoute, type RouteSchool, type InsertRouteSchool,
   type Student, type InsertStudent, type RouteAssignment, type InsertRouteAssignment,
   type PickupSession, type InsertPickupSession, type StudentPickup, type InsertStudentPickup,
@@ -20,8 +20,10 @@ export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByUsernameAndBusiness(username: string, businessName: string): Promise<User | undefined>;
   getUsers(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
+  getUsersByBusiness(businessId: number): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
   
@@ -133,6 +135,22 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user || undefined;
+  }
+
+  async getUserByUsernameAndBusiness(username: string, businessName: string): Promise<User | undefined> {
+    const [result] = await db
+      .select()
+      .from(users)
+      .innerJoin(businesses, eq(users.businessId, businesses.id))
+      .where(and(
+        eq(users.username, username),
+        eq(businesses.name, businessName)
+      ));
+    return result?.users;
+  }
+
+  async getUsersByBusiness(businessId: number): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.businessId, businessId));
   }
 
   async getUsers(): Promise<User[]> {

@@ -25,6 +25,7 @@ import { geocodeAddress, validateCoordinates } from "./geocoding-service";
 const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
+  businessName: z.string().min(1),
 });
 
 const updatePickupSchema = z.object({
@@ -101,11 +102,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         replitDomain: process.env.REPLIT_DOMAIN
       });
       
-      const { username, password } = loginSchema.parse(req.body);
+      const { username, password, businessName } = loginSchema.parse(req.body);
       
       // Check database connection first
       try {
-        const user = await storage.getUserByUsername(username);
+        const user = await storage.getUserByUsernameAndBusiness(username, businessName);
         console.log(`User lookup for "${username}":`, {
           userFound: !!user,
           hasPassword: user ? !!user.password : false,
@@ -408,9 +409,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId: req.sessionID
       });
       
-      const { username, password } = loginSchema.parse(req.body);
+      const { username, password, businessName } = loginSchema.parse(req.body);
       
-      const user = await storage.getUserByUsername(username);
+      const user = await storage.getUserByUsernameAndBusiness(username, businessName);
       if (!user || user.password !== password) {
         console.log(`Mobile login failed for ${username}:`, {
           userFound: !!user,
@@ -2484,6 +2485,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(enrichedHistory);
     } catch (error) {
       res.status(500).json({ message: "Failed to get GPS route history" });
+    }
+  });
+
+  // Enhanced Route Maps API for Admin Dashboard with Comprehensive Tracking
+  app.get("/api/route-maps", async (req, res) => {
+    try {
+      const routeMaps = await pool.query(`
+        SELECT 
+          rm.*,
+          r.name as route_name,
+          u.first_name, u.last_name,
+          jsonb_array_length(rm.route_path) as path_points_count,
+          jsonb_array_length(rm.school_stops) as stops_count
+        FROM route_maps rm
+        JOIN routes r ON rm.route_id = r.id  
+        JOIN users u ON rm.driver_id = u.id
+        ORDER BY rm.created_at DESC
+        LIMIT 50
+      `);
+      
+      res.json(routeMaps.rows || []);
+    } catch (error) {
+      console.error("Error fetching route maps:", error);
+      res.status(500).json({ message: "Failed to fetch route maps" });
+    }
+  });
+
+  app.get("/api/route-maps/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const routeMap = await pool.query(`
+        SELECT 
+          rm.*,
+          r.name as route_name,
+          u.first_name, u.last_name,
+          ps.start_time, ps.end_time as session_end_time
+        FROM route_maps rm
+        JOIN routes r ON rm.route_id = r.id  
+        JOIN users u ON rm.driver_id = u.id
+        JOIN pickup_sessions ps ON rm.session_id = ps.id
+        WHERE rm.session_id = $1
+      `, [sessionId]);
+      
+      if (!routeMap.rows[0]) {
+        return res.status(404).json({ message: "Route map not found" });
+      }
+      
+      res.json(routeMap.rows[0]);
+    } catch (error) {
+      console.error("Error fetching route map:", error);
+      res.status(500).json({ message: "Failed to fetch route map" });
+    }
+  });
+
+  app.get("/api/route-stops/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const routeStops = await pool.query(`
+        SELECT 
+          rs.*,
+          s.name as school_name,
+          s.address as school_address
+        FROM route_stops rs
+        JOIN schools s ON rs.school_id = s.id
+        WHERE rs.session_id = $1
+        ORDER BY rs.arrival_time
+      `, [sessionId]);
+      
+      res.json(routeStops.rows || []);
+    } catch (error) {
+      console.error("Error fetching route stops:", error);
+      res.status(500).json({ message: "Failed to fetch route stops" });
+    }
+  });
+
+  app.post("/api/route-stops", async (req, res) => {
+    try {
+      const { sessionId, schoolId, latitude, longitude, studentsPickedUp, totalStudents, notes } = req.body;
+      
+      const result = await pool.query(`
+        INSERT INTO route_stops (session_id, school_id, arrival_time, latitude, longitude, students_picked_up, total_students, notes)
+        VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [sessionId, schoolId, latitude, longitude, studentsPickedUp || 0, totalStudents || 0, notes]);
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error("Error creating route stop:", error);
+      res.status(500).json({ message: "Failed to create route stop" });
     }
   });
 

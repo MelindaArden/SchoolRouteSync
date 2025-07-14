@@ -3,8 +3,21 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Business/Company table for multi-tenancy
+export const businesses = pgTable("businesses", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  address: text("address"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("driver"), // driver, leadership
@@ -20,6 +33,7 @@ export const users = pgTable("users", {
 
 export const schools = pgTable("schools", {
   id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
   name: text("name").notNull(),
   address: text("address").notNull(),
   latitude: decimal("latitude", { precision: 10, scale: 8 }),
@@ -31,6 +45,7 @@ export const schools = pgTable("schools", {
 
 export const routes = pgTable("routes", {
   id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
   name: text("name").notNull(),
   driverId: integer("driver_id").references(() => users.id),
   isActive: boolean("is_active").notNull().default(true),
@@ -48,6 +63,7 @@ export const routeSchools = pgTable("route_schools", {
 
 export const students = pgTable("students", {
   id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   grade: text("grade").notNull(),
@@ -205,8 +221,50 @@ export const studentAbsences = pgTable("student_absences", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
+// Enhanced route tracking for admins - detailed stops with timestamps
+export const routeStops = pgTable("route_stops", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => pickupSessions.id),
+  schoolId: integer("school_id").notNull().references(() => schools.id),
+  arrivalTime: timestamp("arrival_time").notNull(),
+  departureTime: timestamp("departure_time"),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  studentsPickedUp: integer("students_picked_up").notNull().default(0),
+  totalStudents: integer("total_students").notNull().default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Complete route tracking with map data for admin view
+export const routeMaps = pgTable("route_maps", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => pickupSessions.id),
+  routeId: integer("route_id").notNull().references(() => routes.id),
+  driverId: integer("driver_id").notNull().references(() => users.id),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  totalDurationMinutes: integer("total_duration_minutes"),
+  totalDistanceMiles: decimal("total_distance_miles", { precision: 8, scale: 2 }),
+  routePath: jsonb("route_path").notNull(), // Array of {lat, lng, timestamp} points
+  schoolStops: jsonb("school_stops").notNull(), // Array of stop details with timestamps
+  completionStatus: text("completion_status").notNull().default("in_progress"), // in_progress, completed, abandoned
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Relations for proper joins
+export const businessesRelations = relations(businesses, ({ many }) => ({
+  users: many(users),
+  schools: many(schools),
+  routes: many(routes),
+  students: many(students),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  business: one(businesses, {
+    fields: [users.businessId],
+    references: [businesses.id],
+  }),
   routes: many(routes),
   pickupSessions: many(pickupSessions),
   notifications: many(notifications),

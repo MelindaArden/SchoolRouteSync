@@ -15,16 +15,17 @@ interface LoginProps {
 export default function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username || !password) {
+    if (!username || !password || !businessName) {
       toast({
         title: "Error",
-        description: "Please enter both username and password",
+        description: "Please enter username, password, and business name",
         variant: "destructive",
       });
       return;
@@ -60,7 +61,7 @@ export default function Login({ onLogin }: LoginProps) {
           "Content-Type": "application/json",
         },
         credentials: "include", // Critical for mobile Safari sessions
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, businessName }),
       });
 
       if (!response.ok) {
@@ -73,7 +74,7 @@ export default function Login({ onLogin }: LoginProps) {
               "Content-Type": "application/json",
             },
             credentials: "include",
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ username, password, businessName }),
           });
           
           if (!fallbackResponse.ok) {
@@ -215,6 +216,21 @@ export default function Login({ onLogin }: LoginProps) {
                 disabled={loading}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="businessName" className="text-base font-medium">Business Name</Label>
+              <Input
+                id="businessName"
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="Enter your business name"
+                className="h-12 text-lg px-4 border-2 border-gray-300 focus:border-primary"
+                autoComplete="organization"
+                autoCapitalize="words"
+                disabled={loading}
+              />
+              <p className="text-sm text-gray-500">Enter the exact business name used during setup</p>
+            </div>
             <Button
               type="submit"
               className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
@@ -230,36 +246,7 @@ export default function Login({ onLogin }: LoginProps) {
               )}
             </Button>
             
-            {/* Mobile testing credentials */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm font-medium text-blue-900 mb-2">Test Credentials:</p>
-              <div className="space-y-2 text-sm">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setUsername("ma1313");
-                    setPassword("Dietdew13!");
-                  }}
-                  className="block w-full text-left p-3 bg-white rounded-lg border hover:bg-gray-50 touch-manipulation"
-                  disabled={loading}
-                >
-                  <div className="font-medium text-blue-800">Driver Account</div>
-                  <div className="text-blue-600">ma1313 / Dietdew13!</div>
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setUsername("ChadW");
-                    setPassword("Password123");
-                  }}
-                  className="block w-full text-left p-3 bg-white rounded-lg border hover:bg-gray-50 touch-manipulation"
-                  disabled={loading}
-                >
-                  <div className="font-medium text-blue-800">Admin Account</div>
-                  <div className="text-blue-600">ChadW / Password123</div>
-                </button>
-              </div>
-            </div>
+
           </form>
         </CardContent>
       </Card>

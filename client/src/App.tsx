@@ -8,6 +8,7 @@ import { User } from "./lib/types";
 import Login from "@/pages/login";
 import DriverDashboard from "@/pages/driver-dashboard";
 import LeadershipDashboard from "@/pages/leadership-dashboard";
+import AdminMap from "@/pages/admin-map";
 import RouteSummary from "@/pages/route-summary";
 import MobileDebug from "@/pages/mobile-debug";
 import DebugAuth from "@/pages/debug-auth";
@@ -152,6 +153,9 @@ function Router() {
       </Route>
       <Route path="/leadership">
         <LeadershipDashboard user={user} onLogout={handleLogout} />
+      </Route>
+      <Route path="/admin-map">
+        <AdminMap />
       </Route>
       <Route path="/route-summary/:sessionId">
         {(params) => (

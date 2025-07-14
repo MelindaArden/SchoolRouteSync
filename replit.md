@@ -112,6 +112,21 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 14, 2025 - Complete Admin Map View with Route Tracking, Timestamps & Comprehensive History
+- Implemented comprehensive admin map view with detailed route tracking, timestamps, stops, and total route times as requested
+- Created new admin map page (admin-map.tsx) displaying driver routes with complete GPS path data and school stop information
+- Added route tracking API endpoints (/api/route-maps, /api/route-stops) for comprehensive GPS monitoring and history retrieval
+- Enhanced route visualization showing driver names, route duration, distance traveled, and completion status
+- Built detailed school stops timeline with arrival times, student pickup counts, GPS coordinates, and stop duration
+- Added route path data visualization displaying GPS tracking points with timestamps and coordinate history
+- Integrated admin map navigation into leadership dashboard with new "Map" tab for easy access to route tracking
+- Route maps show comprehensive data including start/end times, total duration, distance, driver information, and completion status
+- School stops display detailed information: arrival times, students picked up vs total, GPS coordinates, and duration at each stop
+- Route path visualization shows GPS tracking points with precise timestamps and coordinates for complete route analysis
+- Enhanced filtering system allowing admins to view all routes, active routes only, or completed routes with real-time updates
+- Map view provides complete route history with 30-second refresh intervals for live tracking of active routes
+- Admin map accessible via new "Map" tab in leadership dashboard providing comprehensive route oversight capabilities
+
 ### July 14, 2025 - Expo Mobile App Creation & Dual Platform Admin Support
 - Created comprehensive Expo React Native mobile app connecting to existing Express.js backend
 - Implemented both driver and admin interfaces ensuring full functionality on mobile and web platforms
