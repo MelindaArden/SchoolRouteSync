@@ -265,19 +265,19 @@ export default function AdminMap() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Route Tracking Map</h1>
-          <p className="text-gray-600">Comprehensive driver route tracking with timestamps and stops</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Route Maps</h1>
+          <p className="text-gray-600">Real-time driver tracking and route history</p>
           <div className="text-xs text-gray-400 mt-1">
-            Showing {routeMaps.length} routes | Refreshing every 10 seconds
+            Showing {routeMaps.length} routes | Updates every 10 seconds
           </div>
         </div>
         
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
           <Select value={viewFilter} onValueChange={(value: any) => setViewFilter(value)}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -287,16 +287,125 @@ export default function AdminMap() {
             </SelectContent>
           </Select>
           
-          <Badge variant="outline" className="px-3 py-1">
+          <Badge variant="outline" className="px-3 py-1 w-fit">
             <Timer className="w-4 h-4 mr-1" />
             {filteredMaps.length} Routes
           </Badge>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Mobile-First Route Display */}
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Route className="w-5 h-5" />
+              Available Routes ({filteredMaps.length})
+              <Badge variant="outline" className="ml-2">
+                <Activity className="w-3 h-3 mr-1" />
+                Real-time Data
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingMaps ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading route data...</p>
+              </div>
+            ) : filteredMaps.length === 0 ? (
+              <div className="text-center py-8">
+                <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No routes found</p>
+                <p className="text-sm text-gray-400">Routes will appear here when drivers start pickup sessions</p>
+                <div className="text-xs text-gray-400 mt-4 p-2 bg-gray-50 rounded">
+                  Debug: Raw data count: {routeMapsRaw.length}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredMaps.map((route: RouteMap) => (
+                  <div
+                    key={route.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      selectedRoute === route.sessionId
+                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    }`}
+                    onClick={() => setSelectedRoute(route.sessionId)}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-600" />
+                        <span className="font-medium">{route.firstName} {route.lastName}</span>
+                        {route.sessionStatus === 'in_progress' && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+                            Live
+                          </Badge>
+                        )}
+                      </div>
+                      <Badge 
+                        variant={route.sessionStatus === 'completed' ? 'default' : 'secondary'}
+                        className={getStatusColor(route.sessionStatus)}
+                      >
+                        {getStatusText(route.sessionStatus)}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{route.routeName}</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm text-gray-500">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        <span>Started: {formatTime(route.startTime)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Timer className="w-4 h-4" />
+                        <span>Duration: {formatDuration(route.totalDurationMinutes)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>{route.pathPointsCount} GPS points</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <School className="w-4 h-4" />
+                        <span>{route.stopsCount} school stops</span>
+                      </div>
+                    </div>
+                    
+                    {/* Real-time location indicator */}
+                    {route.currentLatitude && route.currentLongitude && (
+                      <div className="mt-3 p-3 bg-green-50 rounded-md">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Target className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-700">Live GPS Location</span>
+                        </div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div>Lat: {typeof route.currentLatitude === 'number' ? route.currentLatitude.toFixed(6) : Number(route.currentLatitude || 0).toFixed(6)}</div>
+                          <div>Lng: {typeof route.currentLongitude === 'number' ? route.currentLongitude.toFixed(6) : Number(route.currentLongitude || 0).toFixed(6)}</div>
+                          {route.lastLocationUpdate && (
+                            <div className="text-gray-500">
+                              Updated: {formatTime(route.lastLocationUpdate)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="mt-3 text-xs text-blue-600">
+                      {selectedRoute === route.sessionId ? 'Tap to collapse details' : 'Tap to view detailed tracking info'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden lg:grid lg:grid-cols-3 gap-6">
         {/* Route List */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="col-span-1 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -309,12 +418,7 @@ export default function AdminMap() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {loadingMaps ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-500">Loading route data...</p>
-                </div>
-              ) : filteredMaps.length === 0 ? (
+              {filteredMaps.length === 0 ? (
                 <div className="text-center py-8">
                   <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">No routes found</p>
@@ -405,7 +509,7 @@ export default function AdminMap() {
         </div>
 
         {/* Real-time Active Drivers Summary */}
-        <div className="lg:col-span-2">
+        <div className="col-span-1 lg:col-span-2">
           <Card className="mb-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
