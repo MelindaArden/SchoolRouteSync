@@ -112,6 +112,19 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 14, 2025 - Complete Admin Dashboard Enhancement with Date-Filtered Stats & Real-time Alert System
+- Implemented comprehensive date filtering for admin history stats with dynamic calculation based on selected date ranges
+- Enhanced pickup history component with stats positioning above active route sessions as requested
+- Added real-time alert count updates with 10-second refresh intervals for immediate issue visibility
+- Created comprehensive date range selection system with "Today" and "Last 7 Days" quick-select buttons
+- Enhanced route entries to display correct school and student counts with emoji indicators and detailed breakdowns
+- Implemented visual real-time alert indicators with pulsing animations and detailed breakdown showing missed schools, issues, and behind-schedule routes
+- Added date-filtered statistics that update automatically when date ranges are selected in admin dashboard
+- Created comprehensive mobile-first map testing guide with step-by-step verification instructions
+- Enhanced alert system with red styling, pulse indicators, and real-time status breakdown for immediate admin awareness
+- Fixed route card display to show accurate school counts (🏫) and student counts (👥) with proper data relationships
+- Stats section now positioned prominently above active route sessions with color-coded metrics for better admin oversight
+
 ### July 14, 2025 - GPS Section Removal & Enhanced Admin Map with Real-time 30-Day Historical Tracking
 - Removed GPS section from admin login/leadership dashboard as requested by user
 - Updated admin map tab to provide real-time driver tracking with 30-day historical data view

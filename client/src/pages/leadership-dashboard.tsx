@@ -58,6 +58,10 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
   const [absenceView, setAbsenceView] = useState<"management" | "export">("management");
   const [editingRoute, setEditingRoute] = useState<any>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState<{ start: string; end: string }>({
+    start: new Date().toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
   
   // FIX #5: WEEKLY PERFORMANCE WITH DRIVER BREAKDOWN
   const [selectedPerformanceDay, setSelectedPerformanceDay] = useState<any>(null);
@@ -165,21 +169,16 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     retry: false,
   });
 
-  // Fetch active issues for alerts
+  // Fetch active issues for alerts - REAL-TIME with 10-second refresh
   const { data: issues = [] } = useQuery({
     queryKey: ['/api/issues'],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time alerts
   });
 
-  // Fetch missed school alerts  
-  const { data: missedSchoolAlerts = [] } = useQuery({
-    queryKey: ['/api/missed-school-alerts'],
-  });
-
-  // Fetch missed school alerts for alert count
+  // Fetch missed school alerts for alert count - REAL-TIME with 10-second refresh
   const { data: missedAlerts = [] } = useQuery({
     queryKey: ['/api/missed-school-alerts'],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time alerts
   });
 
   // Fetch active driver locations for real-time data
@@ -244,19 +243,56 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
       <div className="pb-20">
         {activeTab === "dashboard" && (
           <div className="p-2 sm:p-4 space-y-6">
-            {/* Date Filter */}
+            {/* Enhanced Date Range Filter */}
             <Card>
               <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                   <h3 className="text-lg font-semibold">Dashboard Overview</h3>
-                  <div className="flex items-center space-x-2">
-                    <label className="text-sm text-gray-600">Date:</label>
-                    <input
-                      type="date"
-                      value={new Date().toISOString().split('T')[0]}
-                      className="border rounded px-2 py-1 text-sm"
-                      readOnly
-                    />
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm text-gray-600 font-medium">Date Range:</label>
+                      <input
+                        type="date"
+                        value={selectedDateRange.start}
+                        onChange={(e) => setSelectedDateRange(prev => ({ ...prev, start: e.target.value }))}
+                        className="border rounded px-2 py-1 text-sm"
+                      />
+                      <span className="text-sm text-gray-500">to</span>
+                      <input
+                        type="date"
+                        value={selectedDateRange.end}
+                        onChange={(e) => setSelectedDateRange(prev => ({ ...prev, end: e.target.value }))}
+                        className="border rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const today = new Date().toISOString().split('T')[0];
+                          setSelectedDateRange({ start: today, end: today });
+                        }}
+                        className="text-xs"
+                      >
+                        Today
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const today = new Date();
+                          const week = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                          setSelectedDateRange({ 
+                            start: week.toISOString().split('T')[0],
+                            end: today.toISOString().split('T')[0]
+                          });
+                        }}
+                        className="text-xs"
+                      >
+                        Last 7 Days
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -321,14 +357,22 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-red-200 bg-red-50">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Alerts</p>
-                      <p className="text-xl sm:text-2xl font-bold text-red-600">{activeAlerts}</p>
+                      <p className="text-sm text-red-600 font-medium">Active Alerts</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-xl sm:text-2xl font-bold text-red-600">{activeAlerts}</p>
+                        {activeAlerts > 0 && (
+                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        )}
+                      </div>
+                      <div className="text-xs text-red-500 mt-1">
+                        Real-time: {missedSchoolCount} missed + {recentIssuesCount} issues + {behindScheduleRoutes} behind
+                      </div>
                     </div>
-                    <AlertTriangle className="h-8 w-8 text-red-600" />
+                    <AlertTriangle className={`h-8 w-8 text-red-600 ${activeAlerts > 0 ? 'animate-bounce' : ''}`} />
                   </div>
                 </CardContent>
               </Card>

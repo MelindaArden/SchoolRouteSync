@@ -391,10 +391,14 @@ export default function PickupHistory() {
     );
   }
 
-  // Calculate summary statistics
-  const totalCompletedRoutes = history.length;
-  const totalStudentsPickedUp = history.reduce((sum: number, record: any) => sum + record.studentsPickedUp, 0);
-  const totalStudentsAssigned = history.reduce((sum: number, record: any) => sum + record.totalStudents, 0);
+  // Calculate summary statistics based on filtered data (date-filtered)
+  const filteredForStats = selectedDate ? 
+    history.filter((record: any) => new Date(record.date).toISOString().split('T')[0] === selectedDate) :
+    history;
+  
+  const totalCompletedRoutes = filteredForStats.length;
+  const totalStudentsPickedUp = filteredForStats.reduce((sum: number, record: any) => sum + record.studentsPickedUp, 0);
+  const totalStudentsAssigned = filteredForStats.reduce((sum: number, record: any) => sum + record.totalStudents, 0);
   const averageCompletionRate = totalStudentsAssigned > 0 ? Math.round((totalStudentsPickedUp / totalStudentsAssigned) * 100) : 0;
   
   // Get recent activity (last 7 days)
@@ -482,18 +486,40 @@ export default function PickupHistory() {
                 <p className="text-xs text-gray-500">
                   Completed: {formatTime(record.completedAt)}
                 </p>
-                {/* Show school and student info */}
-                {record.pickupDetails && record.pickupDetails.length > 0 && (
-                  <div className="mt-1">
-                    <p className="text-xs text-gray-400">
-                      Schools: {[...new Set(record.pickupDetails.map((p: any) => p.schoolName).filter(Boolean))].join(', ')}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Students: {record.pickupDetails.map((p: any) => p.studentName).filter(Boolean).slice(0, 3).join(', ')}
-                      {record.pickupDetails.length > 3 ? '...' : ''}
-                    </p>
-                  </div>
-                )}
+                {/* Show school and student info with enhanced details */}
+                <div className="mt-2 space-y-1">
+                  {(() => {
+                    // Calculate schools and students for this route
+                    let pickupDetails = [];
+                    try {
+                      pickupDetails = Array.isArray(record.pickupDetails) 
+                        ? record.pickupDetails 
+                        : record.pickupDetails ? JSON.parse(record.pickupDetails) : [];
+                    } catch (e) {
+                      pickupDetails = [];
+                    }
+                    
+                    const schoolsInRoute = [...new Set(pickupDetails.map((p: any) => {
+                      const student = students.find((s: any) => s.id === p.studentId);
+                      const school = schools.find((s: any) => s.id === student?.schoolId);
+                      return school?.name;
+                    }).filter(Boolean))];
+                    
+                    const studentCount = pickupDetails.length;
+                    const schoolCount = schoolsInRoute.length;
+                    
+                    return (
+                      <>
+                        <p className="text-xs text-blue-600 font-medium">
+                          🏫 {schoolCount} {schoolCount === 1 ? 'School' : 'Schools'}: {schoolsInRoute.slice(0, 2).join(', ')}{schoolCount > 2 ? '...' : ''}
+                        </p>
+                        <p className="text-xs text-green-600 font-medium">
+                          👥 {studentCount} {studentCount === 1 ? 'Student' : 'Students'} on route
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           </div>
@@ -653,6 +679,45 @@ export default function PickupHistory() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Stats Section - Positioned above Active Route Sessions */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-primary">{totalCompletedRoutes}</div>
+            <div className="text-sm text-gray-600">
+              {selectedDate ? `Routes on ${new Date(selectedDate).toLocaleDateString()}` : 'Total Completed Routes'}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{totalStudentsPickedUp}</div>
+            <div className="text-sm text-gray-600">
+              {selectedDate ? 'Students Picked Up' : 'Total Students Picked Up'}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">{totalStudentsAssigned}</div>
+            <div className="text-sm text-gray-600">
+              {selectedDate ? 'Students Assigned' : 'Total Students Assigned'}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-purple-600">{averageCompletionRate}%</div>
+            <div className="text-sm text-gray-600">
+              {selectedDate ? 'Completion Rate' : 'Average Completion Rate'}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Active Sessions Management */}
       {activeSessions.length > 0 && (
