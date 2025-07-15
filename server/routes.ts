@@ -1827,13 +1827,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const history = await storage.getGpsRouteHistory();
       
-      // Filter for last 30 days and enrich with driver information
+      // Filter for last 30 days and enrich with driver information and actual student counts
       const enrichedHistory = await Promise.all(
         history
           .filter(route => new Date(route.createdAt) >= thirtyDaysAgo)
           .map(async (route) => {
             const driver = await storage.getUser(route.driverId);
-            return { ...route, driver };
+            
+            // Get actual student pickup data for this session
+            const studentPickups = await storage.getStudentPickups(route.sessionId);
+            const pickedUpCount = studentPickups.filter(p => p.status === 'picked_up').length;
+            const totalStudents = studentPickups.length;
+            
+            // Get actual school count for this route
+            const routeSchools = await storage.getRouteSchools(route.routeId);
+            const schoolsCount = routeSchools.length;
+            
+            return { 
+              ...route, 
+              driver,
+              // Override with accurate counts
+              totalStudentsPickedUp: pickedUpCount,
+              schoolsVisited: schoolsCount,
+              // Add total students for pickup detail display
+              totalStudentsOnRoute: totalStudents
+            };
           })
       );
       

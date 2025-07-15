@@ -113,7 +113,7 @@ export default function StudentPickupDropdown({ sessionId, isExpanded, onToggle 
           <User className="h-4 w-4" />
           <span>Student Pickup Details</span>
           <Badge variant="outline" className="text-xs">
-            {pickedUpCount}/{totalCount} picked up
+{pickedUpCount}/{totalCount} picked up
           </Badge>
         </div>
         {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

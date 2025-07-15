@@ -61,7 +61,7 @@ export default function Navigation({ user, onLogout, role }: NavigationProps) {
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center space-x-3">
           <Bus className="h-6 w-6" />
-          <h1 className="text-xl font-medium">SchoolRide</h1>
+          <h1 className="text-xl font-medium">Route Runner</h1>
         </div>
         
         <div className="flex items-center space-x-3">

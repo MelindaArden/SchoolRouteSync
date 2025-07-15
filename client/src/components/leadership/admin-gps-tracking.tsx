@@ -396,7 +396,7 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                                 </div>
                                 <div>
                                   <p className="text-gray-600">Students</p>
-                                  <p className="font-medium">{route.totalStudentsPickedUp}</p>
+                                  <p className="font-medium">{route.totalStudentsPickedUp}/{route.totalStudentsOnRoute || route.totalStudentsPickedUp}</p>
                                 </div>
                               </div>
                               
