@@ -3022,5 +3022,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GPS simulation endpoint for testing
+  app.post("/api/gps/simulate/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      // Import and use the GPS simulator
+      const { simulateGPSTracking } = await import('./gps-simulator');
+      const result = await simulateGPSTracking(sessionId);
+      
+      res.json({
+        message: "GPS tracking simulation completed",
+        gpsPoints: result.totalPoints,
+        schoolsVisited: result.schoolsVisited,
+        sessionId: sessionId
+      });
+    } catch (error) {
+      console.error('Error simulating GPS tracking:', error);
+      res.status(500).json({ message: "Failed to simulate GPS tracking" });
+    }
+  });
+
   return httpServer;
 }

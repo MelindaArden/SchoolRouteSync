@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWebSocket } from "@/hooks/use-websocket";
+import GpsRouteMap from "@/components/leadership/gps-route-map";
+import RouteMapDetail from "@/components/leadership/route-map-detail";
 import { 
   MapPin, 
   Navigation, 
@@ -210,6 +212,30 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              // Simulate GPS tracking for active sessions
+              const activeSessions = driverLocations.filter(loc => loc.session?.status === 'in_progress');
+              if (activeSessions.length > 0) {
+                for (const session of activeSessions) {
+                  try {
+                    await fetch(`/api/gps/simulate/${session.sessionId}`, { method: 'POST' });
+                  } catch (error) {
+                    console.error('GPS simulation error:', error);
+                  }
+                }
+                // Refresh data after simulation
+                refetchLocations();
+                refetchHistory();
+              }
+            }}
+            className="flex items-center gap-2"
+          >
+            <Activity className="h-4 w-4" />
+            Simulate GPS
+          </Button>
         </div>
       </div>
 
@@ -403,108 +429,15 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
         </TabsContent>
 
         <TabsContent value="detailed-view" className="space-y-4">
-          {selectedSession && (
+          {selectedSession ? (
+            <RouteMapDetail sessionId={selectedSession} />
+          ) : (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Route Details - Session #{selectedSession}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {sessionTracks.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No GPS tracking data available for this session</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Route Statistics */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <p className="text-sm text-blue-600">Total GPS Points</p>
-                        <p className="text-lg font-bold text-blue-800">{sessionTracks.length}</p>
-                      </div>
-                      <div className="bg-green-50 p-3 rounded-lg">
-                        <p className="text-sm text-green-600">School Arrivals</p>
-                        <p className="text-lg font-bold text-green-800">
-                          {sessionTracks.filter(t => t.eventType === 'school_arrival').length}
-                        </p>
-                      </div>
-                      <div className="bg-purple-50 p-3 rounded-lg">
-                        <p className="text-sm text-purple-600">Location Updates</p>
-                        <p className="text-lg font-bold text-purple-800">
-                          {sessionTracks.filter(t => t.eventType === 'location_update').length}
-                        </p>
-                      </div>
-                      <div className="bg-orange-50 p-3 rounded-lg">
-                        <p className="text-sm text-orange-600">Avg Accuracy</p>
-                        <p className="text-lg font-bold text-orange-800">
-                          {Math.round(sessionTracks.filter(t => t.accuracy).reduce((acc, t) => acc + (t.accuracy || 0), 0) / sessionTracks.filter(t => t.accuracy).length || 0)}m
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* GPS Tracking Timeline */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium">GPS Tracking Timeline</h4>
-                      <div className="max-h-96 overflow-y-auto space-y-2">
-                        {sessionTracks
-                          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-                          .map((track) => (
-                            <div key={track.id} className="border rounded-lg p-3 text-sm">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant={track.eventType === 'school_arrival' ? 'default' : 'outline'}>
-                                    {track.eventType.replace('_', ' ')}
-                                  </Badge>
-                                  {track.school && (
-                                    <span className="text-gray-600">at {track.school.name}</span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-gray-500">{formatTime(track.timestamp)}</span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openMapsLocation(track.latitude, track.longitude, `GPS Point ${track.id}`)}
-                                    className="text-xs"
-                                  >
-                                    <MapPin className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs">
-                                <div>
-                                  <span className="text-gray-600">Coordinates:</span>
-                                  <span className="font-mono ml-1">{parseFloat(track.latitude).toFixed(6)}, {parseFloat(track.longitude).toFixed(6)}</span>
-                                </div>
-                                {track.speed && (
-                                  <div>
-                                    <span className="text-gray-600">Speed:</span>
-                                    <span className="ml-1">{track.speed} km/h</span>
-                                  </div>
-                                )}
-                                {track.accuracy && (
-                                  <div>
-                                    <span className="text-gray-600">Accuracy:</span>
-                                    <span className="ml-1">{track.accuracy}m</span>
-                                  </div>
-                                )}
-                                {track.bearing && (
-                                  <div>
-                                    <span className="text-gray-600">Bearing:</span>
-                                    <span className="ml-1">{track.bearing}°</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+              <CardContent className="p-8">
+                <div className="text-center py-8 text-gray-500">
+                  <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Select a route from the history to view detailed GPS tracking with map visualization</p>
+                </div>
               </CardContent>
             </Card>
           )}
