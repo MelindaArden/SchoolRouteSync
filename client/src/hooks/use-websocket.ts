@@ -39,6 +39,21 @@ export function useWebSocket(userId: number) {
             // Update location data if needed
             break;
             
+          case "route_completed":
+            // Handle route completion for real-time admin dashboard updates
+            queryClient.invalidateQueries({ queryKey: ['/api/pickup-sessions'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/pickup-sessions/today'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/driver-locations'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/pickup-history'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/gps/route-history'] });
+            
+            toast({
+              title: "Route Completed",
+              description: `${data.driverName || 'Driver'} completed ${data.routeName || 'route'} in ${data.durationMinutes || 0} minutes`,
+              variant: "default"
+            });
+            break;
+            
           case "issue_created":
             // Handle new driver issues/maintenance requests
             queryClient.invalidateQueries({ queryKey: ['/api/issues'] });

@@ -175,15 +175,15 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
         const absenceDetails = getStudentAbsence(student.id);
         
         return (
-          <div key={student.id} className={`flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0 ${isAbsent ? 'bg-red-50' : ''}`}>
-            <div className="flex items-center space-x-3 flex-1">
-              <div className={`w-8 h-8 ${isAbsent ? 'bg-red-100' : 'bg-blue-100'} rounded-full flex items-center justify-center`}>
+          <div key={student.id} className={`flex items-center justify-between py-2 sm:py-3 border-b border-gray-100 last:border-b-0 ${isAbsent ? 'bg-red-50' : ''}`}>
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+              <div className={`w-6 h-6 sm:w-8 sm:h-8 ${isAbsent ? 'bg-red-100' : 'bg-blue-100'} rounded-full flex items-center justify-center flex-shrink-0`}>
                 <span className={`text-xs font-medium ${isAbsent ? 'text-red-700' : 'text-primary'}`}>
                   {getInitials(student.firstName, student.lastName)}
                 </span>
               </div>
-              <div className="flex-1">
-                <p className={`font-medium text-sm ${isAbsent ? 'text-red-700' : ''}`}>
+              <div className="flex-1 min-w-0">
+                <p className={`font-medium text-xs sm:text-sm ${isAbsent ? 'text-red-700' : ''} truncate`}>
                   {student.firstName} {student.lastName}
                 </p>
                 <p className="text-xs text-gray-500">Grade {student.grade}</p>
@@ -216,13 +216,13 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
                 Absent
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+              <div className="flex flex-col space-y-1">
                 <Button
                   size="sm"
                   variant={isPickedUp ? "default" : "outline"}
                   onClick={() => handleTogglePickup(student)}
                   disabled={!isActive}
-                  className={`text-xs px-3 py-2 w-full sm:w-auto ${
+                  className={`text-xs px-3 py-1 w-full ${
                     isPickedUp
                       ? "bg-green-600 text-white hover:bg-green-700"
                       : "border-green-600 text-green-600 hover:bg-green-50"
@@ -242,13 +242,15 @@ export default function StudentList({ students, isActive, sessionId }: StudentLi
                   variant={isNotPresent ? "default" : "outline"}
                   onClick={() => handleMarkNotPresent(student)}
                   disabled={!isActive}
-                  className={`text-xs px-3 py-2 w-full sm:w-auto ${
+                  className={`text-xs px-3 py-1 w-full ${
                     isNotPresent
                       ? "bg-red-600 text-white hover:bg-red-700"
                       : "border-red-600 text-red-600 hover:bg-red-50"
                   }`}
                 >
-                  {isNotPresent ? "Not Present" : "Not Present"}
+                  <X className="h-3 w-3 mr-1" />
+                  <span className="hidden sm:inline">{isNotPresent ? "Not Present" : "Mark Absent"}</span>
+                  <span className="sm:hidden">{isNotPresent ? "✗" : "Absent"}</span>
                 </Button>
               </div>
             )}

@@ -460,15 +460,43 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                       <span className="font-medium">Session Active</span>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-gray-50 rounded">
-                        <div className="text-2xl font-bold text-gray-800">{sessionPickupStats.total || 0}</div>
-                        <div className="text-sm text-gray-600">Total Students</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 bg-gray-50 rounded">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-800">{sessionPickupStats.total || 0}</div>
+                        <div className="text-xs sm:text-sm text-gray-600">Total Students</div>
                       </div>
-                      <div className="text-center p-4 bg-gray-50 rounded">
-                        <div className="text-2xl font-bold text-green-600">{sessionPickupStats.pickedUp}</div>
-                        <div className="text-sm text-gray-600">Picked Up</div>
+                      <div className="text-center p-3 bg-gray-50 rounded">
+                        <div className="text-xl sm:text-2xl font-bold text-green-600">{sessionPickupStats.pickedUp}</div>
+                        <div className="text-xs sm:text-sm text-gray-600">Picked Up</div>
                       </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-1">
+                        <span>Route Progress</span>
+                        <span className="font-medium">{sessionPickupStats.progressPercent}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-green-600 h-2.5 rounded-full transition-all duration-500 relative"
+                          style={{ width: `${sessionPickupStats.progressPercent}%` }}
+                        >
+                          {sessionPickupStats.progressPercent > 10 && (
+                            <div className="absolute right-1 top-0.5 text-xs text-white font-bold">
+                              {sessionPickupStats.progressPercent}%
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {sessionPickupStats.progressPercent === 100 && (
+                        <div className="mt-2 text-center">
+                          <div className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                            <CheckCircle className="h-3 w-3" />
+                            Route Ready for Completion
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (

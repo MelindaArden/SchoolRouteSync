@@ -64,30 +64,36 @@ export default function SimpleGpsTracking({ userId }: SimpleGpsTrackingProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant={view === 'active' ? 'default' : 'outline'}
               onClick={() => setView('active')}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm"
+              size="sm"
             >
               <Activity className="h-4 w-4" />
-              Active Drivers
+              <span className="hidden xs:inline">Active Drivers</span>
+              <span className="xs:hidden">Active</span>
             </Button>
             <Button
               variant={view === 'history' ? 'default' : 'outline'}
               onClick={() => setView('history')}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm"
+              size="sm"
             >
               <History className="h-4 w-4" />
-              Route History
+              <span className="hidden xs:inline">Route History</span>
+              <span className="xs:hidden">History</span>
             </Button>
             <Button
               variant={view === 'test' ? 'default' : 'outline'}
               onClick={() => setView('test')}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm"
+              size="sm"
             >
               <Clock className="h-4 w-4" />
-              System Check
+              <span className="hidden xs:inline">System Check</span>
+              <span className="xs:hidden">Check</span>
             </Button>
           </div>
         </CardContent>
@@ -132,12 +138,12 @@ export default function SimpleGpsTracking({ userId }: SimpleGpsTrackingProps) {
                   const routeName = location.session?.route?.name || `Route ${location.session?.routeId || 'Unknown'}`;
                   
                   return (
-                    <div key={location.id || index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="font-medium">{driverName}</span>
-                          <Badge variant="outline">{routeName}</Badge>
+                    <div key={location.id || index} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse flex-shrink-0"></div>
+                          <span className="font-medium text-sm truncate">{driverName}</span>
+                          <Badge variant="outline" className="text-xs hidden sm:inline-flex">{routeName}</Badge>
                         </div>
                         <Button
                           variant="outline"
@@ -146,15 +152,21 @@ export default function SimpleGpsTracking({ userId }: SimpleGpsTrackingProps) {
                             const url = `https://www.google.com/maps?q=${location.latitude},${location.longitude}&z=16`;
                             window.open(url, '_blank');
                           }}
+                          className="w-full sm:w-auto"
                         >
                           <Navigation className="h-4 w-4 mr-1" />
-                          View Map
+                          <span className="hidden sm:inline">View Map</span>
+                          <span className="sm:hidden">Map</span>
                         </Button>
                       </div>
                       
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div>Location: {location.latitude}, {location.longitude}</div>
-                        <div>Last Update: {formatTime(location.timestamp || location.updatedAt)}</div>
+                      <div className="sm:hidden">
+                        <Badge variant="outline" className="text-xs mb-2">{routeName}</Badge>
+                      </div>
+                      
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div className="break-all">📍 {location.latitude}, {location.longitude}</div>
+                        <div>🕒 {formatTime(location.timestamp || location.updatedAt)}</div>
                       </div>
                     </div>
                   );
@@ -204,13 +216,13 @@ export default function SimpleGpsTracking({ userId }: SimpleGpsTrackingProps) {
                   const sessionDate = new Date(session.date).toLocaleDateString();
                   
                   return (
-                    <div key={session.id || index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                          <span className="font-medium">{driverName}</span>
-                          <Badge variant="outline">{routeName}</Badge>
-                          <Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>
+                    <div key={session.id || index} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
+                          <span className="font-medium text-sm truncate">{driverName}</span>
+                          <Badge variant="outline" className="text-xs hidden sm:inline-flex">{routeName}</Badge>
+                          <Badge variant={session.status === 'completed' ? 'default' : 'secondary'} className="text-xs hidden sm:inline-flex">
                             {session.status || 'unknown'}
                           </Badge>
                         </div>
@@ -218,15 +230,24 @@ export default function SimpleGpsTracking({ userId }: SimpleGpsTrackingProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => setSelectedSessionId(session.id)}
+                          className="w-full sm:w-auto"
                         >
                           <MapPin className="h-4 w-4 mr-1" />
-                          View Route Map
+                          <span className="hidden sm:inline">View Route Map</span>
+                          <span className="sm:hidden">Map</span>
                         </Button>
                       </div>
                       
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div>Date: {sessionDate}</div>
-                        <div>Duration: {session.duration ? `${session.duration} minutes` : 'Unknown'}</div>
+                      <div className="sm:hidden flex gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">{routeName}</Badge>
+                        <Badge variant={session.status === 'completed' ? 'default' : 'secondary'} className="text-xs">
+                          {session.status || 'unknown'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div>📅 {sessionDate}</div>
+                        <div>⏱️ {session.duration ? `${session.duration} minutes` : 'Unknown'}</div>
                       </div>
                     </div>
                   );

@@ -131,33 +131,33 @@ export default function RouteMapViewer({ sessionId, isRealTime = false }: RouteM
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{mapData.path.length}</div>
-              <div className="text-sm text-blue-800">GPS Points</div>
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
+            <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
+              <div className="text-lg sm:text-2xl font-bold text-blue-600">{mapData.path.length}</div>
+              <div className="text-xs sm:text-sm text-blue-800">GPS Points</div>
             </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{mapData.stops.length}</div>
-              <div className="text-sm text-green-800">School Stops</div>
+            <div className="text-center p-2 sm:p-3 bg-green-50 rounded-lg">
+              <div className="text-lg sm:text-2xl font-bold text-green-600">{mapData.stops.length}</div>
+              <div className="text-xs sm:text-sm text-green-800">School Stops</div>
             </div>
             {routeDuration && (
-              <div className="text-center p-3 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{routeDuration}</div>
-                <div className="text-sm text-purple-800">Minutes</div>
+              <div className="text-center p-2 sm:p-3 bg-purple-50 rounded-lg">
+                <div className="text-lg sm:text-2xl font-bold text-purple-600">{routeDuration}</div>
+                <div className="text-xs sm:text-sm text-purple-800">Minutes</div>
               </div>
             )}
             {sessionDetails && (
-              <div className="text-center p-3 bg-orange-50 rounded-lg">
-                <div className="text-lg font-bold text-orange-600">
+              <div className="text-center p-2 sm:p-3 bg-orange-50 rounded-lg">
+                <div className="text-sm sm:text-lg font-bold text-orange-600 truncate">
                   {sessionDetails.driver?.firstName} {sessionDetails.driver?.lastName}
                 </div>
-                <div className="text-sm text-orange-800">Driver</div>
+                <div className="text-xs sm:text-sm text-orange-800">Driver</div>
               </div>
             )}
           </div>
 
           {/* Route Map Visualization */}
-          <div className="border rounded-lg bg-gray-50 p-4 min-h-[400px] relative overflow-hidden">
+          <div className="border rounded-lg bg-gray-50 p-2 sm:p-4 min-h-[300px] sm:min-h-[400px] relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-green-100 via-blue-50 to-purple-100">
               {/* Geographic background pattern */}
               <div className="absolute inset-0 opacity-20">
@@ -309,33 +309,33 @@ export default function RouteMapViewer({ sessionId, isRealTime = false }: RouteM
               )}
             </div>
 
-            {/* Map Legend */}
-            <div className="absolute bottom-4 left-4 bg-white/90 p-3 rounded-lg shadow-sm">
-              <div className="text-xs font-semibold mb-2">Map Legend</div>
+            {/* Map Legend - Mobile optimized */}
+            <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 bg-white/90 p-2 sm:p-3 rounded-lg shadow-sm max-w-[45%]">
+              <div className="text-xs font-semibold mb-1 sm:mb-2">Legend</div>
               <div className="space-y-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                  <span>Route Start</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-600 rounded-full flex-shrink-0"></div>
+                  <span className="text-xs">Start</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  <span>School Stops</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-orange-500 rounded-full flex-shrink-0"></div>
+                  <span className="text-xs">Schools</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-600 rounded-full"></div>
-                  <span>Route End</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-600 rounded-full flex-shrink-0"></div>
+                  <span className="text-xs">End</span>
                 </div>
                 {isRealTime && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-purple-600 rounded-full animate-pulse"></div>
-                    <span>Current Position</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-purple-600 rounded-full animate-pulse flex-shrink-0"></div>
+                    <span className="text-xs">Live</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* External map link */}
-            <div className="absolute bottom-4 right-4">
+            {/* External map link - Mobile optimized */}
+            <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4">
               <Button
                 variant="outline"
                 size="sm"
@@ -347,10 +347,10 @@ export default function RouteMapViewer({ sessionId, isRealTime = false }: RouteM
                     window.open(url, '_blank');
                   }
                 }}
-                className="bg-white/90"
+                className="bg-white/90 text-xs p-2"
               >
-                <Navigation className="h-4 w-4 mr-1" />
-                Open in Maps
+                <Navigation className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Open in Maps</span>
               </Button>
             </div>
           </div>

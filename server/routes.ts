@@ -1164,17 +1164,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.createPickupHistory(historyData);
       
-      // Broadcast route completion update
+      // Broadcast route completion update for real-time admin dashboard updates
       broadcast({
         type: 'route_completed',
         sessionId: sessionId,
         routeId: session.routeId,
         driverId: session.driverId,
-        completedTime: completedTime,
-        durationMinutes: durationMinutes
+        status: 'completed',
+        completedTime: completedTime.toISOString(),
+        durationMinutes: durationMinutes,
+        studentsPickedUp: studentPickups.filter(p => p.status === 'picked_up').length,
+        totalStudents: studentPickups.length,
+        driverName: `Driver ${session.driverId}`,
+        routeName: route?.name || `Route ${session.routeId}`
       });
       
       console.log(`✅ Route ${sessionId} completed successfully and saved to history`);
+      console.log(`📡 Broadcasting route completion to admin dashboards for real-time updates`);
+      
       res.json({ 
         message: "Route completed successfully", 
         sessionId: sessionId,
