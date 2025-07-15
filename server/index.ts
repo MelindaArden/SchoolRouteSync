@@ -12,8 +12,8 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://schoolride.replit.app',
-    'https://schoolride.replit.dev',
+    'https://routerunner.replit.app',
+    'https://routerunner.replit.dev',
     process.env.REPLIT_DOMAIN && `https://${process.env.REPLIT_DOMAIN}`
   ].filter(Boolean);
   
@@ -40,7 +40,7 @@ const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'school-bus-management-secret-key-2025',
-  name: 'schoolbus.sid',
+  name: 'routerunner.sid',
   resave: true,
   saveUninitialized: true,
   rolling: true,

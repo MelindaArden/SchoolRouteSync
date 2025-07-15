@@ -182,7 +182,7 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
           </div>
           <CardTitle className="text-2xl font-medium text-gray-800">
-            SchoolRide
+            Route Runner
           </CardTitle>
           <p className="text-gray-600">Afterschool Pickup Management</p>
           
