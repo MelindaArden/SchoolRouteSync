@@ -264,7 +264,7 @@ export default function PickupHistory() {
               </Badge>
             </h5>
             
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4">
               {/* Picked Up Students */}
               <div>
                 <h6 className="text-xs font-medium text-green-700 mb-2 flex items-center gap-1">
@@ -274,12 +274,12 @@ export default function PickupHistory() {
                 <div className="space-y-1">
                   {schoolData.pickedUp.map((pickup: any, idx: number) => (
                     <div key={idx} className="text-xs bg-green-50 border border-green-200 rounded p-2">
-                      <p className="font-medium">{pickup.student?.firstName} {pickup.student?.lastName}</p>
+                      <p className="font-medium break-words">{pickup.student?.firstName} {pickup.student?.lastName}</p>
                       {pickup.pickedUpAt && (
-                        <p className="text-green-600">{formatTime(pickup.pickedUpAt)}</p>
+                        <p className="text-green-600 break-words">{formatTime(pickup.pickedUpAt)}</p>
                       )}
                       {pickup.driverNotes && (
-                        <p className="text-gray-600 italic">"{pickup.driverNotes}"</p>
+                        <p className="text-gray-600 italic break-words">"{pickup.driverNotes}"</p>
                       )}
                     </div>
                   ))}
@@ -298,10 +298,10 @@ export default function PickupHistory() {
                 <div className="space-y-1">
                   {schoolData.notPickedUp.map((pickup: any, idx: number) => (
                     <div key={idx} className="text-xs bg-red-50 border border-red-200 rounded p-2">
-                      <p className="font-medium">{pickup.student?.firstName} {pickup.student?.lastName}</p>
-                      <p className="text-red-600 capitalize">{pickup.status.replace('_', ' ')}</p>
+                      <p className="font-medium break-words">{pickup.student?.firstName} {pickup.student?.lastName}</p>
+                      <p className="text-red-600 capitalize break-words">{pickup.status.replace('_', ' ')}</p>
                       {pickup.driverNotes && (
-                        <p className="text-gray-600 italic">"{pickup.driverNotes}"</p>
+                        <p className="text-gray-600 italic break-words">"{pickup.driverNotes}"</p>
                       )}
                     </div>
                   ))}
@@ -338,45 +338,47 @@ export default function PickupHistory() {
 
   if (selectedRecord) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Pickup Details</h2>
-          <Button variant="outline" onClick={() => setSelectedRecord(null)}>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Mobile-Optimized Header */}
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+          <h2 className="text-lg sm:text-xl font-semibold">Pickup Details</h2>
+          <Button variant="outline" onClick={() => setSelectedRecord(null)} className="w-full sm:w-auto">
             Back to History
           </Button>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RouteIcon className="h-5 w-5" />
-              {selectedRecord.route?.name} - {formatTime(selectedRecord.completedAt)}
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm sm:text-base">
+              <RouteIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+              <span className="break-words">{selectedRecord.route?.name} - {formatTime(selectedRecord.completedAt)}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Driver</p>
-                <p className="font-medium">{selectedRecord.driver?.firstName} {selectedRecord.driver?.lastName}</p>
+            {/* Mobile-Optimized Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-gray-600">Driver</p>
+                <p className="font-medium text-sm sm:text-base">{selectedRecord.driver?.firstName} {selectedRecord.driver?.lastName}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Date</p>
-                <p className="font-medium">{selectedRecord.date}</p>
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-gray-600">Date</p>
+                <p className="font-medium text-sm sm:text-base">{selectedRecord.date}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Students Picked Up</p>
-                <p className="font-medium">{selectedRecord.studentsPickedUp} / {selectedRecord.totalStudents}</p>
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-gray-600">Students Picked Up</p>
+                <p className="font-medium text-sm sm:text-base">{selectedRecord.studentsPickedUp} / {selectedRecord.totalStudents}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Completion Rate</p>
-                <p className="font-medium">{Math.round((selectedRecord.studentsPickedUp / selectedRecord.totalStudents) * 100)}%</p>
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-gray-600">Completion Rate</p>
+                <p className="font-medium text-sm sm:text-base">{Math.round((selectedRecord.studentsPickedUp / selectedRecord.totalStudents) * 100)}%</p>
               </div>
             </div>
 
             {selectedRecord.notes && (
-              <div>
-                <p className="text-sm text-gray-600">Notes</p>
-                <p className="font-medium">{selectedRecord.notes}</p>
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-gray-600">Notes</p>
+                <p className="font-medium text-sm sm:text-base break-words">{selectedRecord.notes}</p>
               </div>
             )}
 
@@ -468,25 +470,29 @@ export default function PickupHistory() {
 
   const groupedHistory = groupHistoryByPeriod();
 
-  // RouteHistoryCard component for consistent display
+  // RouteHistoryCard component for consistent display - Mobile Optimized
   const RouteHistoryCard = ({ record, onSelect }: { record: any; onSelect: (record: any) => void }) => (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <RouteIcon className="h-5 w-5 text-blue-600" />
-              <div>
-                <h3 className="font-medium text-gray-900">
+      <CardContent className="p-3 sm:p-4">
+        {/* Mobile-First Layout: Stack on small screens, flex on larger */}
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+          
+          {/* Route Info Section */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <RouteIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0 mt-1" />
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium text-gray-900 text-sm sm:text-base truncate">
                   {record.route?.name || `Route ${record.routeId}`}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600 truncate">
                   Driver: {record.driver?.firstName} {record.driver?.lastName}
                 </p>
-                <p className="text-xs text-gray-500">
-                  Completed: {formatTime(record.completedAt)}
+                <p className="text-xs text-gray-500 break-words">
+                  {formatTime(record.completedAt)}
                 </p>
-                {/* Show school and student info with enhanced details */}
+                
+                {/* Mobile-optimized school and student info */}
                 <div className="mt-2 space-y-1">
                   {(() => {
                     // Calculate schools and students for this route
@@ -509,14 +515,14 @@ export default function PickupHistory() {
                     const schoolCount = schoolsInRoute.length;
                     
                     return (
-                      <>
-                        <p className="text-xs text-blue-600 font-medium">
-                          🏫 {schoolCount} {schoolCount === 1 ? 'School' : 'Schools'}: {schoolsInRoute.slice(0, 2).join(', ')}{schoolCount > 2 ? '...' : ''}
-                        </p>
-                        <p className="text-xs text-green-600 font-medium">
-                          👥 {studentCount} {studentCount === 1 ? 'Student' : 'Students'} on route
-                        </p>
-                      </>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">
+                          🏫 {schoolCount} {schoolCount === 1 ? 'School' : 'Schools'}
+                        </span>
+                        <span className="text-green-600 font-medium bg-green-50 px-2 py-1 rounded">
+                          👥 {studentCount} {studentCount === 1 ? 'Student' : 'Students'}
+                        </span>
+                      </div>
                     );
                   })()}
                 </div>
@@ -524,35 +530,44 @@ export default function PickupHistory() {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            <div className="text-center">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium">{record.studentsPickedUp}</span>
+          {/* Stats Section - Responsive Layout */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 pt-2 sm:pt-0 border-t sm:border-t-0">
+            {/* Picked Up Stats */}
+            <div className="text-center flex-1 sm:flex-none">
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                <span className="text-xs sm:text-sm font-medium">{record.studentsPickedUp}</span>
               </div>
-              <p className="text-xs text-gray-500">picked up</p>
+              <p className="text-xs text-gray-500 hidden sm:block">picked up</p>
             </div>
             
-            <div className="text-center">
-              <div className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm font-medium">{record.totalStudents - record.studentsPickedUp}</span>
+            {/* Missed Stats */}
+            <div className="text-center flex-1 sm:flex-none">
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                <span className="text-xs sm:text-sm font-medium">{record.totalStudents - record.studentsPickedUp}</span>
               </div>
-              <p className="text-xs text-gray-500">missed</p>
+              <p className="text-xs text-gray-500 hidden sm:block">missed</p>
             </div>
             
-            <div className="text-center">
-              <Badge variant={record.studentsPickedUp === record.totalStudents ? "default" : "secondary"}>
+            {/* Completion Rate Badge */}
+            <div className="flex-1 sm:flex-none text-center">
+              <Badge 
+                variant={record.studentsPickedUp === record.totalStudents ? "default" : "secondary"}
+                className="text-xs px-2 py-1"
+              >
                 {Math.round((record.studentsPickedUp / record.totalStudents) * 100)}%
               </Badge>
             </div>
             
+            {/* View Details Button */}
             <Button 
               variant="ghost" 
               size="sm"
               onClick={() => onSelect(record)}
+              className="flex-shrink-0 p-2"
             >
-              <Eye className="h-4 w-4" />
+              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
           </div>
         </div>
@@ -561,17 +576,20 @@ export default function PickupHistory() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Route Completion Repository</h2>
-        <div className="flex items-center gap-2">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Mobile-Optimized Header */}
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+        <h2 className="text-lg sm:text-xl font-semibold">Route History</h2>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <Button 
             onClick={downloadCSVLog} 
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-2 text-xs sm:text-sm"
             variant="outline"
+            size="sm"
           >
-            <Download className="h-4 w-4" />
-            Download Transportation Log
+            <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Download Transportation Log</span>
+            <span className="sm:hidden">Download Log</span>
           </Button>
           <Select value={selectedRecord ? "detailed" : "overview"} onValueChange={(value) => {
             if (value === "overview") setSelectedRecord(null);
@@ -580,7 +598,7 @@ export default function PickupHistory() {
               if (record) setSelectedRecord(record);
             }
           }}>
-            <SelectTrigger className="w-[250px]">
+            <SelectTrigger className="w-full sm:w-[200px] text-xs sm:text-sm">
               <SelectValue placeholder="Select view" />
             </SelectTrigger>
             <SelectContent>
@@ -642,78 +660,79 @@ export default function PickupHistory() {
         </div>
       </div>
 
-      {/* Date and Search Filter */}
+      {/* Mobile-Optimized Date and Search Filter */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-600" />
-                <label className="text-sm font-medium text-gray-700">Filter by Date:</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="border rounded px-3 py-1 text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedDate("")}
-                  className="text-xs"
-                >
-                  Clear
-                </Button>
-              </div>
+        <CardContent className="p-3 sm:p-4">
+          <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+            {/* Date Filter */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Calendar className="h-4 w-4 text-gray-600 flex-shrink-0" />
+              <label className="text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">Filter by Date:</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="border rounded px-2 py-1 text-xs sm:text-sm flex-1 sm:flex-none"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedDate("")}
+                className="text-xs px-2 py-1"
+              >
+                Clear
+              </Button>
             </div>
+            
+            {/* Search */}
             <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-gray-600" />
+              <Search className="h-4 w-4 text-gray-600 flex-shrink-0" />
               <Input
                 type="text"
                 placeholder="Search routes, drivers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
+                className="flex-1 sm:w-64 text-xs sm:text-sm"
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Stats Section - Positioned above Active Route Sessions */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Mobile-Optimized Stats Section */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-primary">{totalCompletedRoutes}</div>
-            <div className="text-sm text-gray-600">
-              {selectedDate ? `Routes on ${new Date(selectedDate).toLocaleDateString()}` : 'Total Completed Routes'}
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-primary">{totalCompletedRoutes}</div>
+            <div className="text-xs sm:text-sm text-gray-600 leading-tight">
+              {selectedDate ? 'Routes Today' : 'Total Routes'}
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">{totalStudentsPickedUp}</div>
-            <div className="text-sm text-gray-600">
-              {selectedDate ? 'Students Picked Up' : 'Total Students Picked Up'}
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-green-600">{totalStudentsPickedUp}</div>
+            <div className="text-xs sm:text-sm text-gray-600 leading-tight">
+              Students Picked Up
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{totalStudentsAssigned}</div>
-            <div className="text-sm text-gray-600">
-              {selectedDate ? 'Students Assigned' : 'Total Students Assigned'}
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-blue-600">{totalStudentsAssigned}</div>
+            <div className="text-xs sm:text-sm text-gray-600 leading-tight">
+              Students Assigned
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600">{averageCompletionRate}%</div>
-            <div className="text-sm text-gray-600">
-              {selectedDate ? 'Completion Rate' : 'Average Completion Rate'}
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-purple-600">{averageCompletionRate}%</div>
+            <div className="text-xs sm:text-sm text-gray-600 leading-tight">
+              Completion Rate
             </div>
           </CardContent>
         </Card>
@@ -730,14 +749,14 @@ export default function PickupHistory() {
           </CardHeader>
           <CardContent className="space-y-4">
             {activeSessions.filter((session: any) => session.status === 'in_progress').map((session: any) => (
-              <div key={session.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">{session.route?.name}</h4>
-                    <p className="text-sm text-gray-600">
+              <div key={session.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
+                <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-medium text-sm sm:text-base truncate">{session.route?.name}</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">
                       Driver: {session.driver?.firstName} {session.driver?.lastName}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 break-words">
                       Started: {session.startTime ? formatTime(session.startTime) : 'In Progress'}
                     </p>
                   </div>
@@ -748,8 +767,9 @@ export default function PickupHistory() {
                       notes: "Completed by admin override" 
                     })}
                     disabled={completeRouteMutation.isPending}
+                    className="w-full sm:w-auto text-xs sm:text-sm"
                   >
-                    <CheckSquare className="h-4 w-4 mr-2" />
+                    <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Mark Complete
                   </Button>
                 </div>
