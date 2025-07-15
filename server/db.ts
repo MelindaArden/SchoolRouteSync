@@ -13,11 +13,13 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 5, // Reduced pool size for stability
-  idleTimeoutMillis: 20000, // Shorter idle timeout
-  connectionTimeoutMillis: 8000, // Longer connection timeout
-  maxUses: 7500, // Limit connection reuse
-  allowExitOnIdle: true // Allow pool to close gracefully
+  max: 3, // Further reduced for stability
+  idleTimeoutMillis: 15000, // Shorter idle timeout
+  connectionTimeoutMillis: 5000, // Reduced connection timeout
+  maxUses: 1000, // Much lower reuse limit
+  allowExitOnIdle: true, // Allow pool to close gracefully
+  statement_timeout: 5000, // 5 second statement timeout
+  query_timeout: 5000 // 5 second query timeout
 });
 
 // Add connection error handling

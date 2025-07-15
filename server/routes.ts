@@ -914,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add timeout protection
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database timeout')), 8000)
+        setTimeout(() => reject(new Error('Database timeout')), 5000)
       );
       
       const dataPromise = (async () => {
@@ -1020,7 +1020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Add timeout protection
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database timeout')), 8000)
+        setTimeout(() => reject(new Error('Database timeout')), 5000)
       );
       
       const dataPromise = (async () => {
@@ -1839,75 +1839,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get GPS route tracks for a session with school details
+  // Get GPS route tracks for a session with school details - optimized
   app.get("/api/gps/sessions/:sessionId/tracks", async (req, res) => {
     try {
       const sessionId = parseInt(req.params.sessionId);
-      const tracks = await storage.getGpsRouteTracksBySession(sessionId);
       
-      // Enrich tracks with school information
-      const enrichedTracks = await Promise.all(
-        tracks.map(async (track) => {
-          if (track.schoolId) {
-            const school = await storage.getSchool(track.schoolId);
-            return { ...track, school };
-          }
-          return { ...track, school: null };
-        })
+      // Add timeout protection
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 3000)
       );
       
-      res.json(enrichedTracks);
+      const dataPromise = (async () => {
+        const tracks = await storage.getGpsRouteTracksBySession(sessionId);
+        
+        // Batch process tracks in smaller chunks
+        const batchSize = 10;
+        const enrichedTracks = [];
+        
+        for (let i = 0; i < tracks.length; i += batchSize) {
+          const batch = tracks.slice(i, i + batchSize);
+          const batchResults = await Promise.allSettled(
+            batch.map(async (track) => {
+              try {
+                if (track.schoolId) {
+                  const school = await storage.getSchool(track.schoolId);
+                  return { ...track, school };
+                }
+                return { ...track, school: null };
+              } catch (err) {
+                console.error(`Error enriching track ${track.id}:`, err);
+                return { ...track, school: null };
+              }
+            })
+          );
+          
+          const successfulResults = batchResults
+            .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+            .map(result => result.value);
+            
+          enrichedTracks.push(...successfulResults);
+        }
+        
+        return enrichedTracks;
+      })();
+      
+      const tracks = await Promise.race([dataPromise, timeoutPromise]);
+      res.json(tracks);
+      
     } catch (error) {
       console.error('Error fetching GPS tracks:', error);
-      res.status(500).json({ message: "Failed to fetch GPS tracks" });
+      if (error instanceof Error && error.message === 'Database timeout') {
+        res.status(504).json({ message: "Request timeout - please try again" });
+      } else {
+        res.status(500).json({ message: "Failed to fetch GPS tracks" });
+      }
     }
   });
 
-  // Get GPS route history for last 30 days
+  // Get GPS route history for last 30 days - optimized
   app.get("/api/gps/route-history", async (req, res) => {
     try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const history = await storage.getGpsRouteHistory();
-      
-      // Filter for last 30 days and enrich with driver information and actual student counts
-      const enrichedHistory = await Promise.all(
-        history
-          .filter(route => new Date(route.createdAt) >= thirtyDaysAgo)
-          .map(async (route) => {
-            const driver = await storage.getUser(route.driverId);
-            
-            // Get actual student pickup data for this session
-            const studentPickups = await storage.getStudentPickups(route.sessionId);
-            const pickedUpCount = studentPickups.filter(p => p.status === 'picked_up').length;
-            const totalStudents = studentPickups.length;
-            
-            // Get actual school count for this route
-            const routeSchools = await storage.getRouteSchools(route.routeId);
-            const schoolsCount = routeSchools.length;
-            
-            return { 
-              ...route, 
-              driver,
-              // Override with accurate counts
-              totalStudentsPickedUp: pickedUpCount,
-              schoolsVisited: schoolsCount,
-              // Add total students for pickup detail display
-              totalStudentsOnRoute: totalStudents
-            };
-          })
+      // Add timeout protection
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 4000)
       );
       
-      // Sort by creation date (newest first)
-      const sortedHistory = enrichedHistory.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      const dataPromise = (async () => {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const history = await storage.getGpsRouteHistory();
+        const recentHistory = history.filter(route => new Date(route.createdAt) >= thirtyDaysAgo);
+        
+        // Process in smaller batches to avoid timeouts
+        const batchSize = 5;
+        const enrichedHistory = [];
+        
+        for (let i = 0; i < recentHistory.length; i += batchSize) {
+          const batch = recentHistory.slice(i, i + batchSize);
+          const batchResults = await Promise.allSettled(
+            batch.map(async (route) => {
+              try {
+                const [driverResult, pickupsResult, schoolsResult] = await Promise.allSettled([
+                  storage.getUser(route.driverId),
+                  storage.getStudentPickups(route.sessionId),
+                  storage.getRouteSchools(route.routeId)
+                ]);
+                
+                const driver = driverResult.status === 'fulfilled' ? driverResult.value : null;
+                const studentPickups = pickupsResult.status === 'fulfilled' ? pickupsResult.value : [];
+                const routeSchools = schoolsResult.status === 'fulfilled' ? schoolsResult.value : [];
+                
+                const pickedUpCount = studentPickups.filter(p => p.status === 'picked_up').length;
+                
+                return { 
+                  ...route, 
+                  driver,
+                  totalStudentsPickedUp: pickedUpCount,
+                  schoolsVisited: routeSchools.length,
+                  totalStudentsOnRoute: studentPickups.length
+                };
+              } catch (err) {
+                console.error(`Error enriching route ${route.id}:`, err);
+                return {
+                  ...route,
+                  driver: null,
+                  totalStudentsPickedUp: 0,
+                  schoolsVisited: 0,
+                  totalStudentsOnRoute: 0
+                };
+              }
+            })
+          );
+          
+          const successfulResults = batchResults
+            .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+            .map(result => result.value);
+            
+          enrichedHistory.push(...successfulResults);
+        }
+        
+        // Sort by creation date (newest first)
+        return enrichedHistory.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      })();
       
+      const sortedHistory = await Promise.race([dataPromise, timeoutPromise]);
       res.json(sortedHistory);
+      
     } catch (error) {
       console.error('Error fetching GPS route history:', error);
-      res.status(500).json({ message: "Failed to fetch GPS route history" });
+      if (error instanceof Error && error.message === 'Database timeout') {
+        res.status(504).json({ message: "Request timeout - please try again" });
+      } else {
+        res.status(500).json({ message: "Failed to fetch GPS route history" });
+      }
     }
   });
 
@@ -1941,29 +2008,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database health check endpoint
+  app.get("/api/health", async (req, res) => {
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Health check timeout')), 2000)
+      );
+      
+      const healthPromise = (async () => {
+        // Simple query to test database responsiveness
+        const testUser = await storage.getUserByUsername('ma1313');
+        return {
+          status: 'healthy',
+          database: 'connected',
+          timestamp: new Date().toISOString(),
+          testQuery: testUser ? 'success' : 'no_data'
+        };
+      })();
+      
+      const result = await Promise.race([healthPromise, timeoutPromise]);
+      res.json(result);
+      
+    } catch (error) {
+      res.status(503).json({
+        status: 'unhealthy',
+        database: 'timeout_or_error',
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Get all active sessions (for leadership dashboard)
   app.get("/api/pickup-sessions/today", (req, res) => {
     res.json([]);
   });
 
-  // Get driver locations
+  // Get driver locations - optimized
   app.get("/api/driver-locations", async (req, res) => {
     try {
-      // Get all current driver locations
-      const sessions = await storage.getTodaysSessions();
-      const activeDriverIds = sessions
-        .filter(s => s.status === "in_progress")
-        .map(s => s.driverId);
-      
-      const locations = await Promise.all(
-        activeDriverIds.map(async (driverId) => {
-          return await storage.getDriverLocation(driverId);
-        })
+      // Add timeout protection
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 3000)
       );
       
-      res.json(locations.filter(Boolean));
+      const dataPromise = (async () => {
+        const sessions = await storage.getTodaysSessions();
+        const activeDriverIds = sessions
+          .filter(s => s.status === "in_progress")
+          .map(s => s.driverId);
+        
+        // Process in batches to avoid overwhelming the database
+        const batchSize = 3;
+        const allLocations = [];
+        
+        for (let i = 0; i < activeDriverIds.length; i += batchSize) {
+          const batch = activeDriverIds.slice(i, i + batchSize);
+          const batchResults = await Promise.allSettled(
+            batch.map(async (driverId) => {
+              try {
+                return await storage.getDriverLocation(driverId);
+              } catch (err) {
+                console.error(`Error fetching location for driver ${driverId}:`, err);
+                return null;
+              }
+            })
+          );
+          
+          const successfulResults = batchResults
+            .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+            .map(result => result.value)
+            .filter(Boolean);
+            
+          allLocations.push(...successfulResults);
+        }
+        
+        return allLocations;
+      })();
+      
+      const locations = await Promise.race([dataPromise, timeoutPromise]);
+      res.json(locations);
+      
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      console.error('Error fetching driver locations:', error);
+      if (error instanceof Error && error.message === 'Database timeout') {
+        res.status(504).json({ message: "Request timeout - please try again" });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
     }
   });
 

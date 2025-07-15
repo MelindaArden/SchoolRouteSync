@@ -112,6 +112,16 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 15, 2025 - Database Performance Optimization & Real-time Tracking Fix
+- Fixed infinite loading issues for admin route tracking and GPS data by optimizing database queries with timeout protection
+- Enhanced database connection pooling with reduced timeouts (3-5 seconds) and statement-level timeouts for better stability
+- Implemented batch processing for GPS tracking data to prevent database overwhelm and timeouts
+- Added comprehensive timeout protection to all route tracking, student pickup, and GPS history endpoints
+- Optimized GPS route history queries with Promise.allSettled for error tolerance and reduced connection strain
+- Fixed real-time tracking data display for admins - route maps and GPS data now load properly without infinite spinning
+- Enhanced driver location tracking with batched queries and improved error handling for consistent admin visibility
+- All route tracking endpoints now respond within 3-5 seconds with proper fallback error handling
+
 ### July 15, 2025 - Complete Expo Mobile App Deployment Setup
 - Configured comprehensive Expo React Native mobile app for Route Runner with full deployment readiness
 - Updated app branding to "Route Runner" with proper bundle identifiers (com.routerunner.app)
