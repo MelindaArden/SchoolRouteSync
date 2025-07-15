@@ -187,82 +187,176 @@ export default function GpsRouteMap({
           {mapData ? (
             <div className="space-y-4">
               <div className="flex justify-center">
-                <svg
-                  width={mapData.mapWidth}
-                  height={mapData.mapHeight}
-                  className="border rounded-lg bg-gray-50"
-                >
-                  {/* Route path */}
-                  <path
-                    d={mapData.pathString}
-                    fill="none"
-                    stroke={isActive ? "#2563eb" : "#6b7280"}
-                    strokeWidth="3"
-                    strokeOpacity="0.8"
-                  />
-                  
-                  {/* School markers */}
-                  {schoolStops.map((school, index) => {
-                    const lat = parseFloat(school.latitude);
-                    const lng = parseFloat(school.longitude);
-                    if (isNaN(lat) || isNaN(lng)) return null;
+                <div className="relative overflow-hidden rounded-lg border">
+                  <svg
+                    width={mapData.mapWidth}
+                    height={mapData.mapHeight}
+                    className="w-full bg-gradient-to-br from-green-50 via-blue-50 to-gray-100"
+                    viewBox={`0 0 ${mapData.mapWidth} ${mapData.mapHeight}`}
+                  >
+                    {/* Geographic Background Patterns */}
+                    <defs>
+                      <pattern 
+                        id="geographic-grid" 
+                        width="40" 
+                        height="40" 
+                        patternUnits="userSpaceOnUse"
+                      >
+                        <path 
+                          d="M 40 0 L 0 0 0 40" 
+                          fill="none" 
+                          stroke="#d1d5db" 
+                          strokeWidth="0.5"
+                          opacity="0.6"
+                        />
+                      </pattern>
+                      <pattern 
+                        id="roads-pattern" 
+                        width="80" 
+                        height="80" 
+                        patternUnits="userSpaceOnUse"
+                      >
+                        <line x1="0" y1="40" x2="80" y2="40" stroke="#9ca3af" strokeWidth="1.5" opacity="0.4" />
+                        <line x1="40" y1="0" x2="40" y2="80" stroke="#9ca3af" strokeWidth="1.5" opacity="0.4" />
+                      </pattern>
+                    </defs>
                     
-                    const position = mapData.coordsToSVG(lat, lng);
-                    const timestamp = routePath.schoolTimestamps.find(st => st.schoolId === school.id);
-                    const isVisited = !!timestamp?.arrivalTime;
+                    {/* Map Background Layers */}
+                    <rect width="100%" height="100%" fill="url(#geographic-grid)" />
+                    <rect width="100%" height="100%" fill="url(#roads-pattern)" />
                     
-                    return (
-                      <g key={school.id}>
+                    {/* Geographic Area Patches */}
+                    <rect x="0" y="0" width="140" height="120" fill="#dcfce7" opacity="0.3" rx="8" />
+                    <rect x="260" y="180" width="140" height="120" fill="#fef3c7" opacity="0.3" rx="8" />
+                    <rect x="120" y="100" width="160" height="80" fill="#f0f9ff" opacity="0.4" rx="6" />
+                    
+                    {/* Route path with enhanced styling */}
+                    <path
+                      d={mapData.pathString}
+                      fill="none"
+                      stroke={isActive ? "#2563eb" : "#6b7280"}
+                      strokeWidth="4"
+                      strokeOpacity="1"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      filter="drop-shadow(0 2px 4px rgba(0,0,0,0.1))"
+                    />
+                    
+                    {/* GPS tracking points with timestamps */}
+                    {routePath.coordinates.map((coord, index) => {
+                      const position = mapData.coordsToSVG(coord.lat, coord.lng);
+                      const isKeyPoint = index % 8 === 0 || index === routePath.coordinates.length - 1;
+                      return (
+                        <g key={index}>
+                          <circle
+                            cx={position.x}
+                            cy={position.y}
+                            r={isKeyPoint ? "3" : "1.5"}
+                            fill="#059669"
+                            fillOpacity="0.8"
+                            stroke="white"
+                            strokeWidth="0.5"
+                          />
+                          {isKeyPoint && (
+                            <text
+                              x={position.x + 8}
+                              y={position.y - 8}
+                              className="text-xs fill-gray-600 font-medium"
+                            >
+                              {formatTime(coord.timestamp)}
+                            </text>
+                          )}
+                        </g>
+                      );
+                    })}
+                    
+                    {/* School markers with enhanced styling */}
+                    {schoolStops.map((school, index) => {
+                      const lat = parseFloat(school.latitude);
+                      const lng = parseFloat(school.longitude);
+                      if (isNaN(lat) || isNaN(lng)) return null;
+                      
+                      const position = mapData.coordsToSVG(lat, lng);
+                      const timestamp = routePath.schoolTimestamps.find(st => st.schoolId === school.id);
+                      const isVisited = !!timestamp?.arrivalTime;
+                      
+                      return (
+                        <g key={school.id}>
+                          {/* School building representation */}
+                          <rect
+                            x={position.x - 12}
+                            y={position.y - 12}
+                            width="24"
+                            height="24"
+                            fill={isVisited ? "#22c55e" : "#ef4444"}
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                            rx="4"
+                            className="cursor-pointer hover:opacity-80 transition-all"
+                            onClick={() => openExternalMap(lat, lng, school.name)}
+                            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
+                          />
+                          <text
+                            x={position.x}
+                            y={position.y + 2}
+                            textAnchor="middle"
+                            className="text-sm font-bold fill-white cursor-pointer"
+                            onClick={() => openExternalMap(lat, lng, school.name)}
+                          >
+                            {index + 1}
+                          </text>
+                          {/* School name label */}
+                          <text
+                            x={position.x}
+                            y={position.y - 20}
+                            textAnchor="middle"
+                            className="text-xs font-medium fill-gray-700"
+                          >
+                            {school.name.length > 12 ? school.name.substring(0, 12) + '...' : school.name}
+                          </text>
+                        </g>
+                      );
+                    })}
+                    
+                    {/* Current location marker with enhanced styling */}
+                    {isActive && currentLocation && (
+                      <g>
                         <circle
-                          cx={position.x}
-                          cy={position.y}
-                          r="8"
-                          fill={isVisited ? "#22c55e" : "#ef4444"}
+                          cx={mapData.coordsToSVG(currentLocation.lat, currentLocation.lng).x}
+                          cy={mapData.coordsToSVG(currentLocation.lat, currentLocation.lng).y}
+                          r="12"
+                          fill="#3b82f6"
                           stroke="#ffffff"
-                          strokeWidth="2"
-                          className="cursor-pointer hover:r-10 transition-all"
-                          onClick={() => openExternalMap(lat, lng, school.name)}
+                          strokeWidth="3"
+                          className="animate-pulse"
+                          filter="drop-shadow(0 2px 6px rgba(0,0,0,0.3))"
                         />
                         <text
-                          x={position.x}
-                          y={position.y - 12}
+                          x={mapData.coordsToSVG(currentLocation.lat, currentLocation.lng).x}
+                          y={mapData.coordsToSVG(currentLocation.lat, currentLocation.lng).y + 22}
                           textAnchor="middle"
-                          className="text-xs font-medium fill-gray-700"
+                          className="text-xs font-bold fill-blue-600"
                         >
-                          {index + 1}
+                          LIVE
                         </text>
                       </g>
-                    );
-                  })}
+                    )}
+                  </svg>
                   
-                  {/* Current location marker for active routes */}
-                  {isActive && currentLocation && (
-                    <circle
-                      cx={mapData.coordsToSVG(currentLocation.lat, currentLocation.lng).x}
-                      cy={mapData.coordsToSVG(currentLocation.lat, currentLocation.lng).y}
-                      r="10"
-                      fill="#3b82f6"
-                      stroke="#ffffff"
-                      strokeWidth="3"
-                      className="animate-pulse"
-                    />
-                  )}
-                  
-                  {/* GPS tracking points */}
-                  {routePath.coordinates.map((coord, index) => {
-                    const position = mapData.coordsToSVG(coord.lat, coord.lng);
-                    return (
-                      <circle
-                        key={index}
-                        cx={position.x}
-                        cy={position.y}
-                        r="2"
-                        fill="#94a3b8"
-                        fillOpacity="0.6"
-                      />
-                    );
-                  })}
-                </svg>
+                  {/* Coordinate Display Overlay */}
+                  <div className="absolute top-2 right-2 bg-white bg-opacity-90 rounded px-3 py-2 text-xs font-mono shadow-sm">
+                    {routePath.coordinates.length > 0 && (
+                      <div className="space-y-1">
+                        <div>Start: {routePath.coordinates[0].lat.toFixed(4)}, {routePath.coordinates[0].lng.toFixed(4)}</div>
+                        {currentLocation ? (
+                          <div className="text-blue-600 font-semibold">Live: {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}</div>
+                        ) : routePath.coordinates.length > 1 ? (
+                          <div>End: {routePath.coordinates[routePath.coordinates.length - 1].lat.toFixed(4)}, {routePath.coordinates[routePath.coordinates.length - 1].lng.toFixed(4)}</div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
               
               {/* Route Map Legend */}
