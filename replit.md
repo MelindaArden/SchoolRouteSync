@@ -125,6 +125,13 @@ This is a full-stack web application for managing school bus routes, driver assi
 - GPS tracking now fully functional with driver locations, route paths, and comprehensive tracking history
 - Updated route utility functions to display only clean route names without hardcoded school counts
 - Enhanced GPS tracking filtering to show drivers with active sessions or recent location updates (30-minute window)
+- **ADDED STUDENT PICKUP DROPDOWNS**: Implemented comprehensive student pickup detail dropdowns in GPS tracking sections
+- Created StudentPickupDropdown component showing student names, pickup status, timestamps, and school groupings
+- Added detailed student pickup API endpoint (/api/sessions/:sessionId/student-pickups-detailed) with full student and school data
+- Enhanced both real-time GPS tracking and route history sections with expandable student pickup information
+- Student dropdowns display pickup status (picked up, not present, absent), timestamps, student grades, and phone numbers
+- Organized student pickup data by school location with visual status indicators and comprehensive pickup tracking
+- GPS tracking now provides complete visibility into student pickup operations with detailed timestamp records
 
 ### July 14, 2025 - Progressive Web App (PWA) Setup & Mobile Installation
 - Implemented comprehensive PWA configuration with manifest.json and service worker (sw.js)

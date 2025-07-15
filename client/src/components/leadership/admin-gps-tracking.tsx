@@ -19,9 +19,15 @@ import {
   Route as RouteIcon,
   History,
   Target,
-  Activity
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle,
+  XCircle,
+  User
 } from "lucide-react";
 import GpsMapViewer from "./gps-map-viewer";
+import StudentPickupDropdown from "./student-pickup-dropdown";
 
 interface GpsRouteHistory {
   id: number;
@@ -107,6 +113,7 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
   const [selectedSession, setSelectedSession] = useState<number | null>(null);
   const [dateFilter, setDateFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedRoutes, setExpandedRoutes] = useState<Set<number>>(new Set());
   
   // WebSocket connection for real-time updates
   useWebSocket(userId);
@@ -177,6 +184,16 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
   const openMapsLocation = (lat: string, lng: string, driverName: string) => {
     const url = `https://www.google.com/maps?q=${lat},${lng}&z=15`;
     window.open(url, '_blank');
+  };
+
+  const toggleRouteExpansion = (sessionId: number) => {
+    const newExpanded = new Set(expandedRoutes);
+    if (newExpanded.has(sessionId)) {
+      newExpanded.delete(sessionId);
+    } else {
+      newExpanded.add(sessionId);
+    }
+    setExpandedRoutes(newExpanded);
   };
 
   const getDateCategory = (dateStr: string) => {
@@ -353,6 +370,13 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                               <p className="font-medium">{route.totalStudentsPickedUp}</p>
                             </div>
                           </div>
+                          
+                          {/* Student Pickup Details Dropdown */}
+                          <StudentPickupDropdown 
+                            sessionId={route.sessionId}
+                            isExpanded={expandedRoutes.has(route.sessionId)}
+                            onToggle={() => toggleRouteExpansion(route.sessionId)}
+                          />
                         </div>
                       ))}
                     </div>

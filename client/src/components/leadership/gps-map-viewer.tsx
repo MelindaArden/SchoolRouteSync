@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatRouteDisplayName } from "@/lib/route-utils";
+import StudentPickupDropdown from "./student-pickup-dropdown";
 import { 
   MapPin, 
   Activity, 
@@ -13,7 +14,10 @@ import {
   Car,
   School,
   Route as RouteIcon,
-  ExternalLink
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  User
 } from "lucide-react";
 
 interface GpsMapViewerProps {
@@ -61,6 +65,17 @@ interface RouteHistory {
 }
 
 export default function GpsMapViewer({ selectedSessionId, onSelectSession }: GpsMapViewerProps) {
+  const [expandedRoutes, setExpandedRoutes] = useState<Set<number>>(new Set());
+
+  const toggleRouteExpansion = (sessionId: number) => {
+    const newExpanded = new Set(expandedRoutes);
+    if (newExpanded.has(sessionId)) {
+      newExpanded.delete(sessionId);
+    } else {
+      newExpanded.add(sessionId);
+    }
+    setExpandedRoutes(newExpanded);
+  };
   // Fetch active driver locations
   const { data: driverLocations = [], refetch: refetchLocations } = useQuery<DriverLocation[]>({
     queryKey: ["/api/driver-locations"],
@@ -279,6 +294,15 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
                       </Badge>
                     </div>
                   </div>
+                  
+                  {/* Student Pickup Details Dropdown */}
+                  {location.sessionId && (
+                    <StudentPickupDropdown 
+                      sessionId={location.sessionId}
+                      isExpanded={expandedRoutes.has(location.sessionId)}
+                      onToggle={() => toggleRouteExpansion(location.sessionId)}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -337,6 +361,15 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
                       <p className="font-mono text-xs">#{location.sessionId}</p>
                     </div>
                   </div>
+                  
+                  {/* Student Pickup Details Dropdown */}
+                  {location.sessionId && (
+                    <StudentPickupDropdown 
+                      sessionId={location.sessionId}
+                      isExpanded={expandedRoutes.has(location.sessionId)}
+                      onToggle={() => toggleRouteExpansion(location.sessionId)}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -380,6 +413,13 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
                       </p>
                     </div>
                   </div>
+                  
+                  {/* Student Pickup Details Dropdown */}
+                  <StudentPickupDropdown 
+                    sessionId={route.sessionId}
+                    isExpanded={expandedRoutes.has(route.sessionId)}
+                    onToggle={() => toggleRouteExpansion(route.sessionId)}
+                  />
                 </div>
               ))}
             </div>

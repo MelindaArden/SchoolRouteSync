@@ -903,6 +903,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get detailed student pickup information for GPS tracking
+  app.get("/api/sessions/:sessionId/student-pickups-detailed", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const pickups = await storage.getStudentPickups(sessionId);
+      
+      // Get detailed pickup info with student and school data
+      const detailedPickups = await Promise.all(
+        pickups.map(async (pickup) => {
+          const student = await storage.getStudentById(pickup.studentId);
+          const school = await storage.getSchool(pickup.schoolId);
+          return {
+            ...pickup,
+            student: student ? {
+              id: student.id,
+              firstName: student.firstName,
+              lastName: student.lastName,
+              grade: student.grade,
+              phoneNumber: student.phoneNumber
+            } : null,
+            school: school ? {
+              id: school.id,
+              name: school.name,
+              address: school.address
+            } : null,
+          };
+        })
+      );
+
+      res.json(detailedPickups);
+    } catch (error) {
+      console.error('Error fetching detailed student pickups:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get all student pickups for today
   app.get('/api/student-pickups/today', async (req, res) => {
     try {
