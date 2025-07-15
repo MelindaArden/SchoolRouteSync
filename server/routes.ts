@@ -903,35 +903,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get student pickups for a session
+  // Get student pickups for a session with timeout protection
   app.get("/api/student-pickups", async (req, res) => {
     try {
       const sessionId = req.query.sessionId ? parseInt(req.query.sessionId as string) : undefined;
       
-      if (sessionId) {
+      if (!sessionId) {
+        return res.status(400).json({ message: "sessionId query parameter required" });
+      }
+
+      // Add timeout protection
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 8000)
+      );
+      
+      const dataPromise = (async () => {
         const pickups = await storage.getStudentPickups(sessionId);
         
         // Get session details to check for absences
         const session = await storage.getPickupSession(sessionId);
         const sessionDate = session?.date || new Date().toISOString().split('T')[0];
         
-        // Update pickup status if student is marked as absent
-        const updatedPickups = await Promise.all(
-          pickups.map(async (pickup) => {
-            const isAbsent = await storage.checkStudentAbsence(pickup.studentId, sessionDate);
-            return {
-              ...pickup,
-              status: isAbsent ? 'absent' : pickup.status
-            };
-          })
-        );
+        // Update pickup status if student is marked as absent with batch processing
+        const batchSize = 5;
+        const updatedPickups = [];
         
-        res.json(updatedPickups);
-      } else {
-        res.status(400).json({ message: "sessionId query parameter required" });
-      }
+        for (let i = 0; i < pickups.length; i += batchSize) {
+          const batch = pickups.slice(i, i + batchSize);
+          const batchResults = await Promise.allSettled(
+            batch.map(async (pickup) => {
+              try {
+                const isAbsent = await storage.checkStudentAbsence(pickup.studentId, sessionDate);
+                return {
+                  ...pickup,
+                  status: isAbsent ? 'absent' : pickup.status
+                };
+              } catch (err) {
+                console.error(`Error checking absence for student ${pickup.studentId}:`, err);
+                return pickup; // Return original pickup if absence check fails
+              }
+            })
+          );
+          
+          // Extract successful results
+          const successfulResults = batchResults
+            .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+            .map(result => result.value);
+            
+          updatedPickups.push(...successfulResults);
+        }
+        
+        return updatedPickups;
+      })();
+      
+      const result = await Promise.race([dataPromise, timeoutPromise]);
+      res.json(result);
+      
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      console.error('Error fetching student pickups:', error);
+      if (error instanceof Error && error.message === 'Database timeout') {
+        res.status(504).json({ message: "Request timeout - please try again" });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
     }
   });
 
@@ -981,22 +1015,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all student pickups for today
+  // Get all student pickups for today with timeout protection
   app.get('/api/student-pickups/today', async (req, res) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const todaysSessions = await storage.getPickupSessionsToday();
+      // Add timeout protection
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 8000)
+      );
       
-      let allPickups: any[] = [];
-      for (const session of todaysSessions) {
-        const pickups = await storage.getStudentPickups(session.id);
-        allPickups = [...allPickups, ...pickups];
-      }
+      const dataPromise = (async () => {
+        const today = new Date().toISOString().split('T')[0];
+        const todaysSessions = await storage.getPickupSessionsToday();
+        
+        let allPickups: any[] = [];
+        for (const session of todaysSessions) {
+          const pickups = await storage.getStudentPickups(session.id);
+          allPickups = [...allPickups, ...pickups];
+        }
+        return allPickups;
+      })();
       
-      res.json(allPickups);
+      const result = await Promise.race([dataPromise, timeoutPromise]);
+      res.json(result);
     } catch (error) {
       console.error('Error fetching today\'s student pickups:', error);
-      res.status(500).json({ error: 'Failed to fetch today\'s student pickups' });
+      if (error instanceof Error && error.message === 'Database timeout') {
+        res.status(504).json({ error: 'Request timeout - please try again' });
+      } else {
+        res.status(500).json({ error: 'Failed to fetch today\'s student pickups' });
+      }
     }
   });
 
@@ -1029,6 +1076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Applying updates:', updates);
       const pickup = await storage.updateStudentPickup(pickupId, updates);
+      console.log('✅ Pickup updated successfully:', { pickupId, status: pickup.status });
       
       // Record GPS school arrival when student is picked up
       if (status === "picked_up" && req.body.sessionId && req.body.latitude && req.body.longitude) {
