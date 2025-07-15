@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWebSocket } from "@/hooks/use-websocket";
 import GpsRouteMap from "@/components/leadership/gps-route-map";
-import RouteMapDetail from "@/components/leadership/route-map-detail";
+import RealTimeRouteMap from "@/components/leadership/real-time-route-map";
 import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   MapPin, 
@@ -276,10 +276,30 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
         </TabsList>
 
         <TabsContent value="real-time" className="space-y-4">
-          <GpsMapViewer 
-            selectedSessionId={selectedSession}
-            onSelectSession={setSelectedSession}
-          />
+          {selectedSession ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedSession(null)}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Live Tracking
+                  </Button>
+                  <h3 className="text-lg font-semibold">Real-time Route Tracking</h3>
+                </div>
+              </div>
+              <RealTimeRouteMap sessionId={selectedSession} isRealTime={true} />
+            </div>
+          ) : (
+            <GpsMapViewer 
+              selectedSessionId={selectedSession}
+              onSelectSession={setSelectedSession}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="route-history" className="space-y-4">
@@ -300,7 +320,7 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                   <h3 className="text-lg font-semibold">Route Map View</h3>
                 </div>
               </div>
-              <RouteMapDetail sessionId={selectedSession} />
+              <RealTimeRouteMap sessionId={selectedSession} isRealTime={false} />
             </div>
           ) : (
             <>

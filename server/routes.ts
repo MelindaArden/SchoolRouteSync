@@ -2755,25 +2755,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const routeSchools = await storage.getRouteSchools(session.routeId);
       console.log(`Found ${routeSchools.length} route schools`);
       
-      // Build school stops data
+      // Build school stops data with enhanced details
       const schoolStops = [];
       for (const rs of routeSchools) {
         const school = await storage.getSchool(rs.schoolId);
         const schoolPickups = allStudentPickups.filter(p => p.schoolId === rs.schoolId);
         
+        // Calculate arrival and departure times from pickups
+        const pickupTimes = schoolPickups
+          .filter(p => p.pickedUpAt)
+          .map(p => new Date(p.pickedUpAt))
+          .sort((a, b) => a.getTime() - b.getTime());
+        
+        const arrivalTime = pickupTimes.length > 0 ? pickupTimes[0].toISOString() : rs.estimatedArrivalTime || null;
+        const departureTime = pickupTimes.length > 0 ? pickupTimes[pickupTimes.length - 1].toISOString() : null;
+        
+        // Calculate duration at school
+        let duration = 0;
+        if (arrivalTime && departureTime) {
+          duration = Math.round((new Date(departureTime).getTime() - new Date(arrivalTime).getTime()) / (1000 * 60));
+        }
+        
         schoolStops.push({
-          id: rs.id,
-          sessionId: sessionId,
           schoolId: rs.schoolId,
           schoolName: school?.name || 'Unknown School',
-          schoolAddress: school?.address || '',
-          latitude: school?.latitude || 0,
-          longitude: school?.longitude || 0,
-          arrivalTime: schoolPickups.length > 0 ? schoolPickups[0]?.pickedUpAt : null,
-          departureTime: null,
+          latitude: school?.latitude || '0',
+          longitude: school?.longitude || '0',
+          arrivalTime: arrivalTime,
+          departureTime: departureTime,
           studentsPickedUp: schoolPickups.filter(p => p.status === 'picked_up').length,
           totalStudents: schoolPickups.length,
-          notes: schoolPickups.map(p => p.driverNotes).filter(Boolean).join('; ') || null
+          duration: duration
         });
       }
       
@@ -2783,20 +2795,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build route path from GPS tracking data - prioritize GPS route tracks over driver locations
       let routePath = [];
       if (gpsRouteTracks.length > 0) {
-        routePath = gpsRouteTracks.map(track => ({
-          latitude: parseFloat(track.latitude),
-          longitude: parseFloat(track.longitude),
+        routePath = gpsRouteTracks.map((track, index) => ({
+          id: track.id || index,
+          latitude: track.latitude,
+          longitude: track.longitude,
           timestamp: track.timestamp || track.createdAt,
-          eventType: track.eventType,
-          speed: track.speed,
-          bearing: track.bearing,
-          accuracy: track.accuracy
+          speed: track.speed || 0
         }));
       } else if (driverLocations.length > 0) {
-        routePath = driverLocations.map(loc => ({
-          latitude: parseFloat(loc.latitude),
-          longitude: parseFloat(loc.longitude),
-          timestamp: loc.timestamp
+        routePath = driverLocations.map((loc, index) => ({
+          id: loc.id || index,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          timestamp: loc.timestamp,
+          speed: 0
         }));
       }
       
@@ -2812,9 +2824,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         durationMinutes: session.durationMinutes,
         routePath: routePath,
         schoolStops: schoolStops,
-        currentLatitude: currentLocation ? parseFloat(currentLocation.latitude) : null,
-        currentLongitude: currentLocation ? parseFloat(currentLocation.longitude) : null,
-        lastLocationUpdate: currentLocation?.timestamp
+        currentLocation: currentLocation ? {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          timestamp: currentLocation.timestamp
+        } : null
       };
       
       console.log(`Returning route details with ${routePath.length} GPS points and ${schoolStops.length} school stops`);
@@ -3099,6 +3113,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error submitting feedback:', error);
       res.status(500).json({ message: 'Failed to submit feedback' });
+    }
+  });
+
+  // Route completion with automatic image generation
+  app.post("/api/routes/:sessionId/complete", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { completionImageData } = req.body;
+      
+      console.log(`🏁 Completing route for session ${sessionId} with image generation`);
+      
+      // Get the pickup session
+      const session = await storage.getPickupSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      // Ensure the session belongs to current user or user is admin
+      const currentUser = req.session?.user;
+      if (!currentUser || (session.driverId !== currentUser.id && currentUser.role !== 'admin')) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      
+      // Complete the pickup session
+      const completedTime = new Date();
+      const startTime = session.startTime ? new Date(session.startTime) : completedTime;
+      const durationMinutes = Math.round((completedTime.getTime() - startTime.getTime()) / (1000 * 60));
+      
+      await storage.updatePickupSession(sessionId, {
+        status: 'completed',
+        completedTime: completedTime,
+        durationMinutes: durationMinutes
+      });
+      
+      // Get comprehensive route details for image generation
+      const routeDetails = await pool.query(`
+        SELECT 
+          ps.id as session_id,
+          ps.route_id,
+          ps.driver_id,
+          u.first_name || ' ' || u.last_name as driver_name,
+          r.name as route_name,
+          ps.start_time,
+          ps.completed_time,
+          ps.duration_minutes
+        FROM pickup_sessions ps
+        JOIN users u ON ps.driver_id = u.id
+        JOIN routes r ON ps.route_id = r.id
+        WHERE ps.id = $1
+      `, [sessionId]);
+      
+      const routeDetail = routeDetails.rows[0];
+      
+      // Get GPS tracking data for image
+      const gpsTrackingData = await storage.getGpsRouteTracksBySession(sessionId);
+      const schoolStops = await storage.getRouteSchools(session.routeId);
+      const studentPickups = await storage.getStudentPickups(sessionId);
+      
+      // Build comprehensive route completion record
+      const routeCompletionData = {
+        sessionId: sessionId,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        routeName: routeDetail.route_name,
+        driverName: routeDetail.driver_name,
+        startTime: routeDetail.start_time,
+        endTime: completedTime,
+        durationMinutes: durationMinutes,
+        totalStops: schoolStops.length,
+        totalStudentsPickedUp: studentPickups.filter(p => p.status === 'picked_up').length,
+        gpsPointsRecorded: gpsTrackingData.length,
+        completionImageData: completionImageData || null,
+        routeStatus: 'completed'
+      };
+      
+      // Save completion image data if provided
+      if (completionImageData) {
+        try {
+          // Store completion image in GPS route history
+          const existingHistory = await storage.getGpsRouteHistoryBySession(sessionId);
+          if (existingHistory) {
+            await storage.updateGpsRouteHistory(existingHistory.id, {
+              endTime: completedTime,
+              completionStatus: 'completed',
+              totalStudentsPickedUp: routeCompletionData.totalStudentsPickedUp,
+              schoolsVisited: schoolStops.length,
+              routePath: {
+                ...existingHistory.routePath,
+                completionImage: completionImageData,
+                completedAt: completedTime.toISOString()
+              }
+            });
+            console.log('📊 Route completion image saved to GPS history');
+          }
+        } catch (imageError) {
+          console.error('⚠️ Failed to save completion image:', imageError);
+          // Don't fail the route completion if image saving fails
+        }
+      }
+      
+      // Broadcast completion to all connected clients
+      broadcast({
+        type: 'route_completed',
+        sessionId: sessionId,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        completionTime: completedTime.toISOString(),
+        durationMinutes: durationMinutes,
+        studentsPickedUp: routeCompletionData.totalStudentsPickedUp
+      });
+      
+      console.log(`🎉 Route ${session.routeId} completed by driver ${session.driverId} - Duration: ${durationMinutes} minutes`);
+      
+      res.json({
+        message: "Route completed successfully",
+        sessionId: sessionId,
+        completionTime: completedTime.toISOString(),
+        durationMinutes: durationMinutes,
+        routeCompletionData: routeCompletionData
+      });
+      
+    } catch (error) {
+      console.error('Error completing route:', error);
+      res.status(500).json({ message: "Failed to complete route", error: error.message });
+    }
+  });
+
+  // Get route completion image
+  app.get("/api/routes/:sessionId/completion-image", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      // Get GPS route history with completion image
+      const history = await storage.getGpsRouteHistoryBySession(sessionId);
+      if (!history || !history.routePath?.completionImage) {
+        return res.status(404).json({ message: "Route completion image not found" });
+      }
+      
+      res.json({
+        sessionId: sessionId,
+        completionImage: history.routePath.completionImage,
+        completedAt: history.routePath.completedAt || history.endTime,
+        routeName: history.routeName,
+        driverId: history.driverId
+      });
+      
+    } catch (error) {
+      console.error('Error fetching completion image:', error);
+      res.status(500).json({ message: "Failed to fetch completion image" });
     }
   });
 
