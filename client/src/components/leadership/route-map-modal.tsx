@@ -65,7 +65,14 @@ export default function RouteMapModal({ sessionId, onClose }: RouteMapModalProps
     staleTime: 30000,
   });
 
-  console.log('🗺️ RouteMapModal - sessionId:', sessionId, 'data:', routeDetail, 'error:', error);
+  console.log('🗺️ RouteMapModal - sessionId:', sessionId, 'isLoading:', isLoading, 'error:', error, 'data available:', !!routeDetail);
+  if (routeDetail) {
+    console.log('🗺️ Route data:', {
+      routePath: routeDetail.routePath?.length || 0,
+      schoolStops: routeDetail.schoolStops?.length || 0,
+      status: routeDetail.status
+    });
+  }
 
   if (!sessionId) return null;
 
@@ -120,11 +127,20 @@ export default function RouteMapModal({ sessionId, onClose }: RouteMapModalProps
           </DialogTitle>
         </DialogHeader>
 
+        <div className="px-6 pb-2">
+          <div className="text-sm text-gray-600">
+            Debug: Loading: {isLoading ? 'Yes' : 'No'} | 
+            Error: {error ? 'Yes' : 'No'} | 
+            Data: {routeDetail ? 'Available' : 'None'}
+            {routeDetail && ` | GPS Points: ${routeDetail.routePath?.length || 0}`}
+          </div>
+        </div>
+
         {isLoading && (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex items-center justify-center h-64 p-6">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600">Loading route details...</p>
+              <p className="text-sm text-gray-600">Loading route details for session {sessionId}...</p>
             </div>
           </div>
         )}
@@ -140,16 +156,17 @@ export default function RouteMapModal({ sessionId, onClose }: RouteMapModalProps
                   <p className="text-xs text-red-400 font-mono bg-red-50 p-2 rounded mt-2">
                     {typeof error === 'string' ? error : (error as any)?.message || 'Unknown error'}
                   </p>
+                  <Button onClick={onClose} className="mt-4">Close</Button>
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {routeDetail && (
+        {!isLoading && !error && routeDetail && (
           <div className="flex h-full">
             {/* Left Panel - Route Info */}
-            <div className="w-1/3 border-r">
+            <div className="w-1/3 border-r bg-gray-50">
               <ScrollArea className="h-full">
                 <div className="p-6 space-y-4">
                   {/* Route Overview */}
