@@ -29,7 +29,18 @@ export function formatRouteDisplayName(route: RouteWithSchools): string {
   // Generate display name with actual school count
   const schoolText = schoolCount === 1 ? 'School' : 'Schools';
   
-  return `${baseName} - ${schoolCount} ${schoolText}`;
+  const result = `${baseName} - ${schoolCount} ${schoolText}`;
+  
+  // Debug logging to see if function is being called
+  console.log('formatRouteDisplayName called:', {
+    originalName: route.name,
+    baseName,
+    schoolCount,
+    schoolsArray: route.schools,
+    result
+  });
+  
+  return result;
 }
 
 /**
