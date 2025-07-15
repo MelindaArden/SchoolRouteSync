@@ -20,6 +20,7 @@ import MasterLogin from "@/pages/master-login";
 import MasterDashboard from "@/pages/master-dashboard";
 import PWATest from "@/pages/pwa-test";
 import QRCodePage from "@/pages/qr-code";
+import TestLogin from "@/pages/test-login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -212,6 +213,7 @@ function Router() {
           <Route path="/deployment-test" component={DeploymentTest} />
           <Route path="/pwa-test" component={PWATest} />
           <Route path="/qr-code" component={QRCodePage} />
+          <Route path="/test-login" component={TestLogin} />
         </>
       )}
       <Route component={NotFound} />
