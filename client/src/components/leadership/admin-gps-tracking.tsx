@@ -29,7 +29,7 @@ import {
   Search,
   Calendar
 } from "lucide-react";
-// import GpsMapViewer from "./gps-map-viewer";
+import SimpleGpsTracker from "./simple-gps-tracker";
 import StudentPickupDropdown from "./student-pickup-dropdown";
 
 interface GpsRouteHistory {
@@ -276,15 +276,7 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
         </TabsList>
 
         <TabsContent value="real-time" className="space-y-4">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-center text-gray-600">
-                Real-time GPS tracking will be displayed here.
-                <br/>
-                <span className="text-sm">Component temporarily disabled for debugging.</span>
-              </p>
-            </CardContent>
-          </Card>
+          <SimpleGpsTracker />
         </TabsContent>
 
         <TabsContent value="route-history" className="space-y-4">

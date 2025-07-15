@@ -1,6 +1,18 @@
 import { createRoot } from "react-dom/client";
-import MinimalApp from "./minimal-app";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/sonner";
+import App from "./App";
 import "./index.css";
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
@@ -38,4 +50,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 };
 
-createRoot(document.getElementById("root")!).render(<MinimalApp />);
+createRoot(document.getElementById("root")!).render(
+  <QueryClientProvider client={queryClient}>
+    <App />
+    <Toaster />
+  </QueryClientProvider>
+);
