@@ -147,16 +147,18 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
 
   // Filter route history based on date and search
   const filteredHistory = routeHistory.filter(route => {
-    const matchesDate = !dateFilter || route.createdAt.startsWith(dateFilter);
+    // Use startTime for date filtering since that's when the route actually happened
+    const routeDate = route.startTime ? route.startTime.split('T')[0] : route.createdAt.split('T')[0];
+    const matchesDate = !dateFilter || routeDate === dateFilter;
     const matchesSearch = !searchTerm || 
       route.routeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       `${route.driver.firstName} ${route.driver.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesDate && matchesSearch;
   });
 
-  // Group history by date
+  // Group history by date using startTime for proper chronological grouping
   const historyByDate = filteredHistory.reduce((acc, route) => {
-    const date = route.createdAt.split('T')[0];
+    const date = route.startTime ? route.startTime.split('T')[0] : route.createdAt.split('T')[0];
     if (!acc[date]) acc[date] = [];
     acc[date].push(route);
     return acc;
