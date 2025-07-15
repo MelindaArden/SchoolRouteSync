@@ -358,22 +358,14 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                 </CardContent>
               </Card>
 
-              <Card className="border-red-200 bg-red-50">
+              <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-red-600 font-medium">Active Alerts</p>
-                      <div className="flex items-center space-x-2">
-                        <p className="text-xl sm:text-2xl font-bold text-red-600">{activeAlerts}</p>
-                        {activeAlerts > 0 && (
-                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        )}
-                      </div>
-                      <div className="text-xs text-red-500 mt-1">
-                        Real-time: {missedSchoolCount} missed + {recentIssuesCount} issues + {behindScheduleRoutes} behind
-                      </div>
+                      <p className="text-sm text-gray-600">Total Drivers</p>
+                      <p className="text-xl sm:text-2xl font-bold text-gray-800">{driverCount}</p>
                     </div>
-                    <AlertTriangle className={`h-8 w-8 text-red-600 ${activeAlerts > 0 ? 'animate-bounce' : ''}`} />
+                    <Users className="h-8 w-8 text-gray-600" />
                   </div>
                 </CardContent>
               </Card>

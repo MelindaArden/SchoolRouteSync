@@ -49,189 +49,52 @@ export default function GpsRouteMap({
   schoolStops, 
   currentLocation 
 }: GpsRouteMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [map, setMap] = useState<any>(null);
-  const [directionsService, setDirectionsService] = useState<any>(null);
-  const [directionsRenderer, setDirectionsRenderer] = useState<any>(null);
-  const [markers, setMarkers] = useState<any[]>([]);
-  const [polyline, setPolyline] = useState<any>(null);
+  
+  // Create a simple coordinate-based map without Google Maps
+  const createSimpleMap = () => {
+    if (!routePath.coordinates || routePath.coordinates.length === 0) return null;
 
-  // Load Google Maps API
-  useEffect(() => {
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBvOkBwb07O2k02pDd02BF58dUrPnUQ0Qg&libraries=geometry`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => setMapLoaded(true);
-      document.head.appendChild(script);
-    } else {
-      setMapLoaded(true);
-    }
-  }, []);
+    // Calculate bounds
+    const lats = routePath.coordinates.map(coord => coord.lat);
+    const lngs = routePath.coordinates.map(coord => coord.lng);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapLoaded || !mapRef.current) return;
+    // Convert coordinates to SVG positions
+    const mapWidth = 400;
+    const mapHeight = 300;
+    const padding = 20;
 
-    const google = window.google;
-    const mapInstance = new google.maps.Map(mapRef.current, {
-      zoom: 12,
-      center: { lat: 36.1627, lng: -86.7816 }, // Default to Nashville
-      mapTypeId: google.maps.MapTypeId.ROADMAP,
-      styles: [
-        {
-          featureType: "poi",
-          elementType: "labels",
-          stylers: [{ visibility: "off" }]
-        }
-      ]
+    const scaleX = (mapWidth - 2 * padding) / (maxLng - minLng);
+    const scaleY = (mapHeight - 2 * padding) / (maxLat - minLat);
+
+    const coordsToSVG = (lat: number, lng: number) => ({
+      x: padding + (lng - minLng) * scaleX,
+      y: mapHeight - (padding + (lat - minLat) * scaleY)
     });
 
-    const directionsServiceInstance = new google.maps.DirectionsService();
-    const directionsRendererInstance = new google.maps.DirectionsRenderer({
-      suppressMarkers: true,
-      polylineOptions: {
-        strokeColor: isActive ? "#2563eb" : "#6b7280",
-        strokeWeight: 4,
-        strokeOpacity: 0.8
-      }
-    });
+    const pathPoints = routePath.coordinates.map(coord => coordsToSVG(coord.lat, coord.lng));
+    const pathString = pathPoints.map((point, index) => 
+      `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
+    ).join(' ');
 
-    directionsRendererInstance.setMap(mapInstance);
+    return { pathString, coordsToSVG, mapWidth, mapHeight };
+  };
 
-    setMap(mapInstance);
-    setDirectionsService(directionsServiceInstance);
-    setDirectionsRenderer(directionsRendererInstance);
-  }, [mapLoaded, isActive]);
-
-  // Update map with route data
-  useEffect(() => {
-    if (!map || !routePath || !schoolStops.length) return;
-
-    const google = window.google;
-    
-    // Clear existing markers and polyline
-    markers.forEach(marker => marker.setMap(null));
-    if (polyline) polyline.setMap(null);
-
-    const newMarkers: any[] = [];
-    const bounds = new google.maps.LatLngBounds();
-
-    // Add school stop markers
-    schoolStops.forEach((school, index) => {
-      const lat = parseFloat(school.latitude);
-      const lng = parseFloat(school.longitude);
-      
-      if (isNaN(lat) || isNaN(lng)) return;
-
-      const position = { lat, lng };
-      bounds.extend(position);
-
-      // Find school timestamp data
-      const schoolTimestamp = routePath.schoolTimestamps.find(st => st.schoolId === school.id);
-      
-      // Create custom marker icon
-      const markerIcon = {
-        path: google.maps.SymbolPath.CIRCLE,
-        fillColor: schoolTimestamp?.arrivalTime ? "#22c55e" : "#ef4444",
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: 2,
-        scale: 8
-      };
-
-      const marker = new google.maps.Marker({
-        position,
-        map,
-        icon: markerIcon,
-        title: school.name,
-        zIndex: 100
-      });
-
-      // Create info window content
-      const infoContent = `
-        <div style="padding: 8px; min-width: 200px;">
-          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #1f2937;">${school.name}</h3>
-          <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 14px;">${school.address}</p>
-          ${schoolTimestamp?.arrivalTime ? `
-            <div style="margin-top: 8px; padding: 4px 8px; background: #dcfce7; border-radius: 4px;">
-              <strong style="color: #166534;">Arrived:</strong> ${formatTime(schoolTimestamp.arrivalTime)}
-              ${schoolTimestamp.departureTime ? `<br><strong style="color: #166534;">Departed:</strong> ${formatTime(schoolTimestamp.departureTime)}` : ''}
-            </div>
-          ` : `
-            <div style="margin-top: 8px; padding: 4px 8px; background: #fef2f2; border-radius: 4px;">
-              <span style="color: #dc2626;">Not visited yet</span>
-            </div>
-          `}
-        </div>
-      `;
-
-      const infoWindow = new google.maps.InfoWindow({
-        content: infoContent
-      });
-
-      marker.addListener('click', () => {
-        infoWindow.open(map, marker);
-      });
-
-      newMarkers.push(marker);
-    });
-
-    // Add current location marker if active
-    if (isActive && currentLocation) {
-      const currentMarker = new google.maps.Marker({
-        position: { lat: currentLocation.lat, lng: currentLocation.lng },
-        map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          fillColor: "#3b82f6",
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 3,
-          scale: 10
-        },
-        title: `${driverName} - Current Location`,
-        zIndex: 200,
-        animation: google.maps.Animation.BOUNCE
-      });
-
-      bounds.extend({ lat: currentLocation.lat, lng: currentLocation.lng });
-      newMarkers.push(currentMarker);
-    }
-
-    // Draw route path if coordinates exist
-    if (routePath.coordinates.length > 0) {
-      const pathCoordinates = routePath.coordinates.map(coord => ({
-        lat: coord.lat,
-        lng: coord.lng
-      }));
-
-      const routePolyline = new google.maps.Polyline({
-        path: pathCoordinates,
-        geodesic: true,
-        strokeColor: isActive ? "#2563eb" : "#6b7280",
-        strokeOpacity: 0.8,
-        strokeWeight: 4,
-        map
-      });
-
-      pathCoordinates.forEach(coord => bounds.extend(coord));
-      setPolyline(routePolyline);
-    }
-
-    setMarkers(newMarkers);
-    
-    // Fit map to bounds
-    if (!bounds.isEmpty()) {
-      map.fitBounds(bounds);
-    }
-  }, [map, routePath, schoolStops, currentLocation, isActive, driverName]);
+  const mapData = createSimpleMap();
 
   const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(timestamp).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const openExternalMap = (lat: number, lng: number, label: string) => {
+    const url = `https://www.google.com/maps?q=${lat},${lng}&z=15`;
+    window.open(url, '_blank');
   };
 
   const formatDuration = (startTime: string, endTime?: string) => {
@@ -315,17 +178,151 @@ export default function GpsRouteMap({
           <CardTitle className="text-lg flex items-center gap-2">
             <MapPin className="h-5 w-5" />
             Route Map
+            <Badge variant="outline" className="ml-2">
+              {isActive ? "Live Tracking" : "Completed Route"}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div 
-            ref={mapRef} 
-            style={{ width: '100%', height: '400px' }}
-            className="rounded-lg border"
-          />
-          {!mapLoaded && (
-            <div className="flex items-center justify-center h-96">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          {mapData ? (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <svg
+                  width={mapData.mapWidth}
+                  height={mapData.mapHeight}
+                  className="border rounded-lg bg-gray-50"
+                >
+                  {/* Route path */}
+                  <path
+                    d={mapData.pathString}
+                    fill="none"
+                    stroke={isActive ? "#2563eb" : "#6b7280"}
+                    strokeWidth="3"
+                    strokeOpacity="0.8"
+                  />
+                  
+                  {/* School markers */}
+                  {schoolStops.map((school, index) => {
+                    const lat = parseFloat(school.latitude);
+                    const lng = parseFloat(school.longitude);
+                    if (isNaN(lat) || isNaN(lng)) return null;
+                    
+                    const position = mapData.coordsToSVG(lat, lng);
+                    const timestamp = routePath.schoolTimestamps.find(st => st.schoolId === school.id);
+                    const isVisited = !!timestamp?.arrivalTime;
+                    
+                    return (
+                      <g key={school.id}>
+                        <circle
+                          cx={position.x}
+                          cy={position.y}
+                          r="8"
+                          fill={isVisited ? "#22c55e" : "#ef4444"}
+                          stroke="#ffffff"
+                          strokeWidth="2"
+                          className="cursor-pointer hover:r-10 transition-all"
+                          onClick={() => openExternalMap(lat, lng, school.name)}
+                        />
+                        <text
+                          x={position.x}
+                          y={position.y - 12}
+                          textAnchor="middle"
+                          className="text-xs font-medium fill-gray-700"
+                        >
+                          {index + 1}
+                        </text>
+                      </g>
+                    );
+                  })}
+                  
+                  {/* Current location marker for active routes */}
+                  {isActive && currentLocation && (
+                    <circle
+                      cx={mapData.coordsToSVG(currentLocation.lat, currentLocation.lng).x}
+                      cy={mapData.coordsToSVG(currentLocation.lat, currentLocation.lng).y}
+                      r="10"
+                      fill="#3b82f6"
+                      stroke="#ffffff"
+                      strokeWidth="3"
+                      className="animate-pulse"
+                    />
+                  )}
+                  
+                  {/* GPS tracking points */}
+                  {routePath.coordinates.map((coord, index) => {
+                    const position = mapData.coordsToSVG(coord.lat, coord.lng);
+                    return (
+                      <circle
+                        key={index}
+                        cx={position.x}
+                        cy={position.y}
+                        r="2"
+                        fill="#94a3b8"
+                        fillOpacity="0.6"
+                      />
+                    );
+                  })}
+                </svg>
+              </div>
+              
+              {/* Route Map Legend */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-1 bg-blue-600 rounded"></div>
+                  <span>Route Path</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                  <span>Visited School</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-white"></div>
+                  <span>Pending School</span>
+                </div>
+                {isActive && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white animate-pulse"></div>
+                    <span>Current Location</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* External Map Links */}
+              <div className="flex justify-center gap-2 pt-2 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const firstCoord = routePath.coordinates[0];
+                    if (firstCoord) {
+                      openExternalMap(firstCoord.lat, firstCoord.lng, `${routeName} - Route Start`);
+                    }
+                  }}
+                  className="text-xs"
+                >
+                  <Navigation className="h-3 w-3 mr-1" />
+                  View in Google Maps
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const coords = routePath.coordinates.map(c => `${c.lat},${c.lng}`).join('|');
+                    const url = `https://www.google.com/maps/dir/${coords}`;
+                    window.open(url, '_blank');
+                  }}
+                  className="text-xs"
+                >
+                  <Target className="h-3 w-3 mr-1" />
+                  Get Directions
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No route data available</p>
+              <p className="text-sm">GPS tracking will appear here when available</p>
             </div>
           )}
         </CardContent>
