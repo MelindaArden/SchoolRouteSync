@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,8 @@ import {
   RefreshCw,
   Car,
   School,
-  Route as RouteIcon
+  Route as RouteIcon,
+  ExternalLink
 } from "lucide-react";
 
 interface GpsMapViewerProps {
@@ -59,9 +60,6 @@ interface RouteHistory {
 }
 
 export default function GpsMapViewer({ selectedSessionId, onSelectSession }: GpsMapViewerProps) {
-  const [mapContainer, setMapContainer] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-
   // Fetch active driver locations
   const { data: driverLocations = [], refetch: refetchLocations } = useQuery<DriverLocation[]>({
     queryKey: ["/api/driver-locations"],
@@ -74,117 +72,10 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
     refetchInterval: 30000, // Update every 30 seconds
   });
 
-  // Initialize Google Maps
-  useEffect(() => {
-    const initMap = () => {
-      if (!window.google) {
-        // Load Google Maps API if not loaded
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBGjE8ZQRqKqBPDUn6zE8sF1Yr-_-DqD9A&libraries=geometry`;
-        script.async = true;
-        script.onload = initMap;
-        document.head.appendChild(script);
-        return;
-      }
-
-      // Nashville center coordinates
-      const nashville = { lat: 36.1627, lng: -86.7816 };
-      
-      const map = new google.maps.Map(document.getElementById('gps-map') as HTMLElement, {
-        zoom: 11,
-        center: nashville,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        styles: [
-          {
-            featureType: "poi",
-            elementType: "labels",
-            stylers: [{ visibility: "off" }]
-          }
-        ]
-      });
-
-      setMapContainer(map);
-    };
-
-    initMap();
-  }, []);
-
-  // Update map markers when driver locations change
-  useEffect(() => {
-    if (!mapContainer || !driverLocations.length) return;
-
-    // Clear existing markers
-    markers.forEach(marker => marker.setMap(null));
-    setMarkers([]);
-
-    const newMarkers: google.maps.Marker[] = [];
-
-    // Add markers for active drivers
-    driverLocations.forEach(location => {
-      if (location.session?.status === 'in_progress') {
-        const marker = new google.maps.Marker({
-          position: {
-            lat: parseFloat(location.latitude),
-            lng: parseFloat(location.longitude)
-          },
-          map: mapContainer,
-          title: `${location.driver.firstName} ${location.driver.lastName} - ${location.session.route.name}`,
-          icon: {
-            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="8" fill="#10b981" stroke="#ffffff" stroke-width="2"/>
-                <path d="M8 12l2 2 4-4" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            `),
-            scaledSize: new google.maps.Size(32, 32),
-            anchor: new google.maps.Point(16, 16)
-          },
-          animation: google.maps.Animation.BOUNCE
-        });
-
-        // Create info window
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div class="p-2">
-              <h3 class="font-semibold">${location.driver.firstName} ${location.driver.lastName}</h3>
-              <p class="text-sm text-gray-600">Route: ${location.session.route.name}</p>
-              <p class="text-sm text-gray-600">Status: ${location.session.status}</p>
-              <p class="text-xs text-gray-500">Last update: ${new Date(location.timestamp).toLocaleTimeString()}</p>
-              <p class="text-xs font-mono text-gray-500">GPS: ${parseFloat(location.latitude).toFixed(6)}, ${parseFloat(location.longitude).toFixed(6)}</p>
-            </div>
-          `
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(mapContainer, marker);
-          onSelectSession(location.sessionId);
-        });
-
-        newMarkers.push(marker);
-      }
-    });
-
-    setMarkers(newMarkers);
-
-    // Auto-fit map to show all markers
-    if (newMarkers.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      newMarkers.forEach(marker => {
-        const position = marker.getPosition();
-        if (position) bounds.extend(position);
-      });
-      mapContainer.fitBounds(bounds);
-      
-      // Don't zoom in too much for single markers
-      if (newMarkers.length === 1) {
-        google.maps.event.addListenerOnce(mapContainer, 'bounds_changed', () => {
-          if (mapContainer.getZoom()! > 15) {
-            mapContainer.setZoom(15);
-          }
-        });
-      }
-    }
-  }, [mapContainer, driverLocations, onSelectSession]);
+  const openMapLocation = (lat: string, lng: string, driverName: string) => {
+    const url = `https://www.google.com/maps?q=${lat},${lng}&z=15`;
+    window.open(url, '_blank');
+  };
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -289,10 +180,105 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
         </CardContent>
       </Card>
 
-      {/* Interactive Map */}
+      {/* GPS Tracking Display */}
       <Card>
-        <CardContent className="p-0">
-          <div id="gps-map" className="w-full h-96 rounded-lg"></div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Real-time Driver Locations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activeDrivers.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Car className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No Active Drivers</h3>
+              <p className="mb-4">No drivers are currently on active routes.</p>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  // Try to simulate GPS data for testing
+                  try {
+                    const response = await fetch('/api/gps/simulate/56', { method: 'POST' });
+                    if (response.ok) {
+                      setTimeout(() => {
+                        refetchLocations();
+                        refetchHistory();
+                      }, 2000);
+                    }
+                  } catch (error) {
+                    console.error('GPS simulation error:', error);
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <Activity className="h-4 w-4" />
+                Generate Test Data
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {activeDrivers.map(location => (
+                <div
+                  key={location.id}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    selectedSessionId === location.sessionId 
+                      ? 'bg-blue-50 border-blue-300 shadow-md' 
+                      : 'hover:bg-gray-50 border-gray-200'
+                  }`}
+                  onClick={() => onSelectSession(location.sessionId)}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
+                        <div>
+                          <h4 className="font-semibold text-lg">{location.driver.firstName} {location.driver.lastName}</h4>
+                          <Badge variant="outline" className="bg-green-50 border-green-300 text-green-700">
+                            <RouteIcon className="h-3 w-3 mr-1" />
+                            {location.session?.route.name}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMapLocation(location.latitude, location.longitude, `${location.driver.firstName} ${location.driver.lastName}`);
+                        }}
+                        className="text-xs"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View on Map
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="bg-gray-50 p-3 rounded">
+                      <p className="text-gray-600 font-medium mb-1">GPS Coordinates</p>
+                      <p className="font-mono text-xs break-all">
+                        {parseFloat(location.latitude).toFixed(6)}, {parseFloat(location.longitude).toFixed(6)}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded">
+                      <p className="text-gray-600 font-medium mb-1">Last Update</p>
+                      <p className="font-medium">{formatTime(location.timestamp)}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded">
+                      <p className="text-gray-600 font-medium mb-1">Session Status</p>
+                      <Badge variant="secondary" className="text-xs">
+                        {location.session?.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

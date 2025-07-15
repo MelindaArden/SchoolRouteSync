@@ -112,6 +112,18 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 15, 2025 - Route Runner GPS Tracking Map & Interface Fixes
+- Successfully changed app name to "Route Runner" across all interfaces and browser title
+- Created comprehensive GPS tracking map viewer with real-time driver location display replacing Google Maps dependency
+- Fixed GPS tracking to show actual driver locations with route information instead of user location
+- Enhanced GPS tracking display with interactive driver cards, live coordinate display, and external map links
+- Added GPS simulation functionality for testing route tracking capabilities
+- Improved driver location visualization with animated status indicators and session details
+- Created comprehensive route tracking interface with real-time updates and proper data integration
+- Fixed school count display logic - route name shows hardcoded text but dynamic counter displays correct school count
+- Enhanced admin map tab with professional GPS tracking interface without external API dependencies
+- GPS tracking now fully functional with driver locations, route paths, and comprehensive tracking history
+
 ### July 14, 2025 - Progressive Web App (PWA) Setup & Mobile Installation
 - Implemented comprehensive PWA configuration with manifest.json and service worker (sw.js)
 - Added PWA meta tags for mobile installation including iOS and Android support
