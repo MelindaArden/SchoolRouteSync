@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWebSocket } from "@/hooks/use-websocket";
 import GpsRouteMap from "@/components/leadership/gps-route-map";
-import SimpleRouteViewer from "@/components/leadership/simple-route-viewer";
+// import SimpleRouteViewer from "@/components/leadership/simple-route-viewer";
 import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   MapPin, 
@@ -285,10 +285,23 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
         <TabsContent value="route-history" className="space-y-4">
           {/* Show Route Detail if a session is selected */}
           {selectedSession ? (
-            <SimpleRouteViewer 
-              sessionId={selectedSession}
-              onBack={() => setSelectedSession(null)}
-            />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSelectedSession(null)}>
+                  ← Back to History
+                </Button>
+                <h2 className="text-xl font-semibold">Route Details - Session #{selectedSession}</h2>
+              </div>
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-center text-gray-600">
+                    Route visualization for session {selectedSession} will be displayed here.
+                    <br/>
+                    <span className="text-sm">This is a temporary placeholder while we fix the route viewer.</span>
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           ) : (
             <>
               {/* Search and Filter Controls */}
