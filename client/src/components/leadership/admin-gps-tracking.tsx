@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWebSocket } from "@/hooks/use-websocket";
 import GpsRouteMap from "@/components/leadership/gps-route-map";
-import RouteMapModal from "@/components/leadership/route-map-modal";
+import SimpleRouteViewer from "@/components/leadership/simple-route-viewer";
 import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   MapPin, 
@@ -283,8 +283,16 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
         </TabsContent>
 
         <TabsContent value="route-history" className="space-y-4">
-          {/* Search and Filter Controls */}
-          <Card>
+          {/* Show Route Detail if a session is selected */}
+          {selectedSession ? (
+            <SimpleRouteViewer 
+              sessionId={selectedSession}
+              onBack={() => setSelectedSession(null)}
+            />
+          ) : (
+            <>
+              {/* Search and Filter Controls */}
+              <Card>
             <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex items-center gap-2">
@@ -396,14 +404,10 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                     </Card>
               ))}
           </div>
+            </>
+          )}
         </TabsContent>
       </Tabs>
-
-      {/* Route Map Modal */}
-      <RouteMapModal 
-        sessionId={selectedSession}
-        onClose={() => setSelectedSession(null)}
-      />
     </div>
   );
 }
