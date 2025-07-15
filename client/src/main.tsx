@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import MinimalApp from "./minimal-app";
+import SuperMinimal from "./super-minimal";
 import "./index.css";
 
 // PWA Service Worker Registration
@@ -39,8 +40,17 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 };
 
-// Use minimal app until we fix the main app issues
-const useMinimal = window.location.search.includes("minimal=false") ? false : true;
-createRoot(document.getElementById("root")!).render(
-  useMinimal ? <MinimalApp /> : <App />
-);
+// Progressive fallback system
+const params = new URLSearchParams(window.location.search);
+let component;
+
+if (params.has("super")) {
+  component = <SuperMinimal />;
+} else if (params.has("minimal") && params.get("minimal") !== "false") {
+  component = <MinimalApp />;
+} else {
+  // Default to super minimal until main app is fixed
+  component = <SuperMinimal />;
+}
+
+createRoot(document.getElementById("root")!).render(component);
