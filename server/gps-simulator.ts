@@ -65,6 +65,17 @@ export async function simulateGPSTracking(sessionId: number) {
       throw new Error(`Session ${sessionId} not found`);
     }
     
+    console.log(`Session data:`, {
+      id: session.id,
+      driverId: session.driverId,
+      routeId: session.routeId,
+      status: session.status
+    });
+    
+    if (!session.driverId) {
+      throw new Error(`Session ${sessionId} has no driver assigned`);
+    }
+    
     // Get route schools
     const routeSchools = await storage.getRouteSchools(session.routeId);
     if (routeSchools.length === 0) {
@@ -118,7 +129,8 @@ export async function simulateGPSTracking(sessionId: number) {
     }
     
     // Update driver location to current position
-    await storage.updateDriverLocation(session.driverId, {
+    await storage.updateDriverLocation({
+      driverId: session.driverId,
       latitude: currentLat.toString(),
       longitude: currentLng.toString(),
       sessionId: sessionId

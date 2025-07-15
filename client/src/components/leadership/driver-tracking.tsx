@@ -89,12 +89,18 @@ export default function DriverTracking() {
     session.status === "in_progress"
   );
   
-  // Filter driver locations to only show those with active in-progress sessions
+  // Filter driver locations to show drivers with active sessions OR just show active drivers
   const activeDriverLocations = (driverLocations as any[]).filter((location: any) => {
-    // Only show drivers who have active in-progress sessions
-    return location.sessionId && inProgressSessions.some(session => 
+    // Show drivers who have sessions OR recent location updates (last 30 minutes)
+    const hasActiveSession = location.sessionId && inProgressSessions.some(session => 
       session.id === location.sessionId
     );
+    
+    // Also show drivers with recent location updates (within last 30 minutes)
+    const hasRecentLocation = location.updatedAt && 
+      (new Date().getTime() - new Date(location.updatedAt).getTime()) < 30 * 60 * 1000;
+    
+    return hasActiveSession || (hasRecentLocation && location.driverId);
   });
 
   // Debug logging to verify filtering
