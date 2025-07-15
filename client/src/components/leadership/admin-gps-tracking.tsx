@@ -24,7 +24,10 @@ import {
   ChevronUp,
   CheckCircle,
   XCircle,
-  User
+  User,
+  ArrowLeft,
+  Search,
+  Calendar
 } from "lucide-react";
 import GpsMapViewer from "./gps-map-viewer";
 import StudentPickupDropdown from "./student-pickup-dropdown";
@@ -164,10 +167,16 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDate = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString();
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   };
+
+
 
   const formatDistanceTime = (timestamp: string) => {
     const now = new Date();
@@ -259,10 +268,9 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
       </div>
 
       <Tabs defaultValue="real-time" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="real-time">Real-time Tracking</TabsTrigger>
           <TabsTrigger value="route-history">Route History</TabsTrigger>
-          <TabsTrigger value="detailed-view">Detailed View</TabsTrigger>
         </TabsList>
 
         <TabsContent value="real-time" className="space-y-4">
@@ -273,140 +281,143 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
         </TabsContent>
 
         <TabsContent value="route-history" className="space-y-4">
-          {/* Search and Filter Controls */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
+          {/* Show Route Map if a session is selected */}
+          {selectedSession ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-600" />
-                  <Input
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-40"
-                  />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setDateFilter("")}
-                    className="text-xs"
+                    onClick={() => setSelectedSession(null)}
+                    className="flex items-center gap-2"
                   >
-                    Clear
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to History
                   </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RouteIcon className="h-4 w-4 text-gray-600" />
-                  <Input
-                    type="text"
-                    placeholder="Search routes, drivers..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1"
-                  />
+                  <h3 className="text-lg font-semibold">Route Map View</h3>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Route History by Date */}
-          <div className="space-y-4">
-            {Object.entries(historyByDate)
-              .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-              .map(([date, routes]) => (
-                <Card key={date}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <History className="h-5 w-5" />
-                      {getDateCategory(date)} - {formatDate(date)}
-                      <Badge variant="outline">{routes.length} routes</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {routes.map((route) => (
-                        <div key={route.id} className="border rounded-lg p-4 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium">{formatRouteDisplayName({ 
-                                name: route.routeName, 
-                                schools: new Array(route.schoolsVisited || 0) 
-                              })}</span>
-                              <Badge variant="outline">
-                                {route.driver.firstName} {route.driver.lastName}
-                              </Badge>
-                              <Badge variant={route.completionStatus === 'completed' ? 'default' : 'secondary'}>
-                                {route.completionStatus}
-                              </Badge>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedSession(route.sessionId);
-                                // Switch to detailed view tab when clicking "View Route"
-                                const tabsTrigger = document.querySelector('[data-value="detailed-view"]') as HTMLElement;
-                                if (tabsTrigger) {
-                                  tabsTrigger.click();
-                                }
-                              }}
-                              className="text-xs"
-                            >
-                              View Route
-                            </Button>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                            <div>
-                              <p className="text-gray-600">Start Time</p>
-                              <p className="font-medium">{formatTime(route.startTime)}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">End Time</p>
-                              <p className="font-medium">{route.endTime ? formatTime(route.endTime) : 'In Progress'}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">Distance</p>
-                              <p className="font-medium">{route.totalDistance ? `${route.totalDistance} km` : 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">Schools</p>
-                              <p className="font-medium">{route.schoolsVisited}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">Students</p>
-                              <p className="font-medium">{route.totalStudentsPickedUp}</p>
-                            </div>
-                          </div>
-                          
-                          {/* Student Pickup Details Dropdown */}
-                          <StudentPickupDropdown 
-                            sessionId={route.sessionId}
-                            isExpanded={expandedRoutes.has(route.sessionId)}
-                            onToggle={() => toggleRouteExpansion(route.sessionId)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="detailed-view" className="space-y-4">
-          {selectedSession ? (
-            <RouteMapDetail sessionId={selectedSession} />
+              <RouteMapDetail sessionId={selectedSession} />
+            </div>
           ) : (
-            <Card>
-              <CardContent className="p-8">
-                <div className="text-center py-8 text-gray-500">
-                  <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Select a route from the history to view detailed GPS tracking with map visualization</p>
-                </div>
-              </CardContent>
-            </Card>
+            <>
+              {/* Search and Filter Controls */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-600" />
+                      <Input
+                        type="date"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                        className="w-40"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDateFilter("")}
+                        className="text-xs"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RouteIcon className="h-4 w-4 text-gray-600" />
+                      <Input
+                        type="text"
+                        placeholder="Search routes, drivers..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Route History by Date */}
+              <div className="space-y-4">
+                {Object.entries(historyByDate)
+                  .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                  .map(([date, routes]) => (
+                    <Card key={date}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <History className="h-5 w-5" />
+                          {getDateCategory(date)} - {formatDate(date)}
+                          <Badge variant="outline">{routes.length} routes</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {routes.map((route) => (
+                            <div key={route.id} className="border rounded-lg p-4 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <span className="font-medium">{formatRouteDisplayName({ 
+                                    name: route.routeName, 
+                                    schools: new Array(route.schoolsVisited || 0) 
+                                  })}</span>
+                                  <Badge variant="outline">
+                                    {route.driver.firstName} {route.driver.lastName}
+                                  </Badge>
+                                  <Badge variant={route.completionStatus === 'completed' ? 'default' : 'secondary'}>
+                                    {route.completionStatus}
+                                  </Badge>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedSession(route.sessionId)}
+                                  className="text-xs"
+                                >
+                                  View Route
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                                <div>
+                                  <p className="text-gray-600">Start Time</p>
+                                  <p className="font-medium">{formatTime(route.startTime)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600">End Time</p>
+                                  <p className="font-medium">{route.endTime ? formatTime(route.endTime) : 'In Progress'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600">Distance</p>
+                                  <p className="font-medium">{route.totalDistance ? `${route.totalDistance} km` : 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600">Schools</p>
+                                  <p className="font-medium">{route.schoolsVisited}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600">Students</p>
+                                  <p className="font-medium">{route.totalStudentsPickedUp}</p>
+                                </div>
+                              </div>
+                              
+                              {/* Student Pickup Details Dropdown */}
+                              <StudentPickupDropdown 
+                                sessionId={route.sessionId}
+                                isExpanded={expandedRoutes.has(route.sessionId)}
+                                onToggle={() => toggleRouteExpansion(route.sessionId)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            </>
           )}
         </TabsContent>
+
+
       </Tabs>
     </div>
   );
