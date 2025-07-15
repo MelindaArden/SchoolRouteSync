@@ -1746,50 +1746,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all driver locations with active sessions only
+  // Get all driver locations
   app.get("/api/driver-locations", async (req, res) => {
     try {
       const locations = await storage.getDriverLocations();
       
-      // Filter to only recent locations (within last 30 minutes) and enrich with driver and session info
-      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-      const recentLocations = locations.filter(location => 
-        new Date(location.timestamp) > thirtyMinutesAgo
-      );
-      
+      // Enrich with driver and session information
       const enrichedLocations = await Promise.all(
-        recentLocations.map(async (location) => {
+        locations.map(async (location) => {
           const driver = await storage.getUser(location.driverId);
           let session = null;
           
           if (location.sessionId) {
             session = await storage.getPickupSession(location.sessionId);
-            if (session && session.status === "in_progress") {
+            if (session) {
               const route = await storage.getRoute(session.routeId);
               session = { ...session, route };
-            } else {
-              // Don't include drivers with completed sessions
-              return null;
             }
           }
           
           return {
             ...location,
-            driver: {
-              firstName: driver?.firstName || '',
-              lastName: driver?.lastName || ''
-            },
+            driver,
             session,
           };
         })
       );
       
-      // Filter out null values (completed sessions)
-      const activeDrivers = enrichedLocations.filter(Boolean);
-      
-      res.json(activeDrivers);
+      res.json(enrichedLocations);
     } catch (error) {
-      console.error("Error fetching driver locations:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1917,54 +1902,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json([]);
   });
 
-  // Get route stops for specific driver session
-  app.get("/api/route-stops/:driverId", async (req, res) => {
+  // Get driver locations
+  app.get("/api/driver-locations", async (req, res) => {
     try {
-      const driverId = parseInt(req.params.driverId);
+      // Get all current driver locations
+      const sessions = await storage.getTodaysSessions();
+      const activeDriverIds = sessions
+        .filter(s => s.status === "in_progress")
+        .map(s => s.driverId);
       
-      // Get the most recent active session for this driver
-      const sessions = await storage.getSessionsByDriver(driverId, new Date().toISOString().split('T')[0]);
-      const activeSession = sessions.find(s => s.status === "in_progress");
+      const locations = await Promise.all(
+        activeDriverIds.map(async (driverId) => {
+          return await storage.getDriverLocation(driverId);
+        })
+      );
       
-      if (!activeSession) {
-        return res.json([]);
-      }
-      
-      // Get route stops for this session
-      const routeStops = await pool.query(`
-        SELECT 
-          rs.*,
-          s.name as school_name,
-          s.address as school_address,
-          s.latitude,
-          s.longitude
-        FROM route_stops rs
-        JOIN schools s ON rs.school_id = s.id
-        WHERE rs.session_id = $1
-        ORDER BY rs.arrival_time
-      `, [activeSession.id]);
-      
-      // Transform to match component interface
-      const formattedStops = routeStops.rows.map(stop => ({
-        id: stop.id,
-        sessionId: stop.session_id,
-        schoolId: stop.school_id,
-        arrivalTime: stop.arrival_time,
-        departureTime: stop.departure_time,
-        studentsPickedUp: stop.students_picked_up || 0,
-        totalStudents: stop.total_students || 0,
-        latitude: stop.latitude,
-        longitude: stop.longitude,
-        school: {
-          name: stop.school_name,
-          address: stop.school_address
-        }
-      }));
-      
-      res.json(formattedStops);
+      res.json(locations.filter(Boolean));
     } catch (error) {
-      console.error("Error fetching route stops:", error);
-      res.status(500).json({ message: "Failed to fetch route stops" });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

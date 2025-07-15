@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWebSocket } from "@/hooks/use-websocket";
 import GpsRouteMap from "@/components/leadership/gps-route-map";
-// import SimpleRouteViewer from "@/components/leadership/simple-route-viewer";
+import RouteMapDetail from "@/components/leadership/route-map-detail";
 import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   MapPin, 
@@ -29,7 +29,7 @@ import {
   Search,
   Calendar
 } from "lucide-react";
-import SimpleGpsTracker from "./simple-gps-tracker";
+import GpsMapViewer from "./gps-map-viewer";
 import StudentPickupDropdown from "./student-pickup-dropdown";
 
 interface GpsRouteHistory {
@@ -276,71 +276,74 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
         </TabsList>
 
         <TabsContent value="real-time" className="space-y-4">
-          <SimpleGpsTracker />
+          <GpsMapViewer 
+            selectedSessionId={selectedSession}
+            onSelectSession={setSelectedSession}
+          />
         </TabsContent>
 
         <TabsContent value="route-history" className="space-y-4">
-          {/* Show Route Detail if a session is selected */}
+          {/* Show Route Map if a session is selected */}
           {selectedSession ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSelectedSession(null)}>
-                  ← Back to History
-                </Button>
-                <h2 className="text-xl font-semibold">Route Details - Session #{selectedSession}</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedSession(null)}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to History
+                  </Button>
+                  <h3 className="text-lg font-semibold">Route Map View</h3>
+                </div>
               </div>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-center text-gray-600">
-                    Route visualization for session {selectedSession} will be displayed here.
-                    <br/>
-                    <span className="text-sm">This is a temporary placeholder while we fix the route viewer.</span>
-                  </p>
-                </CardContent>
-              </Card>
+              <RouteMapDetail sessionId={selectedSession} />
             </div>
           ) : (
             <>
               {/* Search and Filter Controls */}
               <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-600" />
-                  <Input
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-40"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDateFilter("")}
-                    className="text-xs"
-                  >
-                    Clear
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RouteIcon className="h-4 w-4 text-gray-600" />
-                  <Input
-                    type="text"
-                    placeholder="Search routes, drivers..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-600" />
+                      <Input
+                        type="date"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                        className="w-40"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDateFilter("")}
+                        className="text-xs"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RouteIcon className="h-4 w-4 text-gray-600" />
+                      <Input
+                        type="text"
+                        placeholder="Search routes, drivers..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Route History by Date */}
-          <div className="space-y-4">
-            {Object.entries(historyByDate)
-              .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-              .map(([date, routes]) => (
+              {/* Route History by Date */}
+              <div className="space-y-4">
+                {Object.entries(historyByDate)
+                  .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                  .map(([date, routes]) => (
                     <Card key={date}>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-lg">
@@ -372,7 +375,7 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                                   onClick={() => setSelectedSession(route.sessionId)}
                                   className="text-xs"
                                 >
-                                  View Map
+                                  View Route
                                 </Button>
                               </div>
                               
@@ -400,23 +403,23 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                               </div>
                               
                               {/* Student Pickup Details Dropdown */}
-                              <div className="mt-3">
-                                <StudentPickupDropdown 
-                                  sessionId={route.sessionId}
-                                  isExpanded={expandedRoutes.has(route.sessionId)}
-                                  onToggle={() => toggleRouteExpansion(route.sessionId)}
-                                />
-                              </div>
+                              <StudentPickupDropdown 
+                                sessionId={route.sessionId}
+                                isExpanded={expandedRoutes.has(route.sessionId)}
+                                onToggle={() => toggleRouteExpansion(route.sessionId)}
+                              />
                             </div>
                           ))}
                         </div>
                       </CardContent>
                     </Card>
-              ))}
-          </div>
+                  ))}
+              </div>
             </>
           )}
         </TabsContent>
+
+
       </Tabs>
     </div>
   );
