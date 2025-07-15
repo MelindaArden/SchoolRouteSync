@@ -121,23 +121,26 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
   // WebSocket connection for real-time updates
   useWebSocket(userId);
 
-  // Fetch current driver locations
+  // Fetch current driver locations (with reduced load)
   const { data: driverLocations = [], refetch: refetchLocations } = useQuery<DriverLocation[]>({
     queryKey: ['/api/driver-locations'],
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 15000, // Increased to 15 seconds to reduce load
+    retry: 1, // Reduce retries to prevent overwhelming
   });
 
-  // Fetch GPS route history for last 30 days
+  // Fetch GPS route history for last 30 days (using simplified endpoint)
   const { data: routeHistory = [], refetch: refetchHistory } = useQuery<GpsRouteHistory[]>({
-    queryKey: ['/api/gps/route-history'],
+    queryKey: ['/api/gps/route-history-simple'],
     refetchInterval: 30000, // Refetch every 30 seconds
+    retry: 1, // Reduce retries to prevent overwhelming
   });
 
-  // Fetch GPS tracks for selected session
+  // Fetch GPS tracks for selected session (using simplified endpoint)
   const { data: sessionTracks = [] } = useQuery<GpsRouteTrack[]>({
-    queryKey: [`/api/gps/sessions/${selectedSession}/tracks`],
+    queryKey: [`/api/gps/sessions/${selectedSession}/tracks-simple`],
     enabled: !!selectedSession,
     refetchInterval: 15000,
+    retry: 1, // Reduce retries to prevent overwhelming
   });
 
   // Filter active drivers (with in-progress sessions)

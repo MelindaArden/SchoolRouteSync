@@ -63,8 +63,9 @@ export default function AdminMap() {
   const [detailRouteId, setDetailRouteId] = useState<number | null>(null);
 
   const { data: routeMapsRaw = [], isLoading: loadingMaps, error: mapsError } = useQuery({
-    queryKey: ['/api/route-maps'],
-    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
+    queryKey: ['/api/gps/route-history-simple'],
+    refetchInterval: 15000, // Refresh every 15 seconds to reduce load
+    retry: 1, // Reduce retries to prevent overwhelming
   });
 
   // Fetch active pickup sessions for real-time tracking

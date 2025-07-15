@@ -1839,6 +1839,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple GPS tracks endpoint (fast, basic data)
+  app.get("/api/gps/sessions/:sessionId/tracks-simple", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 1500)
+      );
+      
+      const dataPromise = (async () => {
+        // Get basic GPS tracks without school enrichment
+        const tracks = await storage.getGpsRouteTracksBySession(sessionId);
+        return tracks.slice(0, 50); // Limit to 50 tracks for speed
+      })();
+      
+      const tracks = await Promise.race([dataPromise, timeoutPromise]);
+      res.json(tracks);
+      
+    } catch (error) {
+      console.error('Error fetching simple GPS tracks:', error);
+      res.status(504).json({ message: "Request timeout - please try again" });
+    }
+  });
+
   // Get GPS route tracks for a session with school details - optimized
   app.get("/api/gps/sessions/:sessionId/tracks", async (req, res) => {
     try {
@@ -1846,7 +1870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add timeout protection
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database timeout')), 3000)
+        setTimeout(() => reject(new Error('Database timeout')), 1500)
       );
       
       const dataPromise = (async () => {
@@ -1896,12 +1920,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple GPS route history endpoint (fast, minimal data)
+  app.get("/api/gps/route-history-simple", async (req, res) => {
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 2000)
+      );
+      
+      const dataPromise = (async () => {
+        try {
+          // Get basic route history without enrichment
+          const history = await storage.getGpsRouteHistory();
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          
+          const recentRoutes = history
+            .filter(route => new Date(route.createdAt) >= thirtyDaysAgo)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 20) // Limit to 20 most recent
+            .map(route => ({
+              ...route,
+              // Add minimal driver info
+              driverName: `Driver ${route.driverId}`,
+              routeName: `Route ${route.routeId}`,
+              status: route.completedAt ? 'completed' : 'in_progress'
+            }));
+          
+          console.log(`📊 Returning ${recentRoutes.length} simplified GPS routes`);
+          return recentRoutes;
+        } catch (err) {
+          console.error('Error in simplified route history:', err);
+          return [];
+        }
+      })();
+      
+      const routes = await Promise.race([dataPromise, timeoutPromise]);
+      res.json(routes);
+      
+    } catch (error) {
+      console.error('Error fetching simple GPS route history:', error);
+      res.status(504).json({ message: "Request timeout - please try again" });
+    }
+  });
+
   // Get GPS route history for last 30 days - optimized
   app.get("/api/gps/route-history", async (req, res) => {
     try {
       // Add timeout protection
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database timeout')), 4000)
+        setTimeout(() => reject(new Error('Database timeout')), 2000)
       );
       
       const dataPromise = (async () => {
