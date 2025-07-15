@@ -894,7 +894,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (sessionId) {
         const pickups = await storage.getStudentPickups(sessionId);
-        res.json(pickups);
+        
+        // Get session details to check for absences
+        const session = await storage.getPickupSession(sessionId);
+        const sessionDate = session?.date || new Date().toISOString().split('T')[0];
+        
+        // Update pickup status if student is marked as absent
+        const updatedPickups = await Promise.all(
+          pickups.map(async (pickup) => {
+            const isAbsent = await storage.checkStudentAbsence(pickup.studentId, sessionDate);
+            return {
+              ...pickup,
+              status: isAbsent ? 'absent' : pickup.status
+            };
+          })
+        );
+        
+        res.json(updatedPickups);
       } else {
         res.status(400).json({ message: "sessionId query parameter required" });
       }
@@ -909,19 +925,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionId = parseInt(req.params.sessionId);
       const pickups = await storage.getStudentPickups(sessionId);
       
+      // Get session details to get date for absence checking
+      const session = await storage.getPickupSession(sessionId);
+      const sessionDate = session?.date || new Date().toISOString().split('T')[0];
+      
       // Get detailed pickup info with student and school data
       const detailedPickups = await Promise.all(
         pickups.map(async (pickup) => {
           const student = await storage.getStudentById(pickup.studentId);
           const school = await storage.getSchool(pickup.schoolId);
+          
+          // Check if student is marked as absent for this date
+          const isAbsent = await storage.checkStudentAbsence(pickup.studentId, sessionDate);
+          
           return {
             ...pickup,
+            // Override status if student is marked as absent
+            status: isAbsent ? 'absent' : pickup.status,
             student: student ? {
               id: student.id,
               firstName: student.firstName,
               lastName: student.lastName,
               grade: student.grade,
-              phoneNumber: student.phoneNumber
+              phoneNumber: student.parentPhone || student.phoneNumber
             } : null,
             school: school ? {
               id: school.id,

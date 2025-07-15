@@ -341,7 +341,14 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setSelectedSession(route.sessionId)}
+                              onClick={() => {
+                                setSelectedSession(route.sessionId);
+                                // Switch to detailed view tab when clicking "View Route"
+                                const tabsTrigger = document.querySelector('[data-value="detailed-view"]') as HTMLElement;
+                                if (tabsTrigger) {
+                                  tabsTrigger.click();
+                                }
+                              }}
                               className="text-xs"
                             >
                               View Route
