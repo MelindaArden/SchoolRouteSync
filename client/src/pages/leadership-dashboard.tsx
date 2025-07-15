@@ -23,7 +23,7 @@ import MultiDriverRouteOptimizer from "@/components/leadership/multi-driver-rout
 import AdvancedRouteCreator from "@/components/leadership/advanced-route-creator";
 import StudentAbsenceManagement from "@/components/leadership/student-absence-management";
 import AbsenceExport from "@/components/leadership/absence-export";
-import AdminMap from "@/pages/admin-map";
+
 import AdminGpsTracking from "@/components/leadership/admin-gps-tracking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "map" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
   const [absenceView, setAbsenceView] = useState<"management" | "export">("management");
@@ -751,11 +751,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
 
 
-        {activeTab === "map" && (
-          <div className="p-2 sm:p-4">
-            <AdminMap />
-          </div>
-        )}
+
 
         {activeTab === "reports" && (
           <div className="p-4">
@@ -850,15 +846,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </button>
 
 
-          <button
-            onClick={() => setActiveTab("map")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "map" ? "text-primary" : "text-gray-500"
-            }`}
-          >
-            <RouteIcon className="h-6 w-6 mb-1" />
-            <span className="text-xs">Map</span>
-          </button>
+
           <button
             onClick={() => setActiveTab("gps")}
             className={`flex flex-col items-center py-2 px-4 ${
