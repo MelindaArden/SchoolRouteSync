@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import TestApp from "./test-app";
 import "./index.css";
 
 // PWA Service Worker Registration
@@ -38,4 +39,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 };
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Test if React works at all
+const isTestMode = window.location.search.includes("test=true");
+createRoot(document.getElementById("root")!).render(
+  isTestMode ? <TestApp /> : <App />
+);
