@@ -11,8 +11,8 @@ interface RouteWithSchools {
 }
 
 /**
- * Generate a display name for a route with dynamic school count
- * This replaces hardcoded school counts in route names with actual counts
+ * Generate a clean display name for a route without any school counts
+ * Only shows the actual route name without hardcoded numbers
  */
 export function formatRouteDisplayName(route: RouteWithSchools): string {
   if (!route) return 'Unknown Route';
@@ -23,33 +23,31 @@ export function formatRouteDisplayName(route: RouteWithSchools): string {
   // Remove any existing school count pattern like "- X Schools" or "- X School"
   baseName = baseName.replace(/\s*-\s*\d+\s+(Schools?|schools?)\s*$/i, '');
   
-  // Return just the clean route name without school count
+  // Return just the clean route name without any count
   return baseName.trim();
 }
 
 /**
- * Get route name with driver info and school count
+ * Get route name with driver info only (no school counts)
  */
 export function formatRouteWithDriver(route: RouteWithSchools): string {
   if (!route) return 'Unknown Route';
   
-  const schoolCount = route.schools?.length || 0;
-  const schoolText = schoolCount === 1 ? 'School' : 'Schools';
+  // Get clean base name without any school counts
+  const baseName = route.name.replace(/\s*-\s*\d+\s+(Schools?|schools?)\s*$/i, '');
   
-  // If route name already contains driver name, just update school count
+  // If route name already contains driver name, return clean name
   if (route.name.includes(route.driverFirstName || '') || route.name.includes(route.driverLastName || '')) {
-    const baseName = route.name.replace(/\s*-\s*\d+\s+(Schools?|schools?)\s*$/i, '');
-    return `${baseName} - ${schoolCount} ${schoolText}`;
+    return baseName;
   }
   
   // If driver info is available but not in route name, add it
   if (route.driverFirstName && route.driverLastName) {
-    return `${route.driverFirstName} ${route.driverLastName} Route - ${schoolCount} ${schoolText}`;
+    return `${route.driverFirstName} ${route.driverLastName} Route`;
   }
   
-  // Fallback to just route name with school count
-  const baseName = route.name.replace(/\s*-\s*\d+\s+(Schools?|schools?)\s*$/i, '');
-  return `${baseName} - ${schoolCount} ${schoolText}`;
+  // Fallback to just clean route name
+  return baseName;
 }
 
 /**

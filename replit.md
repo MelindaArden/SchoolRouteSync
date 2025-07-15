@@ -120,9 +120,11 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Added GPS simulation functionality for testing route tracking capabilities
 - Improved driver location visualization with animated status indicators and session details
 - Created comprehensive route tracking interface with real-time updates and proper data integration
-- Fixed school count display logic - route name shows hardcoded text but dynamic counter displays correct school count
+- **FIXED HARDCODED SCHOOL COUNTS**: Removed all hardcoded "2 Schools" text from database route names and displays
 - Enhanced admin map tab with professional GPS tracking interface without external API dependencies
 - GPS tracking now fully functional with driver locations, route paths, and comprehensive tracking history
+- Updated route utility functions to display only clean route names without hardcoded school counts
+- Enhanced GPS tracking filtering to show drivers with active sessions or recent location updates (30-minute window)
 
 ### July 14, 2025 - Progressive Web App (PWA) Setup & Mobile Installation
 - Implemented comprehensive PWA configuration with manifest.json and service worker (sw.js)
