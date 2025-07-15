@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Runner - Emergency Fallback</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #1976D2;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .form-section {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #1976D2;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #1976D2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #1565C0;
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .success {
+            background: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .error {
+            background: #f44336;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .info {
+            background: #E3F2FD;
+            color: #1976D2;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Route Runner</h1>
+            <p>School Bus Route Management</p>
+        </div>
+        
+        <div class="form-section">
+            <div class="info">
+                <strong>Emergency Fallback Mode Active</strong><br>
+                Login credentials: ma1313 / Dietdew13!
+            </div>
+            
+            <div id="error-message" class="error" style="display: none;"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" value="ma1313" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" value="Dietdew13!" required>
+                </div>
+                
+                <button type="submit" class="btn" id="loginBtn">Login</button>
+            </form>
+        </div>
+        
+        <div id="success-message" class="success" style="display: none;">
+            Login successful! Route Runner is now working.
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+            
+            loginBtn.textContent = 'Logging in...';
+            loginBtn.disabled = true;
+            errorDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        businessName: 'tnt-gymnastics'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.id) {
+                    // Success
+                    successDiv.style.display = 'block';
+                    document.querySelector('.form-section').style.display = 'none';
+                    
+                    // Store login data
+                    localStorage.setItem('routeRunnerAuth', JSON.stringify(data));
+                    
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                    
+                } else {
+                    // Error
+                    errorDiv.textContent = data.message || 'Login failed';
+                    errorDiv.style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.style.display = 'block';
+            } finally {
+                loginBtn.textContent = 'Login';
+                loginBtn.disabled = false;
+            }
+        });
+        
+        // Check if already logged in
+        const storedAuth = localStorage.getItem('routeRunnerAuth');
+        if (storedAuth) {
+            try {
+                const authData = JSON.parse(storedAuth);
+                if (authData.id) {
+                    document.getElementById('success-message').style.display = 'block';
+                    document.querySelector('.form-section').style.display = 'none';
+                }
+            } catch (e) {
+                localStorage.removeItem('routeRunnerAuth');
+            }
+        }
+    </script>
+</body>
+</html>

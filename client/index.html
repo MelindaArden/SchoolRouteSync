@@ -180,21 +180,33 @@
     </div>
 
     <div id="dashboard" class="dashboard">
-        <button class="logout-btn" onclick="logout()">Logout</button>
-        <h1>Route Runner - Admin Dashboard</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h1>Route Runner - Admin Dashboard</h1>
+            <div>
+                <span id="user-name" style="margin-right: 16px; color: #666;">Admin User</span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
         
         <div class="stats">
             <div class="stat-card">
                 <h3>Active Routes</h3>
-                <div class="value">3</div>
+                <div class="value" id="active-routes">0</div>
             </div>
             <div class="stat-card">
                 <h3>Total Students</h3>
-                <div class="value">142</div>
+                <div class="value" id="total-students">0</div>
             </div>
             <div class="stat-card">
                 <h3>Drivers Active</h3>
-                <div class="value">6</div>
+                <div class="value" id="drivers-active">0</div>
+            </div>
+        </div>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <h3 style="margin-top: 0; margin-bottom: 16px;">GPS Tracking</h3>
+            <div id="gps-tracking">
+                <p style="color: #666; text-align: center; padding: 20px;">Loading GPS tracking data...</p>
             </div>
         </div>
         
@@ -213,30 +225,178 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             
-            // Demo login - in production this would validate against the server
-            if (username === 'ma1313' && password === 'Dietdew13!') {
-                document.getElementById('login-form').style.display = 'none';
-                document.getElementById('dashboard').classList.add('active');
-                document.body.style.padding = '0';
-                document.body.style.alignItems = 'flex-start';
-                document.body.style.justifyContent = 'flex-start';
-                document.body.style.background = '#f9fafb';
-            } else {
-                alert('Invalid credentials. Please use: ma1313 / Dietdew13!');
-            }
+            // Show loading state
+            const loginBtn = document.querySelector('.btn');
+            loginBtn.textContent = 'Logging in...';
+            loginBtn.disabled = true;
+            
+            // Make API call to backend
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    businessName: 'tnt-gymnastics'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    // Login successful
+                    localStorage.setItem('user', JSON.stringify(data));
+                    document.getElementById('login-form').style.display = 'none';
+                    document.getElementById('dashboard').classList.add('active');
+                    document.body.style.padding = '0';
+                    document.body.style.alignItems = 'flex-start';
+                    document.body.style.justifyContent = 'flex-start';
+                    document.body.style.background = '#f9fafb';
+                    
+                    // Update dashboard with user info
+                    document.getElementById('user-name').textContent = data.firstName + ' ' + data.lastName;
+                    
+                    // Load real-time data
+                    loadDashboardData();
+                } else {
+                    // Login failed
+                    alert('Invalid credentials: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Login error:', error);
+                alert('Login error. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                loginBtn.textContent = 'Login';
+                loginBtn.disabled = false;
+            });
         }
         
         function logout() {
+            localStorage.removeItem('user');
+            stopAutoRefresh();
             document.getElementById('login-form').style.display = 'block';
             document.getElementById('dashboard').classList.remove('active');
             document.body.style.padding = '16px';
             document.body.style.alignItems = 'center';
             document.body.style.justifyContent = 'center';
+            document.body.style.background = '#f9fafb';
+            
+            // Reset form
+            document.getElementById('username').value = 'ma1313';
+            document.getElementById('password').value = 'Dietdew13!';
         }
         
-        // Auto-fill demo credentials
+        // Load dashboard data
+        function loadDashboardData() {
+            // Load active routes
+            fetch('/api/pickup-sessions/today')
+                .then(response => response.json())
+                .then(sessions => {
+                    const activeSessions = sessions.filter(s => s.status === 'in_progress');
+                    document.getElementById('active-routes').textContent = activeSessions.length;
+                })
+                .catch(error => console.error('Error loading active routes:', error));
+            
+            // Load driver locations
+            fetch('/api/driver-locations')
+                .then(response => response.json())
+                .then(locations => {
+                    document.getElementById('drivers-active').textContent = locations.length;
+                    updateGpsTracking(locations);
+                })
+                .catch(error => console.error('Error loading driver locations:', error));
+            
+            // Load student count
+            fetch('/api/students')
+                .then(response => response.json())
+                .then(students => {
+                    document.getElementById('total-students').textContent = students.length;
+                })
+                .catch(error => console.error('Error loading students:', error));
+        }
+        
+        // Update GPS tracking display
+        function updateGpsTracking(locations) {
+            const container = document.getElementById('gps-tracking');
+            
+            if (!locations || locations.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No active drivers currently tracking</p>';
+                return;
+            }
+            
+            let html = '<div style="display: grid; gap: 12px;">';
+            locations.forEach(location => {
+                const driver = location.driver || {};
+                const session = location.session || {};
+                const route = session.route || {};
+                
+                html += `
+                    <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; background: #f9fafb;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 500; margin-bottom: 4px;">
+                                    ${driver.firstName || 'Unknown'} ${driver.lastName || 'Driver'}
+                                </div>
+                                <div style="font-size: 14px; color: #666;">
+                                    Route: ${route.name || 'Unknown Route'}
+                                </div>
+                                <div style="font-size: 12px; color: #888; margin-top: 4px;">
+                                    Location: ${location.latitude?.substring(0, 7) || 'N/A'}, ${location.longitude?.substring(0, 7) || 'N/A'}
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-left: auto; margin-bottom: 4px;"></div>
+                                <div style="font-size: 12px; color: #666;">
+                                    ${new Date(location.timestamp).toLocaleTimeString()}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        // Auto-refresh data every 30 seconds
+        let refreshInterval;
+        function startAutoRefresh() {
+            refreshInterval = setInterval(loadDashboardData, 30000);
+        }
+        
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+        
+        // Auto-fill demo credentials and setup
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Route Runner - Pure HTML/CSS/JS version loaded successfully');
+            
+            // Check if user is already logged in
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+                try {
+                    const user = JSON.parse(savedUser);
+                    document.getElementById('login-form').style.display = 'none';
+                    document.getElementById('dashboard').classList.add('active');
+                    document.body.style.padding = '0';
+                    document.body.style.alignItems = 'flex-start';
+                    document.body.style.justifyContent = 'flex-start';
+                    document.body.style.background = '#f9fafb';
+                    document.getElementById('user-name').textContent = user.firstName + ' ' + user.lastName;
+                    loadDashboardData();
+                    startAutoRefresh();
+                } catch (e) {
+                    localStorage.removeItem('user');
+                }
+            }
         });
     </script>
 </body>
