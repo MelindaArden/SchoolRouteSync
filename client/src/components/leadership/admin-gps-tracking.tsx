@@ -7,8 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWebSocket } from "@/hooks/use-websocket";
-import GpsRouteMap from "@/components/leadership/gps-route-map";
-import RealTimeRouteMap from "@/components/leadership/real-time-route-map";
+import ComprehensiveGpsMap from "@/components/leadership/comprehensive-gps-map";
 import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   MapPin, 
@@ -29,7 +28,6 @@ import {
   Search,
   Calendar
 } from "lucide-react";
-import GpsMapViewer from "./gps-map-viewer";
 import StudentPickupDropdown from "./student-pickup-dropdown";
 
 interface GpsRouteHistory {
@@ -143,29 +141,45 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
     retry: 1, // Reduce retries to prevent overwhelming
   });
 
-  // Filter active drivers (with in-progress sessions)
-  const activeDrivers = driverLocations.filter(loc => 
-    loc.session && loc.session.status === 'in_progress'
-  );
+  // Filter active drivers (with in-progress sessions) - handle both simplified and full data
+  const activeDrivers = driverLocations.filter(loc => {
+    // Handle both simplified data structure and full data structure
+    if (loc.session) {
+      return loc.session.status === 'in_progress';
+    }
+    // For simplified structure, check if sessionId exists and is recent
+    if (loc.sessionId) {
+      const locationTime = new Date(loc.timestamp || loc.updatedAt);
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+      return locationTime > thirtyMinutesAgo;
+    }
+    return false;
+  });
 
-  // Filter route history based on date and search
+  // Filter route history based on date and search - handle simplified data
   const filteredHistory = routeHistory.filter(route => {
-    // Use startTime for date filtering since that's when the route actually happened
+    // Use startTime or createdAt for date filtering
     const routeDate = route.startTime ? route.startTime.split('T')[0] : route.createdAt.split('T')[0];
     const matchesDate = !dateFilter || routeDate === dateFilter;
+    
+    // Handle simplified data structure for search
+    const routeName = route.routeName || route.status || `Route ${route.routeId || route.id}`;
+    const driverName = route.driverName || 
+      (route.driver ? `${route.driver.firstName || ''} ${route.driver.lastName || ''}` : `Driver ${route.driverId}`);
+    
     const matchesSearch = !searchTerm || 
-      route.routeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${route.driver.firstName} ${route.driver.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+      routeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      driverName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesDate && matchesSearch;
   });
 
-  // Group history by date using startTime for proper chronological grouping
+  // Group history by date - handle both data structures
   const historyByDate = filteredHistory.reduce((acc, route) => {
     const date = route.startTime ? route.startTime.split('T')[0] : route.createdAt.split('T')[0];
     if (!acc[date]) acc[date] = [];
     acc[date].push(route);
     return acc;
-  }, {} as Record<string, GpsRouteHistory[]>);
+  }, {} as Record<string, any[]>);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -272,13 +286,82 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                   <h3 className="text-lg font-semibold">Real-time Route Tracking</h3>
                 </div>
               </div>
-              <RealTimeRouteMap sessionId={selectedSession} isRealTime={true} />
+              <ComprehensiveGpsMap 
+                sessionId={selectedSession} 
+                isRealTime={true}
+                driverName={activeDrivers.find(d => d.sessionId === selectedSession)?.driver ? 
+                  `${activeDrivers.find(d => d.sessionId === selectedSession)?.driver.firstName} ${activeDrivers.find(d => d.sessionId === selectedSession)?.driver.lastName}` : 
+                  undefined
+                }
+                routeName={activeDrivers.find(d => d.sessionId === selectedSession)?.session?.route?.name}
+              />
             </div>
           ) : (
-            <GpsMapViewer 
-              selectedSessionId={selectedSession}
-              onSelectSession={setSelectedSession}
-            />
+            <div className="space-y-4">
+              {/* Active Drivers Section */}
+              {activeDrivers.length > 0 ? (
+                <>
+                  <h3 className="text-lg font-semibold text-gray-800">Active Drivers</h3>
+                  <div className="grid gap-4">
+                    {activeDrivers.map((location) => (
+                      <Card key={location.id} className="bg-white border-green-200 hover:shadow-md transition-shadow cursor-pointer"
+                            onClick={() => setSelectedSession(location.sessionId)}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <Activity className="h-5 w-5 text-green-600 animate-pulse" />
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-800">
+                                  {location.driver ? `${location.driver.firstName} ${location.driver.lastName}` : `Driver ${location.driverId}`}
+                                </h4>
+                                <p className="text-sm text-gray-600">
+                                  {location.session?.route?.name || 'Active Route'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge className="bg-green-100 text-green-800">Live</Badge>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatDistanceTime(location.timestamp || location.updatedAt)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              <span>{parseFloat(location.latitude).toFixed(4)}, {parseFloat(location.longitude).toFixed(4)}</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openMapsLocation(location.latitude, location.longitude, location.driver?.firstName + ' ' + location.driver?.lastName || 'Driver');
+                              }}
+                            >
+                              View on Map
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <Card className="bg-gray-50">
+                  <CardContent className="flex items-center justify-center p-8">
+                    <div className="text-center">
+                      <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600">No active drivers currently tracking</p>
+                      <p className="text-sm text-gray-500">Drivers will appear here when they start routes</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
         </TabsContent>
 
@@ -300,7 +383,15 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                   <h3 className="text-lg font-semibold">Route Map View</h3>
                 </div>
               </div>
-              <RealTimeRouteMap sessionId={selectedSession} isRealTime={false} />
+              <ComprehensiveGpsMap 
+                sessionId={selectedSession} 
+                isRealTime={false}
+                driverName={routeHistory.find(r => r.sessionId === selectedSession)?.driver ? 
+                  `${routeHistory.find(r => r.sessionId === selectedSession)?.driver.firstName} ${routeHistory.find(r => r.sessionId === selectedSession)?.driver.lastName}` : 
+                  undefined
+                }
+                routeName={routeHistory.find(r => r.sessionId === selectedSession)?.routeName}
+              />
             </div>
           ) : (
             <>
