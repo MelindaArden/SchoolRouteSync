@@ -20,6 +20,7 @@ import {
   Target,
   Activity
 } from "lucide-react";
+import GpsMapViewer from "./gps-map-viewer";
 
 interface GpsRouteHistory {
   id: number;
@@ -247,81 +248,10 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
         </TabsList>
 
         <TabsContent value="real-time" className="space-y-4">
-          {/* Active Drivers Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-green-600" />
-                Active Drivers ({activeDrivers.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {activeDrivers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Navigation className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No active drivers currently tracking</p>
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {activeDrivers.map((location) => (
-                    <div key={location.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="font-medium">
-                              {location.driver.firstName} {location.driver.lastName}
-                            </span>
-                          </div>
-                          <Badge variant="outline" className="bg-green-50">
-                            {location.session?.route.name}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedDriver(location.driverId)}
-                            className="text-xs"
-                          >
-                            View Details
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openMapsLocation(location.latitude, location.longitude, `${location.driver.firstName} ${location.driver.lastName}`)}
-                            className="text-xs"
-                          >
-                            <Navigation className="h-3 w-3 mr-1" />
-                            Maps
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-600">Location</p>
-                          <p className="font-mono text-xs">{parseFloat(location.latitude).toFixed(6)}, {parseFloat(location.longitude).toFixed(6)}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Last Update</p>
-                          <p className="font-medium">{formatDistanceTime(location.timestamp)}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Route Status</p>
-                          <Badge variant="secondary">{location.session?.status}</Badge>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Session ID</p>
-                          <p className="font-mono text-xs">#{location.sessionId}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <GpsMapViewer 
+            selectedSessionId={selectedSession}
+            onSelectSession={setSelectedSession}
+          />
         </TabsContent>
 
         <TabsContent value="route-history" className="space-y-4">
