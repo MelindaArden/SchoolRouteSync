@@ -30,12 +30,18 @@ export default function SimpleGpsTracking({ userId }: SimpleGpsTrackingProps) {
     staleTime: 60000,
   });
   
-  // Safe data processing
+  // Safe data processing - ONLY show TODAY's active drivers
   const activeDrivers = Array.isArray(driverLocations) ? driverLocations.filter((location: any) => {
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const sessionDate = location.session?.date ? location.session.date.split('T')[0] : location.session?.startTime?.split('T')[0];
+      const isToday = sessionDate === today;
+      const isInProgress = location.session?.status === 'in_progress';
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
       const locationTime = new Date(location.timestamp || location.updatedAt || Date.now());
-      return locationTime >= thirtyMinutesAgo && location.session;
+      const hasRecentLocation = locationTime >= thirtyMinutesAgo;
+      
+      return isToday && isInProgress && hasRecentLocation && location.session;
     } catch (e) {
       return false;
     }

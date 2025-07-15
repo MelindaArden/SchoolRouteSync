@@ -165,9 +165,13 @@ export default function AdminMap() {
   // Merge route maps with active sessions and driver locations for real-time tracking
   const mergedRouteData = [...routeMaps];
   
-  // Add active sessions that don't have corresponding route maps yet
+  // Add TODAY's active sessions that don't have corresponding route maps yet
   const activeSessionsData = Array.isArray(activeSessions) ? activeSessions : [];
-  const activeInProgress = activeSessionsData.filter((session: any) => session.status === 'in_progress');
+  const today = new Date().toISOString().split('T')[0];
+  const activeInProgress = activeSessionsData.filter((session: any) => {
+    const sessionDate = session.date ? session.date.split('T')[0] : session.startTime?.split('T')[0];
+    return session.status === 'in_progress' && sessionDate === today;
+  });
   
   activeInProgress.forEach((session: any) => {
     const existingRoute = mergedRouteData.find(r => r.sessionId === session.id);
@@ -704,15 +708,20 @@ export default function AdminMap() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const activeDrivers = filteredMaps.filter(route => 
-                  route.sessionStatus === 'in_progress' && route.currentLatitude && route.currentLongitude
-                );
+                const today = new Date().toISOString().split('T')[0];
+                const activeDrivers = filteredMaps.filter(route => {
+                  const routeDate = route.sessionDate ? route.sessionDate.split('T')[0] : '';
+                  return route.sessionStatus === 'in_progress' && 
+                         route.currentLatitude && 
+                         route.currentLongitude &&
+                         routeDate === today;
+                });
                 
                 if (activeDrivers.length === 0) {
                   return (
                     <div className="text-center py-4">
                       <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-500">No active drivers with live location</p>
+                      <p className="text-gray-500">No active drivers with live location today</p>
                     </div>
                   );
                 }

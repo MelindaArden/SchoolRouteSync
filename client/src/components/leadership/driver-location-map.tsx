@@ -83,11 +83,15 @@ export default function DriverLocationMap({ userId }: DriverLocationMapProps) {
     filteredActiveDrivers: driverLocations.filter(loc => loc.session && loc.session.status === 'in_progress').length
   });
 
-  // CRITICAL FIX: Only show drivers with in_progress sessions as active
+  // CRITICAL FIX: Only show drivers with TODAY's in_progress sessions as active
   const activeDrivers = driverLocations.filter(loc => {
+    const today = new Date().toISOString().split('T')[0];
+    const sessionDate = loc.session?.date ? loc.session.date.split('T')[0] : loc.session?.startTime?.split('T')[0];
+    const isToday = sessionDate === today;
     const hasSession = loc.session && loc.session.status === 'in_progress';
-    console.log(`Driver ${loc.driverId}: has session=${!!loc.session}, status=${loc.session?.status}, isActive=${hasSession}`);
-    return hasSession;
+    const isActive = hasSession && isToday;
+    console.log(`Driver ${loc.driverId}: has session=${!!loc.session}, status=${loc.session?.status}, isToday=${isToday}, isActive=${isActive}`);
+    return isActive;
   });
   
   const allDrivers = driverLocations;
