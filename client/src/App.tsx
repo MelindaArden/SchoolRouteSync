@@ -103,7 +103,7 @@ function Router() {
         }
         
         // Final fallback to localStorage only (offline mode)
-        if (storedUser) {
+        if (!user && storedUser) {
           try {
             const userData = JSON.parse(storedUser);
             setUser(userData);
