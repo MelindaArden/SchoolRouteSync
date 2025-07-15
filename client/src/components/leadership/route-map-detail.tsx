@@ -40,30 +40,58 @@ interface RouteDetail {
 }
 
 export default function RouteMapDetail({ sessionId }: RouteMapDetailProps) {
+  console.log('🗺️ RouteMapDetail rendered with sessionId:', sessionId);
+  
   // Fetch detailed route data
-  const { data: routeDetail, isLoading } = useQuery<RouteDetail>({
+  const { data: routeDetail, isLoading, error } = useQuery<RouteDetail>({
     queryKey: [`/api/route-details/${sessionId}`],
     refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
+  console.log('🗺️ Query state:', { isLoading, error, hasData: !!routeDetail });
+
+  if (error) {
+    console.error('🚨 RouteMapDetail error:', error);
+    return (
+      <div className="bg-white min-h-screen p-6">
+        <Card>
+          <CardContent className="p-8">
+            <div className="text-center py-8 text-red-500">
+              <MapPin className="h-12 w-12 mx-auto mb-4 text-red-300" />
+              <p>Error loading route data</p>
+              <p className="text-xs text-red-400 mt-2">Session ID: {sessionId}</p>
+              <p className="text-xs text-red-400 mt-1">{error.message}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-64 bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-sm text-gray-600">Loading route details...</p>
+        </div>
       </div>
     );
   }
 
   if (!routeDetail) {
     return (
-      <Card>
-        <CardContent className="p-8">
-          <div className="text-center py-8 text-gray-500">
-            <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No route data available for this session</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-white min-h-screen p-6">
+        <Card>
+          <CardContent className="p-8">
+            <div className="text-center py-8 text-gray-500">
+              <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No route data available for this session</p>
+              <p className="text-xs text-gray-400 mt-2">Session ID: {sessionId}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -107,9 +135,10 @@ export default function RouteMapDetail({ sessionId }: RouteMapDetailProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Route Overview */}
-      <Card>
+    <div className="bg-white min-h-screen p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Route Overview */}
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
@@ -170,17 +199,18 @@ export default function RouteMapDetail({ sessionId }: RouteMapDetailProps) {
         </CardContent>
       </Card>
 
-      {/* GPS Route Map */}
-      <GpsRouteMap
-        sessionId={sessionId}
-        driverId={routeDetail.driverId}
-        driverName={routeDetail.driverName}
-        routeName={routeDetail.routeName}
-        isActive={isActive}
-        routePath={routePath}
-        schoolStops={routeDetail.schoolStops}
-        currentLocation={currentLocation}
-      />
+        {/* GPS Route Map */}
+        <GpsRouteMap
+          sessionId={sessionId}
+          driverId={routeDetail.driverId}
+          driverName={routeDetail.driverName}
+          routeName={routeDetail.routeName}
+          isActive={isActive}
+          routePath={routePath}
+          schoolStops={routeDetail.schoolStops}
+          currentLocation={currentLocation}
+        />
+      </div>
     </div>
   );
 }

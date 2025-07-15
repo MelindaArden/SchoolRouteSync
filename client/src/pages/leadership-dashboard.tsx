@@ -808,7 +808,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
         {activeTab === "settings" && (
           <div className="p-2 sm:p-4">
-            <ProfileSettings />
+            <ProfileSettings user={user} />
           </div>
         )}
 

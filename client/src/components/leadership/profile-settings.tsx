@@ -27,6 +27,8 @@ interface ProfileSettingsProps {
 }
 
 export default function ProfileSettings({ user }: ProfileSettingsProps) {
+  console.log('⚙️ ProfileSettings rendered with user:', user?.username);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -69,10 +71,27 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
     updateProfileMutation.mutate(data);
   };
 
+  if (!user) {
+    console.error('❌ ProfileSettings: No user provided');
+    return (
+      <div className="bg-white min-h-screen p-6">
+        <Card>
+          <CardContent className="p-8">
+            <div className="text-center py-8 text-red-500">
+              <p>Error: No user data available</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle>Profile Settings</CardTitle>
+    <div className="bg-white min-h-screen p-6">
+      <div className="max-w-2xl mx-auto">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Profile Settings</CardTitle>
         <CardDescription>
           Update your profile information and mobile number for SMS notifications
         </CardDescription>
@@ -169,5 +188,7 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
         </Form>
       </CardContent>
     </Card>
+      </div>
+    </div>
   );
 }
