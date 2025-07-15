@@ -112,6 +112,20 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 15, 2025 - Mobile Optimization & Real-time Admin Updates with Accurate Route Counting
+- Fixed critical route counting issue where admin dashboard showed 23 active routes instead of actual today's routes (max 3 drivers)
+- Enhanced route counting logic to only include TODAY's in-progress sessions for accurate active route display
+- Added admin force completion functionality allowing admins to force complete stuck or forgotten driver routes
+- Implemented comprehensive RouteStatus component with admin controls and confirmation dialogs for force completion
+- Added cleanup functionality for stale sessions older than 1 day with automatic admin cleanup buttons
+- Enhanced WebSocket system with route_completed message handling for real-time admin dashboard updates
+- Optimized mobile interface with responsive button sizing and text abbreviations for phone screens
+- Fixed real-time query invalidation ensuring admin dashboards update immediately when drivers complete routes
+- Improved GPS tracking and route map viewer components with mobile-first responsive design
+- Enhanced driver dashboard and student list components for touch-friendly mobile interface with compressed layouts
+- Route counting now accurately reflects only current day's active routes preventing misleading high route counts
+- Admin can now force complete any active route with proper confirmation and real-time updates across all connected clients
+
 ### July 15, 2025 - Complete Route Tracking System Overhaul & Performance Optimization
 - Fixed infinite loading issues for admin route tracking and GPS data by optimizing database queries with timeout protection
 - Enhanced database connection pooling with reduced timeouts (3-5 seconds) and statement-level timeouts for better stability

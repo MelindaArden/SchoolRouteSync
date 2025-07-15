@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { User } from "@/lib/types";
 import Navigation from "@/components/shared/navigation";
 import RouteStatus from "@/components/leadership/route-status";
@@ -116,6 +118,9 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
+  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Push notifications for browser alerts
   const { showDriverAlert, canNotify } = usePushNotifications({ 
@@ -199,9 +204,14 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Calculate dashboard metrics with real data
+  // Calculate dashboard metrics with real data - only count TODAY's active routes
   const sessionsData = Array.isArray(sessions) ? (sessions as any[]) : [];
-  const activeRoutes = sessionsData.filter((s: any) => s.status === "in_progress").length;
+  const today = new Date().toISOString().split('T')[0];
+  const todaysActiveRoutes = sessionsData.filter((s: any) => {
+    const sessionDate = s.date ? s.date.split('T')[0] : s.startTime?.split('T')[0];
+    return s.status === "in_progress" && sessionDate === today;
+  });
+  const activeRoutes = todaysActiveRoutes.length;
   
   // Calculate total students and pickups from real-time pickup data
   const pickupsData = Array.isArray(allStudentPickups) ? (allStudentPickups as any[]) : [];
@@ -217,8 +227,8 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     alert.status === 'active' || alert.status === 'pending'
   ).length;
   
-  const behindScheduleRoutes = sessionsData.filter((session: any) => 
-    session.status === "in_progress" && session.progressPercent < 50
+  const behindScheduleRoutes = todaysActiveRoutes.filter((session: any) => 
+    session.progressPercent < 50
   ).length;
   
   const recentIssuesData = Array.isArray(issues) ? issues : [];
@@ -389,11 +399,40 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
             {/* Route Status Overview */}
             <div>
-              <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-3">Active Route Status</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base sm:text-lg font-medium text-gray-800">Active Route Status</h3>
+                {activeRoutes > 3 && (
+                  <Button
+                    onClick={async () => {
+                      if (window.confirm('This will force complete all stale routes older than 1 day. Continue?')) {
+                        try {
+                          await apiRequest("POST", "/api/admin/cleanup-sessions", { olderThanDays: 1 });
+                          queryClient.invalidateQueries({ queryKey: ['/api/pickup-sessions/today'] });
+                          toast({
+                            title: "Cleanup Complete",
+                            description: "All stale routes have been cleaned up",
+                            variant: "default"
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Cleanup Failed",
+                            description: "Failed to cleanup stale routes",
+                            variant: "destructive"
+                          });
+                        }
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-amber-300 text-amber-600 hover:bg-amber-50"
+                  >
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Clean Stale Routes
+                  </Button>
+                )}
+              </div>
               <div className="space-y-3">
-                {sessionsData
-                  .filter((session: any) => session.status === "in_progress")
-                  .map((session: any) => (
+                {todaysActiveRoutes.map((session: any) => (
                     <RouteStatus
                       key={session.id}
                       routeName={session.route?.name || `Route ${session.id}`}
@@ -403,9 +442,11 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                       currentLocation="En route to next school"
                       studentsPickedUp={session.completedPickups}
                       totalStudents={session.totalStudents}
+                      sessionId={session.id}
+                      canForceComplete={true}
                     />
                   ))}
-                {sessionsData.filter((session: any) => session.status === "in_progress").length === 0 && (
+                {todaysActiveRoutes.length === 0 && (
                   <Card className="border-blue-200 bg-blue-50">
                     <CardContent className="p-4 text-center">
                       <p className="text-blue-800">No active routes in progress</p>
