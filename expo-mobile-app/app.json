@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "School Bus Driver",
-    "slug": "school-bus-driver-app",
+    "name": "Route Runner",
+    "slug": "route-runner-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,14 +16,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.schoolbus.driverapp"
+      "bundleIdentifier": "com.routerunner.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.schoolbus.driverapp",
+      "package": "com.routerunner.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",

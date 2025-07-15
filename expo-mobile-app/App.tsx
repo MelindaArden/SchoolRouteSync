@@ -50,7 +50,7 @@ function AppNavigator() {
               name="Dashboard" 
               component={DashboardScreen}
               options={{ 
-                title: 'Driver Dashboard',
+                title: 'Route Runner',
                 headerLeft: () => null
               }}
             />

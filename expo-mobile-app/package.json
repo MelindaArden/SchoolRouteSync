@@ -30,8 +30,8 @@
     "typescript": "~5.3.3"
   },
   "expo": {
-    "name": "School Bus Driver",
-    "slug": "school-bus-driver",
+    "name": "Route Runner",
+    "slug": "route-runner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
