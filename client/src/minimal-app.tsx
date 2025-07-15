@@ -1,44 +1,105 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function MinimalApp() {
   const [page, setPage] = useState<"login" | "dashboard">("login");
 
   if (page === "login") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center text-2xl">Route Runner</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Username</label>
-                <input 
-                  type="text" 
-                  placeholder="ma1313"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Password</label>
-                <input 
-                  type="password" 
-                  placeholder="Dietdew13!"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <Button 
-                onClick={() => setPage("dashboard")}
-                className="w-full"
-              >
-                Login
-              </Button>
+      <div style={{ 
+        minHeight: "100vh", 
+        backgroundColor: "#f9fafb", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        padding: "16px" 
+      }}>
+        <div style={{ 
+          width: "100%", 
+          maxWidth: "400px", 
+          backgroundColor: "white", 
+          borderRadius: "8px", 
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)", 
+          overflow: "hidden" 
+        }}>
+          <div style={{ 
+            padding: "24px", 
+            borderBottom: "1px solid #e5e7eb" 
+          }}>
+            <h1 style={{ 
+              fontSize: "24px", 
+              fontWeight: "bold", 
+              textAlign: "center", 
+              margin: "0",
+              color: "#1976D2" 
+            }}>
+              Route Runner
+            </h1>
+          </div>
+          <div style={{ padding: "24px" }}>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ 
+                display: "block", 
+                fontSize: "14px", 
+                fontWeight: "500", 
+                color: "#374151",
+                marginBottom: "4px" 
+              }}>
+                Username
+              </label>
+              <input 
+                type="text" 
+                placeholder="ma1313"
+                style={{ 
+                  width: "100%", 
+                  padding: "8px 12px", 
+                  border: "1px solid #d1d5db", 
+                  borderRadius: "4px",
+                  fontSize: "16px",
+                  boxSizing: "border-box" 
+                }}
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ 
+                display: "block", 
+                fontSize: "14px", 
+                fontWeight: "500", 
+                color: "#374151",
+                marginBottom: "4px" 
+              }}>
+                Password
+              </label>
+              <input 
+                type="password" 
+                placeholder="Dietdew13!"
+                style={{ 
+                  width: "100%", 
+                  padding: "8px 12px", 
+                  border: "1px solid #d1d5db", 
+                  borderRadius: "4px",
+                  fontSize: "16px",
+                  boxSizing: "border-box" 
+                }}
+              />
+            </div>
+            <button 
+              onClick={() => setPage("dashboard")}
+              style={{ 
+                width: "100%", 
+                padding: "12px", 
+                backgroundColor: "#1976D2", 
+                color: "white", 
+                border: "none", 
+                borderRadius: "4px", 
+                fontSize: "16px", 
+                fontWeight: "500",
+                cursor: "pointer" 
+              }}
+            >
+              Login
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
