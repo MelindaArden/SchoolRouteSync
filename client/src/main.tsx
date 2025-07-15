@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import MinimalApp from "./minimal-app";
 import "./index.css";
 
 // PWA Service Worker Registration
@@ -38,4 +39,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 };
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Use minimal app until we fix the main app issues
+const useMinimal = window.location.search.includes("minimal=false") ? false : true;
+createRoot(document.getElementById("root")!).render(
+  useMinimal ? <MinimalApp /> : <App />
+);
