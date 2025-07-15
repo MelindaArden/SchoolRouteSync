@@ -3529,5 +3529,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple routes endpoint for basic route data without complex joins
+  app.get("/api/routes-simple", async (req, res) => {
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 1500)
+      );
+      
+      const dataPromise = (async () => {
+        // Get basic route data without schools/students joins
+        const routes = await storage.getRoutes();
+        return routes.map(route => ({
+          id: route.id,
+          businessId: route.businessId,
+          name: route.name,
+          driverId: route.driverId,
+          createdAt: route.createdAt,
+          updatedAt: route.updatedAt
+        }));
+      })();
+      
+      const routes = await Promise.race([dataPromise, timeoutPromise]);
+      console.log(`📊 Returning ${routes.length} simplified routes`);
+      res.json(routes);
+      
+    } catch (error) {
+      console.error('Error fetching simple routes:', error);
+      res.status(504).json({ message: "Request timeout - please try again" });
+    }
+  });
+
   return httpServer;
 }

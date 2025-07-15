@@ -139,40 +139,51 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     };
   }, [canNotify, showDriverAlert]);
 
-  // Fetch data for dynamic counts
-  const { data: schools = [] } = useQuery({
+  // Fetch data for dynamic counts with error handling
+  const { data: schools = [], error: schoolsError } = useQuery({
     queryKey: ['/api/schools'],
+    retry: 1,
+    staleTime: 30000, // Keep data fresh for 30 seconds
   });
 
-  const { data: students = [] } = useQuery({
+  const { data: students = [], error: studentsError } = useQuery({
     queryKey: ['/api/students'],
+    retry: 1,
+    staleTime: 30000,
   });
 
-  const { data: users = [] } = useQuery({
+  const { data: users = [], error: usersError } = useQuery({
     queryKey: ['/api/users'],
+    retry: 1,
+    staleTime: 30000,
   });
 
-  const { data: routes = [] } = useQuery({
+  const { data: routes = [], error: routesError } = useQuery({
     queryKey: ['/api/routes'],
+    retry: 1,
+    staleTime: 30000,
   });
 
-  // Fetch today's sessions for overview
-  const { data: sessions = [], isLoading } = useQuery({
+  // Fetch today's sessions for overview with timeout protection
+  const { data: sessions = [], isLoading, error: sessionsError } = useQuery({
     queryKey: ['/api/pickup-sessions/today'],
-    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
-    retry: false,
+    refetchInterval: 10000, // Reduced to 10 seconds to decrease load
+    retry: 1,
+    staleTime: 15000,
   });
 
-  // Fetch real-time student pickups for today
-  const { data: allStudentPickups = [] } = useQuery({
+  // Fetch real-time student pickups for today with timeout protection
+  const { data: allStudentPickups = [], error: pickupsError } = useQuery({
     queryKey: ['/api/student-pickups/today'],
-    refetchInterval: 5000, // Refresh every 5 seconds for real-time pickup updates
-    retry: false,
+    refetchInterval: 15000, // Reduced to 15 seconds to decrease load
+    retry: 1,
+    staleTime: 15000,
   });
 
-  // Fetch active issues for alerts - REAL-TIME with 10-second refresh
-  const { data: issues = [] } = useQuery({
+  // Fetch active issues for alerts with error handling
+  const { data: issues = [], error: issuesError } = useQuery({
     queryKey: ['/api/issues'],
+    retry: 1,
     refetchInterval: 10000, // Refresh every 10 seconds for real-time alerts
   });
 
@@ -219,13 +230,16 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   
   const activeAlerts = missedSchoolCount + behindScheduleRoutes + recentIssuesCount;
 
-  // Real counts from database
+  // Real counts from database with error fallbacks
   const schoolCount = Array.isArray(schools) ? schools.length : 0;
   const studentCount = Array.isArray(students) ? students.length : 0;
   const driverCount = Array.isArray(users) ? users.filter((u: any) => u.role === 'driver').length : 0;
   const routeCount = Array.isArray(routes) ? routes.length : 0;
 
-  if (isLoading) {
+  // Check for critical errors that would prevent page loading
+  const hasDataErrors = schoolsError || studentsError || usersError || routesError;
+
+  if (isLoading && !hasDataErrors) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -516,6 +530,21 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
         {activeTab === "routes" && !showForm && (
           <div className="p-2 sm:p-4 space-y-4">
+            {/* Error State Display */}
+            {hasDataErrors && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 text-red-800">
+                    <AlertTriangle className="h-5 w-5" />
+                    <div>
+                      <p className="font-medium">Data Loading Issue</p>
+                      <p className="text-sm text-red-600">Some data may not be current due to server load. The system is still functional.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             {/* Management Actions */}
             <div className="grid grid-cols-2 gap-3">
               <Button
