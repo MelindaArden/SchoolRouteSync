@@ -26,6 +26,15 @@ export default function NavigationView({ route, currentLocation, activeSession, 
   const [currentSchoolIndex, setCurrentSchoolIndex] = useState(0);
   const [directions, setDirections] = useState<any[]>([]);
 
+  // Debug logging to understand data structure
+  console.log('NavigationView Debug:', {
+    route,
+    currentLocation,
+    activeSession,
+    studentPickups,
+    routeSchools: route?.schools
+  });
+
   // Get ordered schools for the route
   const orderedSchools = route?.schools?.sort((a: any, b: any) => a.orderIndex - b.orderIndex) || [];
 
@@ -64,13 +73,13 @@ export default function NavigationView({ route, currentLocation, activeSession, 
     // Find first school where not all students are picked up
     for (let i = 0; i < orderedSchools.length; i++) {
       const school = orderedSchools[i];
-      if (!areAllStudentsPickedUp(school.schoolId)) {
+      if (!areAllStudentsPickedUp(school.schoolId || school.school?.id)) {
         return { school, index: i };
       }
     }
     
-    // If all schools are completed, return null to indicate route completion
-    return null;
+    // If all schools are completed, return the first school as next destination
+    return orderedSchools.length > 0 ? { school: orderedSchools[0], index: 0 } : null;
   };
 
   const nextSchool = getNextSchool();
@@ -85,8 +94,8 @@ export default function NavigationView({ route, currentLocation, activeSession, 
 
     for (let i = 0; i < orderedSchools.length; i++) {
       const school = orderedSchools[i];
-      const schoolLat = parseFloat(school.school?.latitude || '0');
-      const schoolLng = parseFloat(school.school?.longitude || '0');
+      const schoolLat = parseFloat(school.school?.latitude || school.latitude || '0');
+      const schoolLng = parseFloat(school.school?.longitude || school.longitude || '0');
 
       if (schoolLat && schoolLng) {
         const distance = calculateDistance(currentLat, currentLng, schoolLat, schoolLng);
@@ -97,14 +106,14 @@ export default function NavigationView({ route, currentLocation, activeSession, 
         const direction = getDirectionFromBearing(bearing);
 
         directions.push({
-          schoolName: school.school?.name,
-          address: school.school?.address,
+          schoolName: school.school?.name || school.name,
+          address: school.school?.address || school.address,
           distance: distance.toFixed(1),
           travelTime,
           direction,
-          orderIndex: school.orderIndex,
-          estimatedArrival: school.estimatedArrivalTime,
-          dismissalTime: school.school?.dismissalTime,
+          orderIndex: school.orderIndex || (i + 1),
+          estimatedArrival: school.estimatedArrivalTime || 'TBD',
+          dismissalTime: school.school?.dismissalTime || school.dismissalTime,
           latitude: schoolLat,
           longitude: schoolLng
         });
@@ -157,14 +166,32 @@ export default function NavigationView({ route, currentLocation, activeSession, 
     }
   }, [currentLocation, orderedSchools]);
 
-  if (!route || !orderedSchools.length) {
+  if (!route) {
     return (
       <div className="p-4">
         <Card>
           <CardContent className="p-6 text-center">
             <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-800 mb-2">No Route Available</h3>
-            <p className="text-gray-600">No schools found in your route or route not properly configured.</p>
+            <p className="text-gray-600">Please start a route from the Route tab to begin navigation.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!orderedSchools.length) {
+    return (
+      <div className="p-4">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-800 mb-2">No Schools Found</h3>
+            <p className="text-gray-600">No schools are assigned to this route yet. Contact your administrator.</p>
+            <div className="mt-4 text-sm text-gray-500">
+              <p>Route: {route.name}</p>
+              <p>Debug: {JSON.stringify(route.schools || 'No schools property')}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -224,23 +251,26 @@ export default function NavigationView({ route, currentLocation, activeSession, 
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
               <div className="flex-1">
-                <h3 className="font-semibold text-lg">{nextSchool.school.school?.name}</h3>
+                <h3 className="font-semibold text-lg">{nextSchool.school.school?.name || nextSchool.school.name}</h3>
                 <p className="text-sm text-gray-600 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  <span className="truncate">{nextSchool.school.school?.address}</span>
+                  <span className="truncate">{nextSchool.school.school?.address || nextSchool.school.address}</span>
                 </p>
                 <div className="flex items-center gap-4 mt-2">
                   <Badge variant="outline" className="text-xs">
-                    Stop #{nextSchool.school.orderIndex}
+                    Stop #{nextSchool.school.orderIndex || (nextSchool.index + 1)}
                   </Badge>
                   <span className="text-xs text-gray-500 flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    Arrival: {nextSchool.school.estimatedArrivalTime}
+                    Arrival: {nextSchool.school.estimatedArrivalTime || 'TBD'}
                   </span>
                 </div>
               </div>
               <Button 
-                onClick={() => openInMaps(nextSchool.school.school)}
+                onClick={() => openInMaps({
+                  latitude: nextSchool.school.school?.latitude || nextSchool.school.latitude,
+                  longitude: nextSchool.school.school?.longitude || nextSchool.school.longitude
+                })}
                 className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
                 size="sm"
               >
@@ -249,7 +279,7 @@ export default function NavigationView({ route, currentLocation, activeSession, 
               </Button>
             </div>
 
-            {currentLocation && nextSchool.school.school?.latitude && (
+            {currentLocation && (nextSchool.school.school?.latitude || nextSchool.school.latitude) && (
               <div className="bg-blue-50 rounded-lg p-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm space-y-2 sm:space-y-0">
                   <div className="flex items-center gap-2">
@@ -258,8 +288,8 @@ export default function NavigationView({ route, currentLocation, activeSession, 
                       {calculateDistance(
                         currentLocation.latitude,
                         currentLocation.longitude,
-                        parseFloat(nextSchool.school.school.latitude),
-                        parseFloat(nextSchool.school.school.longitude)
+                        parseFloat(nextSchool.school.school?.latitude || nextSchool.school.latitude),
+                        parseFloat(nextSchool.school.school?.longitude || nextSchool.school.longitude)
                       ).toFixed(1)} miles
                     </span>
                   </div>
@@ -269,8 +299,8 @@ export default function NavigationView({ route, currentLocation, activeSession, 
                       ~{calculateTravelTime(calculateDistance(
                         currentLocation.latitude,
                         currentLocation.longitude,
-                        parseFloat(nextSchool.school.school.latitude),
-                        parseFloat(nextSchool.school.school.longitude)
+                        parseFloat(nextSchool.school.school?.latitude || nextSchool.school.latitude),
+                        parseFloat(nextSchool.school.school?.longitude || nextSchool.school.longitude)
                       ))} min
                     </span>
                   </div>
