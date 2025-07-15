@@ -40,12 +40,33 @@ export default function NavigationView({ route, currentLocation, activeSession, 
 
   // Function to check if all students are picked up from a school
   const areAllStudentsPickedUp = (schoolId: number) => {
-    const schoolStudents = route?.students?.filter((s: any) => s.schoolId === schoolId) || [];
+    // Get students for this school from the route data
+    const schoolStudents = [];
+    
+    // Find the school in the route's schools array and get its students
+    const schoolData = route?.schools?.find((s: any) => s.schoolId === schoolId || s.school?.id === schoolId);
+    if (schoolData?.students) {
+      schoolStudents.push(...schoolData.students);
+    }
+    
+    console.log(`📋 Checking school ${schoolId}:`, {
+      studentsCount: schoolStudents.length,
+      students: schoolStudents.map((s: any) => ({ id: s.id, name: `${s.firstName} ${s.lastName}` }))
+    });
+    
     if (schoolStudents.length === 0) return true;
     
     return schoolStudents.every((student: any) => {
       const pickup = studentPickups.find((p: any) => p.studentId === student.id);
-      return pickup && (pickup.status === 'picked_up' || pickup.status === 'absent' || pickup.status === 'no_show');
+      const isCompleted = pickup && (pickup.status === 'picked_up' || pickup.status === 'absent' || pickup.status === 'no_show');
+      
+      console.log(`🎓 Student ${student.firstName} ${student.lastName}:`, {
+        id: student.id,
+        pickup: pickup ? { status: pickup.status, pickedUpAt: pickup.pickedUpAt } : 'No pickup record',
+        isCompleted
+      });
+      
+      return isCompleted;
     });
   };
 
@@ -68,18 +89,32 @@ export default function NavigationView({ route, currentLocation, activeSession, 
 
   // Get next school to visit based on pickup completion
   const getNextSchool = () => {
+    console.log('🗺️ Finding next school from ordered schools:', orderedSchools.length);
+    
     if (!orderedSchools.length) return null;
     
     // Find first school where not all students are picked up
     for (let i = 0; i < orderedSchools.length; i++) {
       const school = orderedSchools[i];
-      if (!areAllStudentsPickedUp(school.schoolId || school.school?.id)) {
+      const schoolId = school.schoolId || school.school?.id;
+      const allPickedUp = areAllStudentsPickedUp(schoolId);
+      
+      console.log(`🏫 School ${i + 1}/${orderedSchools.length}:`, {
+        name: school.school?.name || school.name,
+        id: schoolId,
+        orderIndex: school.orderIndex,
+        allPickedUp
+      });
+      
+      if (!allPickedUp) {
+        console.log(`🎯 Next destination: ${school.school?.name || school.name} (index ${i})`);
         return { school, index: i };
       }
     }
     
-    // If all schools are completed, return the first school as next destination
-    return orderedSchools.length > 0 ? { school: orderedSchools[0], index: 0 } : null;
+    console.log('✅ All schools completed! Route is finished.');
+    // If all schools are completed, return null to indicate route completion
+    return null;
   };
 
   const nextSchool = getNextSchool();
@@ -239,26 +274,26 @@ export default function NavigationView({ route, currentLocation, activeSession, 
         </CardContent>
       </Card>
 
-      {/* Current Navigation */}
+      {/* Auto Navigation - Next School */}
       {nextSchool && (
-        <Card className="border-primary">
+        <Card className="border-green-500 bg-green-50">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              Next Destination
+            <CardTitle className="flex items-center gap-2 text-green-800">
+              <Target className="h-5 w-5 text-green-600" />
+              🎯 Auto Navigation - Next School
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
               <div className="flex-1">
-                <h3 className="font-semibold text-lg">{nextSchool.school.school?.name || nextSchool.school.name}</h3>
+                <h3 className="font-semibold text-xl text-green-800">{nextSchool.school.school?.name || nextSchool.school.name}</h3>
                 <p className="text-sm text-gray-600 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
                   <span className="truncate">{nextSchool.school.school?.address || nextSchool.school.address}</span>
                 </p>
                 <div className="flex items-center gap-4 mt-2">
-                  <Badge variant="outline" className="text-xs">
-                    Stop #{nextSchool.school.orderIndex || (nextSchool.index + 1)}
+                  <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
+                    Stop #{nextSchool.school.orderIndex || (nextSchool.index + 1)} of {orderedSchools.length}
                   </Badge>
                   <span className="text-xs text-gray-500 flex items-center gap-1">
                     <Clock className="h-3 w-3" />
@@ -307,6 +342,19 @@ export default function NavigationView({ route, currentLocation, activeSession, 
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Route Completion Message */}
+      {!nextSchool && orderedSchools.length > 0 && (
+        <Card className="border-green-500 bg-green-50">
+          <CardContent className="p-6 text-center">
+            <div className="text-green-600">
+              <Target className="h-12 w-12 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-green-800 mb-2">🎉 Route Complete!</h3>
+              <p className="text-green-700">All students have been picked up from all schools. You can complete this route in the Route tab.</p>
+            </div>
           </CardContent>
         </Card>
       )}
