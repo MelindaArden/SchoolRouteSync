@@ -95,42 +95,82 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
 
   // Filter active drivers (drivers with sessions and recent location updates)
   const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-  const activeDrivers: ActiveDriver[] = driverLocations
-    .filter((location: any) => {
-      const locationTime = new Date(location.timestamp || location.updatedAt);
-      return locationTime >= thirtyMinutesAgo && location.session && location.sessionId;
-    })
-    .map((location: any) => ({
-      id: location.id,
-      driverId: location.driverId,
-      sessionId: location.sessionId,
-      latitude: location.latitude,
-      longitude: location.longitude,
-      timestamp: location.timestamp || location.updatedAt,
-      driver: {
-        firstName: location.driver?.firstName || 'Unknown',
-        lastName: location.driver?.lastName || 'Driver'
-      },
-      route: {
-        name: location.session?.route?.name || `Route ${location.session?.routeId || 'Unknown'}`
-      }
-    }));
+  const activeDrivers: ActiveDriver[] = [];
+  
+  try {
+    if (Array.isArray(driverLocations)) {
+      driverLocations.forEach((location: any) => {
+        try {
+          const locationTime = new Date(location.timestamp || location.updatedAt);
+          if (locationTime >= thirtyMinutesAgo && location.session && location.sessionId) {
+            activeDrivers.push({
+              id: location.id || 0,
+              driverId: location.driverId || 0,
+              sessionId: location.sessionId || 0,
+              latitude: location.latitude || '0',
+              longitude: location.longitude || '0',
+              timestamp: location.timestamp || location.updatedAt || new Date().toISOString(),
+              driver: {
+                firstName: location.driver?.firstName || 'Unknown',
+                lastName: location.driver?.lastName || 'Driver'
+              },
+              route: {
+                name: location.session?.route?.name || `Route ${location.session?.routeId || 'Unknown'}`
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Error processing driver location:', e);
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('Error filtering active drivers:', e);
+  }
 
   // Filter and prepare route sessions for history
-  const filteredSessions = pickupSessions.filter((session: any) => {
-    const matchesSearch = searchTerm === "" || 
-      session.route?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${session.driver?.firstName} ${session.driver?.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDate = dateFilter === "" || session.date?.startsWith(dateFilter);
-    
-    return matchesSearch && matchesDate;
-  });
+  const filteredSessions = [];
+  
+  try {
+    if (Array.isArray(pickupSessions)) {
+      pickupSessions.forEach((session: any) => {
+        try {
+          const matchesSearch = searchTerm === "" || 
+            session.route?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            `${session.driver?.firstName || ''} ${session.driver?.lastName || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
+          
+          const matchesDate = dateFilter === "" || session.date?.startsWith(dateFilter);
+          
+          if (matchesSearch && matchesDate) {
+            filteredSessions.push(session);
+          }
+        } catch (e) {
+          console.warn('Error filtering session:', e);
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('Error filtering sessions:', e);
+  }
 
   const openExternalMap = (lat: string, lng: string, label: string) => {
     const url = `https://www.google.com/maps?q=${lat},${lng}&z=16`;
     window.open(url, '_blank');
   };
+
+  // Error boundary for mobile compatibility
+  if (isLoadingLocations && isLoadingHistory) {
+    return (
+      <Card className="bg-white">
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="flex items-center gap-2">
+            <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+            <span>Loading tracking system...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

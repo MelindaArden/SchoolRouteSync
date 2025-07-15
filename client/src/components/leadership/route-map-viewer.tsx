@@ -54,6 +54,7 @@ export default function RouteMapViewer({
     enabled: !!sessionId,
     refetchInterval: isRealTime ? 15000 : undefined,
     retry: 1,
+    staleTime: 30000,
   });
 
   const formatTime = (timestamp: string) => {
@@ -72,6 +73,54 @@ export default function RouteMapViewer({
     const url = `https://www.google.com/maps?q=${lat},${lng}&z=16`;
     window.open(url, '_blank');
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className="bg-white">
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="flex items-center gap-2">
+            <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+            <span>Loading route map data...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Card className="bg-white border-red-200">
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <MapPin className="h-12 w-12 text-red-500 mx-auto mb-2" />
+            <p className="text-red-600">Unable to load route map</p>
+            <p className="text-sm text-gray-500">
+              {error instanceof Error ? error.message : "Please try again later"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No data state
+  if (!routeData || (!routeData.path && !routeData.stops)) {
+    return (
+      <Card className="bg-white">
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-600">No route data available</p>
+            <p className="text-sm text-gray-500">
+              Session {sessionId} may not have GPS tracking data yet
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const createRouteVisualization = () => {
     if (!routeData?.path || routeData.path.length === 0) return null;
