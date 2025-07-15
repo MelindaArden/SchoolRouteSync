@@ -24,6 +24,7 @@ import AdvancedRouteCreator from "@/components/leadership/advanced-route-creator
 import StudentAbsenceManagement from "@/components/leadership/student-absence-management";
 import AbsenceExport from "@/components/leadership/absence-export";
 import AdminMap from "@/pages/admin-map";
+import AdminGpsTracking from "@/components/leadership/admin-gps-tracking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -53,7 +54,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "map" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "map" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
   const [absenceView, setAbsenceView] = useState<"management" | "export">("management");
@@ -811,6 +812,18 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           </div>
         )}
 
+        {activeTab === "gps" && (
+          <div className="p-2 sm:p-4">
+            <AdminGpsTracking userId={user.id} />
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div className="p-2 sm:p-4">
+            <ProfileSettings />
+          </div>
+        )}
+
 
       </div>
 
@@ -847,6 +860,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
             <span className="text-xs">Map</span>
           </button>
           <button
+            onClick={() => setActiveTab("gps")}
+            className={`flex flex-col items-center py-2 px-4 ${
+              activeTab === "gps" ? "text-primary" : "text-gray-500"
+            }`}
+          >
+            <MapPin className="h-6 w-6 mb-1" />
+            <span className="text-xs">GPS Tracking</span>
+          </button>
+          <button
             onClick={() => setActiveTab("users")}
             className={`flex flex-col items-center py-2 px-4 ${
               activeTab === "users" ? "text-primary" : "text-gray-500"
@@ -872,6 +894,15 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           >
             <GraduationCap className="h-6 w-6 mb-1" />
             <span className="text-xs">Absences</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex flex-col items-center py-2 px-4 ${
+              activeTab === "settings" ? "text-primary" : "text-gray-500"
+            }`}
+          >
+            <Settings className="h-6 w-6 mb-1" />
+            <span className="text-xs">Settings</span>
           </button>
 
         </div>

@@ -1581,11 +1581,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Update driver location with GPS route tracking
+  // Enhanced mobile-friendly GPS tracking endpoint
   app.post("/api/drivers/:driverId/location", async (req, res) => {
     try {
       const driverId = parseInt(req.params.driverId);
       const { latitude, longitude, sessionId, speed, bearing, accuracy } = locationUpdateSchema.parse(req.body);
+      
+      const timestamp = new Date();
+      console.log(`📍 Enhanced GPS update for driver ${driverId}: ${latitude}, ${longitude}`, {
+        speed,
+        bearing,
+        accuracy,
+        sessionId,
+        timestamp: timestamp.toISOString()
+      });
       
       const location = await storage.updateDriverLocation({
         driverId,
@@ -1594,11 +1603,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId,
       });
 
-      // Create GPS route track entry for route history
+      // Enhanced GPS route tracking for comprehensive history
       if (sessionId) {
         try {
           const session = await storage.getPickupSession(sessionId);
           if (session && session.status === 'in_progress') {
+            // Create detailed GPS route track entry
             await storage.createGpsRouteTrack({
               sessionId: sessionId,
               driverId: driverId,
@@ -1608,9 +1618,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
               speed: speed || null,
               bearing: bearing || null,
               accuracy: accuracy || null,
-              eventType: 'location_update'
+              eventType: 'location_update',
+              timestamp: timestamp
             });
-            console.log('📊 GPS route track recorded for session', sessionId);
+            
+            // Initialize or update GPS route history for this session
+            const existingHistory = await storage.getGpsRouteHistoryBySession(sessionId);
+            if (!existingHistory) {
+              const route = await storage.getRoute(session.routeId);
+              await storage.createGpsRouteHistory({
+                sessionId: sessionId,
+                driverId: driverId,
+                routeId: session.routeId,
+                routeName: route?.name || `Route ${session.routeId}`,
+                startTime: session.startTime || timestamp,
+                routePath: {
+                  coordinates: [{ lat: parseFloat(latitude), lng: parseFloat(longitude), timestamp: timestamp.toISOString(), speed: speed || undefined }],
+                  schoolTimestamps: []
+                }
+              });
+            } else {
+              // Update existing route history with new GPS point
+              const currentPath = existingHistory.routePath || { coordinates: [], schoolTimestamps: [] };
+              currentPath.coordinates.push({ 
+                lat: parseFloat(latitude), 
+                lng: parseFloat(longitude), 
+                timestamp: timestamp.toISOString(), 
+                speed: speed || undefined 
+              });
+              
+              await storage.updateGpsRouteHistory(existingHistory.id, {
+                routePath: currentPath
+              });
+            }
+            
+            console.log('📊 Comprehensive GPS route tracking recorded for session', sessionId);
           }
         } catch (trackError) {
           console.error('⚠️ Failed to record GPS track:', trackError);
@@ -1627,11 +1669,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'location_updated',
         driverId,
         location,
+        timestamp: timestamp.toISOString(),
+        gpsTracked: !!sessionId
       }, driverId);
 
-      res.json(location);
+      res.json({
+        ...location,
+        timestamp: timestamp.toISOString(),
+        gpsTracked: !!sessionId
+      });
     } catch (error) {
-      res.status(400).json({ message: "Invalid location data" });
+      console.error("Enhanced GPS tracking error:", error);
+      res.status(400).json({ message: "Invalid location data", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -1681,6 +1730,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(location);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get GPS route tracks for a session with school details
+  app.get("/api/gps/sessions/:sessionId/tracks", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const tracks = await storage.getGpsRouteTracksBySession(sessionId);
+      
+      // Enrich tracks with school information
+      const enrichedTracks = await Promise.all(
+        tracks.map(async (track) => {
+          if (track.schoolId) {
+            const school = await storage.getSchool(track.schoolId);
+            return { ...track, school };
+          }
+          return { ...track, school: null };
+        })
+      );
+      
+      res.json(enrichedTracks);
+    } catch (error) {
+      console.error('Error fetching GPS tracks:', error);
+      res.status(500).json({ message: "Failed to fetch GPS tracks" });
+    }
+  });
+
+  // Get GPS route history for last 30 days
+  app.get("/api/gps/route-history", async (req, res) => {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const history = await storage.getGpsRouteHistory();
+      
+      // Filter for last 30 days and enrich with driver information
+      const enrichedHistory = await Promise.all(
+        history
+          .filter(route => new Date(route.createdAt) >= thirtyDaysAgo)
+          .map(async (route) => {
+            const driver = await storage.getUser(route.driverId);
+            return { ...route, driver };
+          })
+      );
+      
+      // Sort by creation date (newest first)
+      const sortedHistory = enrichedHistory.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      res.json(sortedHistory);
+    } catch (error) {
+      console.error('Error fetching GPS route history:', error);
+      res.status(500).json({ message: "Failed to fetch GPS route history" });
+    }
+  });
+
+  // Get GPS tracks for a specific driver
+  app.get("/api/gps/drivers/:driverId/tracks", async (req, res) => {
+    try {
+      const driverId = parseInt(req.params.driverId);
+      const tracks = await storage.getGpsRouteTracksByDriver(driverId);
+      
+      // Enrich tracks with session and school information
+      const enrichedTracks = await Promise.all(
+        tracks.map(async (track) => {
+          const session = await storage.getPickupSession(track.sessionId);
+          const school = track.schoolId ? await storage.getSchool(track.schoolId) : null;
+          
+          return { 
+            ...track, 
+            session: session ? {
+              ...session,
+              route: await storage.getRoute(session.routeId)
+            } : null,
+            school
+          };
+        })
+      );
+      
+      res.json(enrichedTracks);
+    } catch (error) {
+      console.error('Error fetching driver GPS tracks:', error);
+      res.status(500).json({ message: "Failed to fetch driver GPS tracks" });
     }
   });
 

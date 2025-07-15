@@ -16,7 +16,7 @@ export function useGeolocation() {
   const watchId = useRef<number | null>(null);
   const { toast } = useToast();
 
-  const startTracking = () => {
+  const startTracking = (userId?: number, sessionId?: number) => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by this browser");
       toast({
@@ -30,14 +30,24 @@ export function useGeolocation() {
     setIsTracking(true);
     setError(null);
 
+    // Enhanced mobile-optimized GPS tracking options
     const options = {
       enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 60000, // 1 minute
+      timeout: 30000, // Increased timeout for mobile devices
+      maximumAge: 5000, // Reduced max age for more frequent updates
     };
 
     watchId.current = navigator.geolocation.watchPosition(
       (position) => {
+        console.log('📍 GPS position received:', {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          speed: position.coords.speed,
+          heading: position.coords.heading,
+          timestamp: new Date(position.timestamp).toISOString()
+        });
+        
         const newLocation = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -46,9 +56,16 @@ export function useGeolocation() {
         };
         
         setLocation(newLocation);
+        
+        // Automatically update server if userId is provided
+        if (userId) {
+          updateLocationOnServer(position, userId, sessionId);
+        }
       },
       (error) => {
         let message = "Unknown location error";
+        console.error('GPS tracking error:', error);
+        
         switch (error.code) {
           case error.PERMISSION_DENIED:
             message = "Location access denied by user";
@@ -61,14 +78,27 @@ export function useGeolocation() {
             break;
         }
         setError(message);
-        toast({
-          title: "Location Error",
-          description: message,
-          variant: "destructive",
-        });
+        
+        // Don't show toast for timeout errors, just log them
+        if (error.code !== error.TIMEOUT) {
+          toast({
+            title: "Location Error",
+            description: message,
+            variant: "destructive",
+          });
+        }
+        
+        // Don't stop tracking on temporary errors
+        if (error.code === error.TIMEOUT) {
+          console.log('GPS timeout, continuing to track...');
+        } else {
+          setIsTracking(false);
+        }
       },
       options
     );
+    
+    console.log('📍 GPS tracking started for user:', userId, 'session:', sessionId);
   };
 
   const stopTracking = () => {
@@ -85,11 +115,18 @@ export function useGeolocation() {
     sessionId?: number
   ) => {
     try {
-      await apiRequest("POST", `/api/drivers/${userId}/location`, {
-        latitude: location.latitude.toString(),
-        longitude: location.longitude.toString(),
+      const locationData = {
+        latitude: location.coords.latitude.toString(),
+        longitude: location.coords.longitude.toString(),
         sessionId,
-      });
+        speed: location.coords.speed?.toString() || undefined,
+        bearing: location.coords.heading?.toString() || undefined,
+        accuracy: location.coords.accuracy?.toString() || undefined,
+      };
+      
+      console.log('📍 Sending enhanced GPS data to server:', locationData);
+      
+      await apiRequest("POST", `/api/drivers/${userId}/location`, locationData);
     } catch (error) {
       console.error("Failed to update location on server:", error);
     }
