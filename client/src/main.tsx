@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import App from "./App";
+import MinimalWorkingApp from "./minimal-working-app";
 import "./index.css";
 
 // Create a client
@@ -52,7 +53,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
-    <App />
+    <MinimalWorkingApp />
     <Toaster />
   </QueryClientProvider>
 );
