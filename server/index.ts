@@ -122,9 +122,50 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // CRITICAL: Serve emergency fallback HTML directly in response
-  app.get("/", (req, res) => {
-    const html = `
+  const server = await registerRoutes(app);
+
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    res.status(status).json({ message });
+    throw err;
+  });
+
+  // Setup vite in development
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
+  // ALWAYS serve the app on port 5000
+  const port = 5000;
+  server.listen({
+    port,
+    host: "0.0.0.0", 
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+    log(`Server accessible at:`);
+    log(`- http://localhost:${port}`);
+    log(`- http://0.0.0.0:${port}`);
+    
+    if (process.env.REPLIT_DOMAINS) {
+      const domains = process.env.REPLIT_DOMAINS.split(',');
+      domains.forEach(domain => {
+        log(`- https://${domain}`);
+      });
+    }
+    
+    // Start missed school monitoring service
+    startMissedSchoolMonitoring();
+  });
+})();
+
+// Remove the HTML content and restore normal structure
+/*
+const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -416,48 +457,4 @@ app.use((req, res, next) => {
 </html>
     `;
     
-    res.send(html);
-  });
-  
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // SKIP Vite setup to avoid React build issues - using static HTML instead
-  // if (app.get("env") === "development") {
-  //   await setupVite(app, server);
-  // } else {
-  //   serveStatic(app);
-  // }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-    log(`Server accessible at:`);
-    log(`- http://localhost:${port}`);
-    log(`- http://0.0.0.0:${port}`);
-    
-    if (process.env.REPLIT_DOMAINS) {
-      const domains = process.env.REPLIT_DOMAINS.split(',');
-      domains.forEach(domain => {
-        log(`- https://${domain}`);
-      });
-    }
-    
-    // Start missed school monitoring service
-    startMissedSchoolMonitoring();
-  });
-})();
+*/
