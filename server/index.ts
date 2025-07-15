@@ -67,7 +67,12 @@ app.use((req, res, next) => {
   
   // Mobile-specific headers
   res.header('X-Content-Type-Options', 'nosniff');
-  res.header('X-Frame-Options', 'SAMEORIGIN');
+  // Allow frames for Replit preview
+  if (req.headers.host && req.headers.host.includes('.replit.dev')) {
+    res.header('X-Frame-Options', 'ALLOWALL');
+  } else {
+    res.header('X-Frame-Options', 'SAMEORIGIN');
+  }
   res.header('X-XSS-Protection', '1; mode=block');
   
   // Cache control for mobile
