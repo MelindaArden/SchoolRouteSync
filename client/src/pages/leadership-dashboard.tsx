@@ -24,7 +24,7 @@ import AdvancedRouteCreator from "@/components/leadership/advanced-route-creator
 import StudentAbsenceManagement from "@/components/leadership/student-absence-management";
 import AbsenceExport from "@/components/leadership/absence-export";
 
-import AdminGpsTracking from "@/components/leadership/admin-gps-tracking";
+import SimpleGpsTracking from "@/components/leadership/simple-gps-tracking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -831,7 +831,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
         {activeTab === "gps" && (
           <div className="p-2 sm:p-4">
-            <AdminGpsTracking userId={user.id} />
+            <SimpleGpsTracking userId={user.id} />
           </div>
         )}
 

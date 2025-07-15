@@ -58,11 +58,17 @@ interface AdminGpsTrackingProps {
 }
 
 export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
+  // Debug logging for mobile troubleshooting
+  console.log('AdminGpsTracking component loading, userId:', userId);
+  
   const [activeTab, setActiveTab] = useState("live");
   const [selectedSession, setSelectedSession] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const { isConnected } = useWebSocket();
+  
+  // Add error boundary
+  try {
 
   // Get active driver locations for real-time tracking
   const { data: driverLocations = [], isLoading: isLoadingLocations } = useQuery({
@@ -409,4 +415,29 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
       </Tabs>
     </div>
   );
+  
+  } catch (error) {
+    console.error('AdminGpsTracking component error:', error);
+    
+    return (
+      <Card className="bg-white border-red-200">
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <MapPin className="h-12 w-12 text-red-500 mx-auto mb-2" />
+            <p className="text-red-600">GPS tracking system error</p>
+            <p className="text-sm text-gray-500">
+              Component failed to load. Check console for details.
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.reload()} 
+              className="mt-2"
+            >
+              Reload Page
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 }
