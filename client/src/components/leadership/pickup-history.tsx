@@ -484,7 +484,7 @@ export default function PickupHistory() {
               <RouteIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0 mt-1" />
               <div className="min-w-0 flex-1">
                 <h3 className="font-medium text-gray-900 text-sm sm:text-base truncate">
-                  {record.route?.name || `Route ${record.routeId}`}
+                  {formatRouteDisplayName(record.route) || `Route ${record.routeId}`}
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 truncate">
                   Driver: {record.driver?.firstName} {record.driver?.lastName}
@@ -631,7 +631,7 @@ export default function PickupHistory() {
                 return (
                   <SelectItem key={record.id} value={record.id.toString()}>
                     <div className="flex flex-col">
-                      <span>{record.route?.name || `Route ${record.routeId}`} - {record.driver?.firstName} {record.driver?.lastName}</span>
+                      <span>{formatRouteDisplayName(record.route) || `Route ${record.routeId}`} - {record.driver?.firstName} {record.driver?.lastName}</span>
                       <span className="text-xs">{format(new Date(record.completedAt), 'MMM d, yyyy')}</span>
                       {schoolsInRoute.length > 0 && (
                         <span className="text-xs text-gray-500">

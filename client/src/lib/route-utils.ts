@@ -17,30 +17,14 @@ interface RouteWithSchools {
 export function formatRouteDisplayName(route: RouteWithSchools): string {
   if (!route) return 'Unknown Route';
   
-  // Get the base name without hardcoded school count
+  // Get the base name without any school count
   let baseName = route.name;
   
   // Remove any existing school count pattern like "- X Schools" or "- X School"
   baseName = baseName.replace(/\s*-\s*\d+\s+(Schools?|schools?)\s*$/i, '');
   
-  // Get actual school count
-  const schoolCount = route.schools?.length || 0;
-  
-  // Generate display name with actual school count
-  const schoolText = schoolCount === 1 ? 'School' : 'Schools';
-  
-  const result = `${baseName} - ${schoolCount} ${schoolText}`;
-  
-  // Debug logging to see if function is being called
-  console.log('formatRouteDisplayName called:', {
-    originalName: route.name,
-    baseName,
-    schoolCount,
-    schoolsArray: route.schools,
-    result
-  });
-  
-  return result;
+  // Return just the clean route name without school count
+  return baseName.trim();
 }
 
 /**

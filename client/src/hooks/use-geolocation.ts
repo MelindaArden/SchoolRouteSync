@@ -68,13 +68,13 @@ export function useGeolocation() {
         
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            message = "Location access denied by user";
+            message = "Location access denied. Please enable location permissions in your browser settings and refresh the page.";
             break;
           case error.POSITION_UNAVAILABLE:
-            message = "Location information is unavailable";
+            message = "GPS signal unavailable. Try moving to an area with better signal, ensure location services are enabled on your device, or refresh the page.";
             break;
           case error.TIMEOUT:
-            message = "Location request timed out";
+            message = "Location request timed out. Checking for GPS signal...";
             break;
         }
         setError(message);
@@ -82,9 +82,10 @@ export function useGeolocation() {
         // Don't show toast for timeout errors, just log them
         if (error.code !== error.TIMEOUT) {
           toast({
-            title: "Location Error",
+            title: "GPS Location Issue",
             description: message,
             variant: "destructive",
+            duration: 8000, // Show longer for important location instructions
           });
         }
         
