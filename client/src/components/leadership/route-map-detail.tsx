@@ -42,13 +42,50 @@ interface RouteDetail {
 export default function RouteMapDetail({ sessionId }: RouteMapDetailProps) {
   console.log('🗺️ RouteMapDetail rendered with sessionId:', sessionId);
   
-  // Fetch detailed route data
+  // Fetch detailed route data with enhanced error handling
   const { data: routeDetail, isLoading, error } = useQuery<RouteDetail>({
     queryKey: [`/api/route-details/${sessionId}`],
-    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
+    refetchInterval: isLoading ? false : 10000, // Don't refetch while loading
+    retry: (failureCount, error) => {
+      console.error('🚨 Query failed:', error);
+      return failureCount < 2; // Retry only once
+    },
+    staleTime: 5000,
+    queryFn: async () => {
+      try {
+        console.log('🔄 Fetching route details for session:', sessionId);
+        const response = await fetch(`/api/route-details/${sessionId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+
+        console.log('📡 Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Redirect to login if unauthorized
+            window.location.href = '/api/login';
+            throw new Error('Authentication required');
+          }
+          
+          const errorText = await response.text();
+          console.error('📡 Response error text:', errorText);
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('📊 Route detail data received:', data);
+        return data;
+      } catch (error) {
+        console.error('🚨 Fetch error:', error);
+        throw error;
+      }
+    },
   });
 
-  console.log('🗺️ Query state:', { isLoading, error, hasData: !!routeDetail });
+  console.log('🗺️ Query state:', { isLoading, error, hasData: !!routeDetail, routeDetail });
 
   if (error) {
     console.error('🚨 RouteMapDetail error:', error);
@@ -58,9 +95,18 @@ export default function RouteMapDetail({ sessionId }: RouteMapDetailProps) {
           <CardContent className="p-8">
             <div className="text-center py-8 text-red-500">
               <MapPin className="h-12 w-12 mx-auto mb-4 text-red-300" />
-              <p>Error loading route data</p>
-              <p className="text-xs text-red-400 mt-2">Session ID: {sessionId}</p>
-              <p className="text-xs text-red-400 mt-1">{error.message}</p>
+              <h3 className="text-lg font-medium mb-2">Error loading route data</h3>
+              <p className="text-sm text-red-600 mb-2">Session ID: {sessionId}</p>
+              <p className="text-xs text-red-400 font-mono bg-red-50 p-2 rounded">
+                {typeof error === 'string' ? error : (error as any)?.message || 'Unknown error'}
+              </p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="mt-4"
+                variant="outline"
+              >
+                Retry
+              </Button>
             </div>
           </CardContent>
         </Card>
