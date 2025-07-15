@@ -14,7 +14,7 @@ import {
   Car,
   School,
   Route as RouteIcon,
-  ExternalLink,
+  Target,
   ChevronDown,
   ChevronUp,
   User
@@ -88,10 +88,7 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
     refetchInterval: 30000, // Update every 30 seconds
   });
 
-  const openMapLocation = (lat: string, lng: string, driverName: string) => {
-    const url = `https://www.google.com/maps?q=${lat},${lng}&z=15`;
-    window.open(url, '_blank');
-  };
+
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -266,12 +263,12 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openMapLocation(location.latitude, location.longitude, `${location.driver.firstName} ${location.driver.lastName}`);
+                          onSelectSession(location.sessionId);
                         }}
                         className="text-xs"
                       >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        View on Map
+                        <Target className="h-3 w-3 mr-1" />
+                        View Route
                       </Button>
                     </div>
                   </div>
