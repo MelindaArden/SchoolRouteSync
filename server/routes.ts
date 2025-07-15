@@ -3559,5 +3559,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New route map data endpoint - shows actual driver path with 3+ minute stops
+  app.get("/api/routes/:sessionId/map-data", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 3000)
+      );
+      
+      const dataPromise = (async () => {
+        // Get GPS tracks for this session
+        const tracks = await storage.getGpsRouteTracksBySession(sessionId);
+        
+        if (!tracks || tracks.length === 0) {
+          return { path: [], stops: [], currentPosition: null };
+        }
+        
+        // Create route path from all GPS points
+        const routePath = tracks.map(track => ({
+          latitude: track.latitude,
+          longitude: track.longitude,
+          timestamp: track.timestamp,
+          speed: track.speed,
+          eventType: track.eventType
+        })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        
+        // Identify actual stops (where driver stayed 3+ minutes)
+        const stops = [];
+        const stopThreshold = 3 * 60 * 1000; // 3 minutes in milliseconds
+        const locationThreshold = 0.0005; // ~50 meters in degrees
+        
+        for (let i = 0; i < tracks.length; i++) {
+          const track = tracks[i];
+          const trackTime = new Date(track.timestamp);
+          
+          // Find consecutive tracks at same location
+          const sameLocationTracks = [track];
+          for (let j = i + 1; j < tracks.length; j++) {
+            const nextTrack = tracks[j];
+            const latDiff = Math.abs(parseFloat(track.latitude) - parseFloat(nextTrack.latitude));
+            const lngDiff = Math.abs(parseFloat(track.longitude) - parseFloat(nextTrack.longitude));
+            
+            if (latDiff <= locationThreshold && lngDiff <= locationThreshold) {
+              sameLocationTracks.push(nextTrack);
+            } else {
+              break;
+            }
+          }
+          
+          // If stayed at location for 3+ minutes, it's a stop
+          if (sameLocationTracks.length > 1) {
+            const firstTrack = sameLocationTracks[0];
+            const lastTrack = sameLocationTracks[sameLocationTracks.length - 1];
+            const duration = new Date(lastTrack.timestamp).getTime() - new Date(firstTrack.timestamp).getTime();
+            
+            if (duration >= stopThreshold) {
+              // Get school info if this is a school stop
+              const school = track.schoolId ? await storage.getSchool(track.schoolId) : null;
+              
+              stops.push({
+                id: track.id,
+                latitude: track.latitude,
+                longitude: track.longitude,
+                timestamp: track.timestamp,
+                arrivalTime: firstTrack.timestamp,
+                departureTime: lastTrack.timestamp,
+                duration: Math.round(duration / (60 * 1000)), // duration in minutes
+                eventType: track.eventType,
+                school: school
+              });
+              
+              // Skip the tracks we already processed
+              i += sameLocationTracks.length - 1;
+            }
+          }
+        }
+        
+        // Get current position (latest track) for real-time
+        const currentPosition = tracks.length > 0 ? {
+          latitude: tracks[tracks.length - 1].latitude,
+          longitude: tracks[tracks.length - 1].longitude,
+          timestamp: tracks[tracks.length - 1].timestamp
+        } : null;
+        
+        // Calculate total distance
+        let totalDistance = 0;
+        for (let i = 1; i < routePath.length; i++) {
+          const prev = routePath[i - 1];
+          const curr = routePath[i];
+          const distance = calculateDistance(
+            parseFloat(prev.latitude), parseFloat(prev.longitude),
+            parseFloat(curr.latitude), parseFloat(curr.longitude)
+          );
+          totalDistance += distance;
+        }
+        
+        return {
+          path: routePath,
+          stops: stops,
+          currentPosition: currentPosition,
+          totalDistance: `${totalDistance.toFixed(1)} km`,
+          lastUpdate: tracks[tracks.length - 1]?.timestamp
+        };
+      })();
+      
+      const routeData = await Promise.race([dataPromise, timeoutPromise]);
+      res.json(routeData);
+      
+    } catch (error) {
+      console.error('Error fetching route map data:', error);
+      if (error instanceof Error && error.message === 'Database timeout') {
+        res.status(504).json({ message: "Request timeout - please try again" });
+      } else {
+        res.status(500).json({ message: "Failed to fetch route map data" });
+      }
+    }
+  });
+
   return httpServer;
 }
