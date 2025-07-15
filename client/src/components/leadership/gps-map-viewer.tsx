@@ -128,30 +128,7 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  // Simulate GPS data for testing
-                  if (activeDrivers.length > 0) {
-                    activeDrivers.forEach(async (driver) => {
-                      try {
-                        await fetch(`/api/gps/simulate/${driver.sessionId}`, { method: 'POST' });
-                      } catch (error) {
-                        console.error('GPS simulation error:', error);
-                      }
-                    });
-                    setTimeout(() => {
-                      refetchLocations();
-                      refetchHistory();
-                    }, 2000);
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <Activity className="h-4 w-4" />
-                Simulate GPS
-              </Button>
+
             </div>
           </div>
         </CardHeader>

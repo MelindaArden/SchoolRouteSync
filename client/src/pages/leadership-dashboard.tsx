@@ -241,7 +241,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         role="leadership"
       />
 
-      <div className="pb-20">
+      <div className="pb-32">
         {activeTab === "dashboard" && (
           <div className="p-2 sm:p-4 space-y-6">
             {/* Enhanced Date Range Filter */}
@@ -815,76 +815,77 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
       </div>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation - Mobile Responsive with 2 Rows */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
-        <div className="flex justify-around py-2">
+        {/* First Row - Main Tabs */}
+        <div className="grid grid-cols-4 gap-0">
           <button
             onClick={() => setActiveTab("dashboard")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "dashboard" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center py-2 px-1 ${
+              activeTab === "dashboard" ? "text-primary bg-blue-50" : "text-gray-500"
             }`}
           >
-            <BarChart3 className="h-6 w-6 mb-1" />
+            <BarChart3 className="h-5 w-5 mb-1" />
             <span className="text-xs">Dashboard</span>
           </button>
           <button
             onClick={() => setActiveTab("routes")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "routes" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center py-2 px-1 ${
+              activeTab === "routes" ? "text-primary bg-blue-50" : "text-gray-500"
             }`}
           >
-            <RouteIcon className="h-6 w-6 mb-1" />
-            <span className="text-xs">Route Setup</span>
+            <RouteIcon className="h-5 w-5 mb-1" />
+            <span className="text-xs">Routes</span>
           </button>
-
-
-
           <button
             onClick={() => setActiveTab("gps")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "gps" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center py-2 px-1 ${
+              activeTab === "gps" ? "text-primary bg-blue-50" : "text-gray-500"
             }`}
           >
-            <MapPin className="h-6 w-6 mb-1" />
-            <span className="text-xs">GPS Tracking</span>
+            <MapPin className="h-5 w-5 mb-1" />
+            <span className="text-xs">GPS</span>
           </button>
           <button
             onClick={() => setActiveTab("users")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "users" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center py-2 px-1 ${
+              activeTab === "users" ? "text-primary bg-blue-50" : "text-gray-500"
             }`}
           >
-            <Users className="h-6 w-6 mb-1" />
+            <Users className="h-5 w-5 mb-1" />
             <span className="text-xs">Users</span>
           </button>
+        </div>
+        
+        {/* Second Row - Secondary Tabs */}
+        <div className="grid grid-cols-3 gap-0 border-t border-gray-100">
           <button
             onClick={() => setActiveTab("history")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "history" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center py-2 px-1 ${
+              activeTab === "history" ? "text-primary bg-blue-50" : "text-gray-500"
             }`}
           >
-            <FileText className="h-6 w-6 mb-1" />
+            <FileText className="h-5 w-5 mb-1" />
             <span className="text-xs">History</span>
           </button>
           <button
             onClick={() => setActiveTab("absences")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "absences" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center py-2 px-1 ${
+              activeTab === "absences" ? "text-primary bg-blue-50" : "text-gray-500"
             }`}
           >
-            <GraduationCap className="h-6 w-6 mb-1" />
+            <GraduationCap className="h-5 w-5 mb-1" />
             <span className="text-xs">Absences</span>
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`flex flex-col items-center py-2 px-4 ${
-              activeTab === "settings" ? "text-primary" : "text-gray-500"
+            className={`flex flex-col items-center py-2 px-1 ${
+              activeTab === "settings" ? "text-primary bg-blue-50" : "text-gray-500"
             }`}
           >
-            <Settings className="h-6 w-6 mb-1" />
+            <Settings className="h-5 w-5 mb-1" />
             <span className="text-xs">Settings</span>
           </button>
-
         </div>
       </nav>
     </div>

@@ -752,23 +752,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessions = await storage.getPickupSessionsToday();
       
-      // Enrich sessions with driver, route, and pickup details
-      const enrichedSessions = await Promise.all(
+      // Enrich sessions with driver, route, and pickup details with timeout protection
+      const enrichedSessions = await Promise.allSettled(
         sessions.map(async (session) => {
-          const driver = await storage.getUser(session.driverId);
-          const route = await storage.getRoute(session.routeId);
-          const studentPickups = await storage.getStudentPickups(session.id);
-          
-          return {
-            ...session,
-            driver,
-            route,
-            studentPickups
-          };
+          try {
+            const [driver, route, studentPickups] = await Promise.allSettled([
+              storage.getUser(session.driverId),
+              storage.getRoute(session.routeId),
+              storage.getStudentPickups(session.id)
+            ]);
+            
+            return {
+              ...session,
+              driver: driver.status === 'fulfilled' ? driver.value : null,
+              route: route.status === 'fulfilled' ? route.value : null,
+              studentPickups: studentPickups.status === 'fulfilled' ? studentPickups.value : []
+            };
+          } catch (sessionError) {
+            console.error(`Error enriching session ${session.id}:`, sessionError);
+            return {
+              ...session,
+              driver: null,
+              route: null,
+              studentPickups: []
+            };
+          }
         })
       );
       
-      res.json(enrichedSessions);
+      const validSessions = enrichedSessions
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value);
+      
+      res.json(validSessions);
     } catch (error) {
       console.error('Error fetching today\'s pickup sessions:', error);
       res.status(500).json({ message: "Internal server error" });
@@ -1057,111 +1073,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!session) {
         return res.status(404).json({ message: "Session not found" });
       }
-
-      // Get pickup details for history
-      const pickups = await storage.getStudentPickups(sessionId);
-      const pickedUpCount = pickups.filter(p => p.status === "picked_up").length;
       
-      // Calculate duration properly
-      let durationMinutes = null;
-      const endTime = new Date();
+      // Calculate duration
+      const completedTime = new Date();
+      const startTime = session.startTime ? new Date(session.startTime) : completedTime;
+      const durationMinutes = Math.round((completedTime.getTime() - startTime.getTime()) / (1000 * 60));
       
-      if (session.startTime) {
-        const startTime = new Date(session.startTime);
-        durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
-        console.log('Route duration calculated:', { 
-          startTime: startTime.toISOString(), 
-          endTime: endTime.toISOString(), 
-          durationMinutes 
-        });
-      } else {
-        // If no start time, estimate duration based on first pickup time
-        const firstPickupTime = pickups
-          .filter(p => p.pickedUpAt)
-          .map(p => new Date(p.pickedUpAt!))
-          .sort((a, b) => a.getTime() - b.getTime())[0];
-        
-        if (firstPickupTime) {
-          durationMinutes = Math.round((endTime.getTime() - firstPickupTime.getTime()) / (1000 * 60));
-          // Ensure minimum duration of 1 minute for very quick routes
-          if (durationMinutes < 1) {
-            durationMinutes = Math.max(1, Math.round((endTime.getTime() - firstPickupTime.getTime()) / (1000 * 60 * 60) * 60));
-            if (durationMinutes < 1) durationMinutes = 1;
-          }
-          console.log('Route duration estimated from first pickup:', { 
-            firstPickupTime: firstPickupTime.toISOString(), 
-            endTime: endTime.toISOString(), 
-            durationMinutes,
-            actualSeconds: (endTime.getTime() - firstPickupTime.getTime()) / 1000
-          });
-        } else {
-          // Default to 5 minutes if no pickup times available
-          durationMinutes = 5;
-          console.log('No pickup times found, using default 5 minutes duration');
-        }
-      }
-
-      // Update session to completed with duration
-      const updateData: any = {
-        status: "completed",
-        completedTime: endTime
+      console.log(`🏁 Completing route session ${sessionId}, duration: ${durationMinutes} minutes`);
+      
+      // Update session status to completed
+      await storage.updatePickupSession(sessionId, {
+        status: 'completed',
+        completedTime: completedTime,
+        durationMinutes: durationMinutes
+      });
+      
+      // Get student pickups for history
+      const studentPickups = await storage.getStudentPickups(sessionId);
+      const route = await storage.getRoute(session.routeId);
+      const driver = await storage.getUser(session.driverId);
+      
+      // Save to pickup history
+      const historyData = {
+        sessionId: sessionId,
+        routeId: session.routeId,
+        driverId: session.driverId,
+        routeName: route?.name || `Route ${session.routeId}`,
+        driverName: driver ? `${driver.firstName} ${driver.lastName}` : 'Unknown Driver',
+        startTime: session.startTime,
+        completedTime: completedTime,
+        durationMinutes: durationMinutes,
+        pickupDetails: JSON.stringify(studentPickups.map(pickup => ({
+          studentId: pickup.studentId,
+          status: pickup.status,
+          pickupTime: pickup.pickupTime,
+          notes: pickup.notes
+        }))),
+        totalStudents: studentPickups.length,
+        studentsPickedUp: studentPickups.filter(p => p.status === 'picked_up').length,
+        studentsAbsent: studentPickups.filter(p => p.status === 'absent').length,
+        studentsNoShow: studentPickups.filter(p => p.status === 'no_show').length
       };
       
-      if (durationMinutes !== null) {
-        updateData.durationMinutes = durationMinutes;
-      }
+      await storage.createPickupHistory(historyData);
       
-      console.log('Final update data for session:', updateData);
-
-      await storage.updatePickupSession(sessionId, updateData);
-      console.log('Session updated with completion data:', updateData);
-
-      // Save to pickup history
-      await storage.createPickupHistory({
-        sessionId,
-        routeId: session.routeId,
-        driverId: session.driverId,
-        date: session.date,
-        completedAt: endTime,
-        totalStudents: pickups.length,
-        studentsPickedUp: pickedUpCount,
-        pickupDetails: JSON.stringify(pickups),
-        notes: req.body.notes || null
-      });
-
-      // Update GPS route history when route completes
-      if (req.body.endLatitude && req.body.endLongitude) {
-        try {
-          const history = await storage.getGpsRouteHistoryBySession(sessionId);
-          if (history) {
-            await storage.updateGpsRouteHistory(history.id, {
-              endLatitude: req.body.endLatitude,
-              endLongitude: req.body.endLongitude,
-              endTime: endTime,
-              totalDistance: req.body.totalDistance || null,
-              routeDuration: durationMinutes
-            });
-            console.log('📊 GPS route history completed for session', sessionId);
-          }
-        } catch (gpsError) {
-          console.error('⚠️ Failed to update GPS history:', gpsError);
-          // Don't fail route completion if GPS tracking fails
-        }
-      }
-
-      // Broadcast completion
+      // Broadcast route completion update
       broadcast({
         type: 'route_completed',
-        sessionId,
+        sessionId: sessionId,
         routeId: session.routeId,
         driverId: session.driverId,
-        completedAt: endTime.toISOString()
+        completedTime: completedTime,
+        durationMinutes: durationMinutes
       });
-
+      
+      console.log(`✅ Route ${sessionId} completed successfully and saved to history`);
       res.json({ 
-        message: "Route completed and saved to history", 
-        durationMinutes,
-        completedAt: endTime.toISOString()
+        message: "Route completed successfully", 
+        sessionId: sessionId,
+        durationMinutes: durationMinutes,
+        historyId: historyData
       });
     } catch (error) {
       console.error('Error completing route:', error);
@@ -1749,32 +1720,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all driver locations
   app.get("/api/driver-locations", async (req, res) => {
     try {
-      const locations = await storage.getDriverLocations();
+      // Set timeout for database queries
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 8000);
+      });
       
-      // Enrich with driver and session information
-      const enrichedLocations = await Promise.all(
+      const locationsPromise = storage.getDriverLocations();
+      const locations = await Promise.race([locationsPromise, timeoutPromise]);
+      
+      // Enrich with driver and session information using Promise.allSettled for error tolerance
+      const enrichedLocations = await Promise.allSettled(
         locations.map(async (location) => {
-          const driver = await storage.getUser(location.driverId);
-          let session = null;
-          
-          if (location.sessionId) {
-            session = await storage.getPickupSession(location.sessionId);
+          try {
+            const [driverResult, sessionResult] = await Promise.allSettled([
+              storage.getUser(location.driverId),
+              location.sessionId ? storage.getPickupSession(location.sessionId) : Promise.resolve(null)
+            ]);
+            
+            const driver = driverResult.status === 'fulfilled' ? driverResult.value : null;
+            let session = sessionResult.status === 'fulfilled' ? sessionResult.value : null;
+            
             if (session) {
-              const route = await storage.getRoute(session.routeId);
-              session = { ...session, route };
+              try {
+                const route = await storage.getRoute(session.routeId);
+                session = { ...session, route };
+              } catch (routeError) {
+                console.error('Error fetching route for session:', routeError);
+              }
             }
+            
+            return {
+              ...location,
+              driver,
+              session,
+            };
+          } catch (locationError) {
+            console.error(`Error enriching location ${location.id}:`, locationError);
+            return {
+              ...location,
+              driver: null,
+              session: null,
+            };
           }
-          
-          return {
-            ...location,
-            driver,
-            session,
-          };
         })
       );
       
-      res.json(enrichedLocations);
+      const validLocations = enrichedLocations
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value);
+      
+      res.json(validLocations);
     } catch (error) {
+      console.error('Error fetching driver locations:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

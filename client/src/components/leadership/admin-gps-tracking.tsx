@@ -242,30 +242,7 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              // Simulate GPS tracking for active sessions
-              const activeSessions = driverLocations.filter(loc => loc.session?.status === 'in_progress');
-              if (activeSessions.length > 0) {
-                for (const session of activeSessions) {
-                  try {
-                    await fetch(`/api/gps/simulate/${session.sessionId}`, { method: 'POST' });
-                  } catch (error) {
-                    console.error('GPS simulation error:', error);
-                  }
-                }
-                // Refresh data after simulation
-                refetchLocations();
-                refetchHistory();
-              }
-            }}
-            className="flex items-center gap-2"
-          >
-            <Activity className="h-4 w-4" />
-            Simulate GPS
-          </Button>
+
         </div>
       </div>
 
