@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { formatRouteDisplayName } from "@/lib/route-utils";
 import { ChevronDown, ChevronRight, School, MapPin, Clock, Users } from "lucide-react";
 
 interface ExpandableRouteCardProps {
@@ -43,7 +44,7 @@ export default function ExpandableRouteCard({ route, driver, onEdit }: Expandabl
             )}
           </Button>
           <div className="flex-1">
-            <p className="font-medium">{route.name}</p>
+            <p className="font-medium">{formatRouteDisplayName({ ...route, schools })}</p>
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <span>Driver: {driver ? `${driver.firstName} ${driver.lastName}` : 'Unassigned'}</span>
               <span>{schools.length} schools • {schools.reduce((sum, school) => sum + getStudentCount(school.school?.id || 0), 0)} students</span>

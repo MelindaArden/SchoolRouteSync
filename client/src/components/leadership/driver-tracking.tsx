@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   MapPin, 
   Navigation, 
@@ -237,7 +238,7 @@ export default function DriverTracking() {
                       {location ? "Tracking" : "No Signal"}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600">{session.route.name}</p>
+                  <p className="text-sm text-gray-600">{formatRouteDisplayName({ ...session.route, schools: session.route.schools })}</p>
                 </CardHeader>
 
                 <CardContent className="space-y-4">

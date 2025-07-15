@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   MapPin, 
   Activity, 
@@ -236,7 +237,10 @@ export default function GpsMapViewer({ selectedSessionId, onSelectSession }: Gps
                           <h4 className="font-semibold text-lg">{location.driver.firstName} {location.driver.lastName}</h4>
                           <Badge variant="outline" className="bg-green-50 border-green-300 text-green-700">
                             <RouteIcon className="h-3 w-3 mr-1" />
-                            {location.session?.route.name}
+                            {formatRouteDisplayName({ 
+                              ...location.session?.route, 
+                              schools: [] // Will be updated when we get full route data
+                            })}
                           </Badge>
                         </div>
                       </div>

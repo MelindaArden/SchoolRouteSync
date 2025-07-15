@@ -14,6 +14,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useLocationTracking } from "@/hooks/use-location-tracking";
 import { apiRequest } from "@/lib/queryClient";
+import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   Navigation as NavigationIcon, 
   AlertTriangle, 
@@ -342,7 +343,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold">{currentRoute.name}</h3>
+                    <h3 className="text-lg font-semibold">{formatRouteDisplayName(currentRoute)}</h3>
                     <div className="flex items-center space-x-4 mt-1">
                       <div className="flex items-center space-x-1 text-sm text-gray-600">
                         <RouteIcon className="h-4 w-4" />

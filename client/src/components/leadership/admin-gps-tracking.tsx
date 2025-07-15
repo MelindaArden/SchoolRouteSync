@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useWebSocket } from "@/hooks/use-websocket";
 import GpsRouteMap from "@/components/leadership/gps-route-map";
 import RouteMapDetail from "@/components/leadership/route-map-detail";
+import { formatRouteDisplayName } from "@/lib/route-utils";
 import { 
   MapPin, 
   Navigation, 
@@ -309,7 +310,10 @@ export default function AdminGpsTracking({ userId }: AdminGpsTrackingProps) {
                         <div key={route.id} className="border rounded-lg p-4 space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <span className="font-medium">{route.routeName}</span>
+                              <span className="font-medium">{formatRouteDisplayName({ 
+                                name: route.routeName, 
+                                schools: new Array(route.schoolsVisited || 0) 
+                              })}</span>
                               <Badge variant="outline">
                                 {route.driver.firstName} {route.driver.lastName}
                               </Badge>

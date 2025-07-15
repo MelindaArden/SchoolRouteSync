@@ -10,6 +10,7 @@ import { Clock, User, Route as RouteIcon, Calendar, CheckCircle, XCircle, Search
 import { format } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatRouteDisplayName } from "@/lib/route-utils";
 
 export default function PickupHistory() {
   const [searchTerm, setSearchTerm] = useState("");
