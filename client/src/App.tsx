@@ -39,10 +39,8 @@ function Router() {
           try {
             const masterAdminData = JSON.parse(storedMasterAdmin);
             setMasterAdmin(masterAdminData);
-            console.log("Master admin authentication successful");
             return;
           } catch (error) {
-            console.log("Master admin token validation failed, clearing stored data");
             localStorage.removeItem("masterAdminToken");
             localStorage.removeItem("masterAdmin");
           }
@@ -66,12 +64,10 @@ function Router() {
               if (sessionData.isAuthenticated) {
                 const userData = JSON.parse(storedUser);
                 setUser(userData);
-                console.log("Token authentication successful");
                 return;
               }
             }
           } catch (error) {
-            console.log("Token validation failed, clearing stored data");
             localStorage.removeItem("authToken");
             localStorage.removeItem("user");
           }
@@ -99,7 +95,7 @@ function Router() {
             }
           }
         } catch (error) {
-          console.log("Session check failed");
+          // Session check failed, continue
         }
         
         // Final fallback to localStorage only (offline mode)
@@ -107,7 +103,6 @@ function Router() {
           try {
             const userData = JSON.parse(storedUser);
             setUser(userData);
-            console.log("Using offline authentication");
           } catch (error) {
             localStorage.removeItem("user");
           }
