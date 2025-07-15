@@ -1,8 +1,10 @@
+console.log("main.tsx: Script starting to load");
+
 import { createRoot } from "react-dom/client";
-import App from "./App";
-import MinimalApp from "./minimal-app";
+console.log("main.tsx: createRoot imported");
+
 import SuperMinimal from "./super-minimal";
-import "./index.css";
+console.log("main.tsx: SuperMinimal imported");
 
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
@@ -40,17 +42,33 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 };
 
-// Progressive fallback system
-const params = new URLSearchParams(window.location.search);
-let component;
+console.log("main.tsx: About to create root and render");
 
-if (params.has("super")) {
-  component = <SuperMinimal />;
-} else if (params.has("minimal") && params.get("minimal") !== "false") {
-  component = <MinimalApp />;
-} else {
-  // Default to super minimal until main app is fixed
-  component = <SuperMinimal />;
+try {
+  const rootElement = document.getElementById("root");
+  console.log("main.tsx: Root element found:", rootElement);
+  
+  if (!rootElement) {
+    throw new Error("Root element not found");
+  }
+  
+  const root = createRoot(rootElement);
+  console.log("main.tsx: Root created successfully");
+  
+  root.render(<SuperMinimal />);
+  console.log("main.tsx: Component rendered successfully");
+} catch (error) {
+  console.error("main.tsx: Error during rendering:", error);
+  
+  // Fallback: render directly to DOM
+  const rootElement = document.getElementById("root");
+  if (rootElement) {
+    rootElement.innerHTML = `
+      <div style="padding: 20px; font-family: Arial;">
+        <h1 style="color: red;">Route Runner - Emergency Mode</h1>
+        <p>React failed to load. Error: ${error.message}</p>
+        <p>This is a direct DOM fallback.</p>
+      </div>
+    `;
+  }
 }
-
-createRoot(document.getElementById("root")!).render(component);
