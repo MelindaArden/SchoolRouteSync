@@ -292,11 +292,25 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
   const totalStudents = currentRoute?.totalStudents || 0;
   
-  const sessionPickupStats = {
-    pickedUp: sessionPickups.data?.filter((pickup: any) => pickup.status === 'picked_up').length || 0,
-    total: sessionPickups.data?.length || 0,
-    progressPercent: sessionPickups.data?.length ? Math.round((sessionPickups.data.filter((pickup: any) => pickup.status === 'picked_up').length / sessionPickups.data.length) * 100) : 0
+  // Calculate student pickup stats properly including all students assigned to the route
+  const calculatePickupStats = () => {
+    if (!currentRoute || !sessionPickups.data) return { pickedUp: 0, total: 0, progressPercent: 0 };
+    
+    // Get total students from route schools instead of just session pickups
+    const totalStudents = currentRoute.schools?.reduce((sum: number, school: any) => {
+      return sum + (school.students?.length || 0);
+    }, 0) || 0;
+    
+    const pickedUpCount = sessionPickups.data.filter((pickup: any) => pickup.status === 'picked_up').length || 0;
+    
+    return {
+      pickedUp: pickedUpCount,
+      total: totalStudents,
+      progressPercent: totalStudents > 0 ? Math.round((pickedUpCount / totalStudents) * 100) : 0
+    };
   };
+  
+  const sessionPickupStats = calculatePickupStats();
   
   // Debug logging
   console.log('Session debug:', { 

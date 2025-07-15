@@ -1,592 +1,387 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  MapPin, 
-  Navigation, 
-  Clock, 
-  Route as RouteIcon,
-  Target,
-  Activity,
-  ExternalLink,
-  Play,
-  Square,
-  Pause
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MapPin, Clock, Navigation, School, AlertTriangle } from "lucide-react";
+import StudentPickupDropdown from "./student-pickup-dropdown";
 
-interface RouteStop {
+interface RouteMapViewerProps {
+  sessionId: number;
+  isRealTime?: boolean;
+}
+
+interface GpsTrack {
   id: number;
   latitude: string;
   longitude: string;
   timestamp: string;
-  arrivalTime: string | null;
-  departureTime: string | null;
-  duration: number; // in minutes
-  eventType: string;
-  school: {
+  eventType?: string;
+  speed?: number;
+}
+
+interface School {
+  id: number;
+  name: string;
+  address: string;
+}
+
+interface RouteMapData {
+  path: GpsTrack[];
+  stops: Array<{
     id: number;
-    name: string;
-    address: string;
-  } | null;
+    latitude: string;
+    longitude: string;
+    timestamp: string;
+    schoolId?: number;
+    school?: School;
+    duration?: number;
+    studentsPickedUp?: number;
+    totalStudents?: number;
+  }>;
+  currentPosition?: {
+    latitude: string;
+    longitude: string;
+    timestamp: string;
+  };
 }
 
-interface RouteMapViewerProps {
-  sessionId: number;
-  driverName?: string;
-  routeName?: string;
-  isRealTime?: boolean;
-}
+export default function RouteMapViewer({ sessionId, isRealTime = false }: RouteMapViewerProps) {
+  console.log('RouteMapViewer loading for session:', sessionId, 'realTime:', isRealTime);
 
-export default function RouteMapViewer({ 
-  sessionId, 
-  driverName, 
-  routeName, 
-  isRealTime = false 
-}: RouteMapViewerProps) {
-  const [selectedStop, setSelectedStop] = useState<RouteStop | null>(null);
-  const [hoveredStop, setHoveredStop] = useState<RouteStop | null>(null);
-
-  // Fetch route path data with actual stops (filtered for 3+ minute stops)
-  const { data: routeData, isLoading, error } = useQuery({
+  // Fetch map data for this session
+  const { data: mapData, isLoading: isLoadingMap, error: mapError } = useQuery({
     queryKey: [`/api/routes/${sessionId}/map-data`],
+    refetchInterval: isRealTime ? 15000 : false, // Refresh every 15 seconds if real-time
     enabled: !!sessionId,
-    refetchInterval: isRealTime ? 15000 : undefined,
-    retry: 1,
-    staleTime: 30000,
+  }) as { data: RouteMapData | undefined, isLoading: boolean, error: any };
+
+  // Fetch session details
+  const { data: sessionDetails, isLoading: isLoadingSession } = useQuery({
+    queryKey: [`/api/pickup-sessions/${sessionId}`],
+    enabled: !!sessionId,
   });
 
+  if (isLoadingMap || isLoadingSession) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-gray-600">Loading route map...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (mapError) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+          <p className="text-red-600 mb-2">Error loading route map</p>
+          <p className="text-sm text-gray-500">Unable to fetch GPS tracking data</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!mapData || (!mapData.path.length && !mapData.stops.length)) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 mb-2">No GPS data available</p>
+          <p className="text-sm text-gray-500">
+            {isRealTime ? 'GPS tracking will appear when driver starts route' : 'No GPS data recorded for this route'}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMins = minutes % 60;
-    return `${hours}h ${remainingMins}m`;
+  const formatCoordinate = (coord: string) => {
+    return parseFloat(coord).toFixed(6);
   };
 
-  const openInMaps = (lat: string, lng: string, name: string) => {
-    const url = `https://www.google.com/maps?q=${lat},${lng}&z=16`;
-    window.open(url, '_blank');
+  // Calculate total route duration
+  const getRouteDuration = () => {
+    if (mapData.path.length < 2) return null;
+    const start = new Date(mapData.path[0].timestamp);
+    const end = new Date(mapData.path[mapData.path.length - 1].timestamp);
+    const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+    return durationMinutes;
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <Card className="bg-white">
-        <CardContent className="flex items-center justify-center p-8">
-          <div className="flex items-center gap-2">
-            <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
-            <span>Loading route map data...</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Card className="bg-white border-red-200">
-        <CardContent className="flex items-center justify-center p-8">
-          <div className="text-center">
-            <MapPin className="h-12 w-12 text-red-500 mx-auto mb-2" />
-            <p className="text-red-600">Unable to load route map</p>
-            <p className="text-sm text-gray-500">
-              {error instanceof Error ? error.message : "Please try again later"}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // No data state
-  if (!routeData || (!routeData.path && !routeData.stops)) {
-    return (
-      <Card className="bg-white">
-        <CardContent className="flex items-center justify-center p-8">
-          <div className="text-center">
-            <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600">No route data available</p>
-            <p className="text-sm text-gray-500">
-              Session {sessionId} may not have GPS tracking data yet
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const createRouteVisualization = () => {
-    if (!routeData?.path || routeData.path.length === 0) return null;
-
-    const coordinates = routeData.path.map((point: any) => ({
-      lat: parseFloat(point.latitude),
-      lng: parseFloat(point.longitude),
-      timestamp: point.timestamp
-    })).filter((coord: any) => !isNaN(coord.lat) && !isNaN(coord.lng));
-
-    const stops = routeData.stops || [];
-
-    if (coordinates.length === 0) return null;
-
-    // Calculate bounds
-    const lats = coordinates.map((coord: any) => coord.lat);
-    const lngs = coordinates.map((coord: any) => coord.lng);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-
-    // Add padding
-    const latRange = maxLat - minLat || 0.01;
-    const lngRange = maxLng - minLng || 0.01;
-    const padding = 0.1;
-
-    const bounds = {
-      minLat: minLat - latRange * padding,
-      maxLat: maxLat + latRange * padding,
-      minLng: minLng - lngRange * padding,
-      maxLng: maxLng + lngRange * padding
-    };
-
-    // SVG dimensions
-    const mapWidth = 800;
-    const mapHeight = 500;
-    const svgPadding = 40;
-
-    const scaleX = (mapWidth - 2 * svgPadding) / (bounds.maxLng - bounds.minLng);
-    const scaleY = (mapHeight - 2 * svgPadding) / (bounds.maxLat - bounds.minLat);
-
-    const coordsToSVG = (lat: number, lng: number) => ({
-      x: svgPadding + (lng - bounds.minLng) * scaleX,
-      y: mapHeight - (svgPadding + (lat - bounds.minLat) * scaleY)
-    });
-
-    // Create smooth path
-    const pathCoords = coordinates.map((coord: any) => coordsToSVG(coord.lat, coord.lng));
-    const pathString = pathCoords.map((point, index) => 
-      `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
-    ).join(' ');
-
-    return (
-      <div className="space-y-4">
-        <Card className="bg-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RouteIcon className="h-5 w-5 text-blue-600" />
-              Driver Route Map
-              {isRealTime && (
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  <Activity className="h-3 w-3 mr-1" />
-                  Live Tracking
-                </Badge>
-              )}
-            </CardTitle>
-            <div className="text-sm text-gray-600">
-              {driverName && `Driver: ${driverName}`} • {routeName && `Route: ${routeName}`}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <svg 
-                width={mapWidth} 
-                height={mapHeight} 
-                className="w-full h-auto border border-gray-200 rounded bg-gradient-to-br from-blue-50 via-green-50 to-yellow-50"
-                viewBox={`0 0 ${mapWidth} ${mapHeight}`}
-              >
-                {/* Map grid background */}
-                <defs>
-                  <pattern id="mapGrid" width="30" height="30" patternUnits="userSpaceOnUse">
-                    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#e5e7eb" strokeWidth="0.5"/>
-                  </pattern>
-                  <pattern id="roads" width="60" height="60" patternUnits="userSpaceOnUse">
-                    <rect width="60" height="60" fill="#f9fafb"/>
-                    <path d="M0 30 L60 30 M30 0 L30 60" stroke="#d1d5db" strokeWidth="1"/>
-                  </pattern>
-                </defs>
-                
-                {/* Background with road pattern */}
-                <rect width="100%" height="100%" fill="url(#roads)" />
-                <rect width="100%" height="100%" fill="url(#mapGrid)" opacity="0.5" />
-                
-                {/* Route path */}
-                {pathString && (
-                  <path
-                    d={pathString}
-                    stroke="#2563eb"
-                    strokeWidth="4"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="drop-shadow-sm"
-                    strokeDasharray={isRealTime ? "10,5" : "none"}
-                  />
-                )}
-                
-                {/* Start point */}
-                {coordinates.length > 0 && (
-                  <g>
-                    {(() => {
-                      const startPoint = coordsToSVG(coordinates[0].lat, coordinates[0].lng);
-                      return (
-                        <g>
-                          <circle
-                            cx={startPoint.x}
-                            cy={startPoint.y}
-                            r="12"
-                            fill="#10b981"
-                            stroke="white"
-                            strokeWidth="3"
-                            className="drop-shadow-lg cursor-pointer"
-                            onClick={() => openInMaps(coordinates[0].lat.toString(), coordinates[0].lng.toString(), 'Start')}
-                          />
-                          <text
-                            x={startPoint.x}
-                            y={startPoint.y - 20}
-                            textAnchor="middle"
-                            className="text-sm font-bold fill-green-700"
-                          >
-                            START
-                          </text>
-                        </g>
-                      );
-                    })()}
-                  </g>
-                )}
-                
-                {/* Route stops with 3+ minute duration */}
-                {stops.map((stop: RouteStop, index: number) => {
-                  const point = coordsToSVG(parseFloat(stop.latitude), parseFloat(stop.longitude));
-                  const isHovered = hoveredStop?.id === stop.id;
-                  
-                  return (
-                    <g key={stop.id}>
-                      <circle
-                        cx={point.x}
-                        cy={point.y}
-                        r={isHovered ? "14" : "10"}
-                        fill={stop.school ? "#f59e0b" : "#ef4444"}
-                        stroke="white"
-                        strokeWidth="3"
-                        className="cursor-pointer drop-shadow-lg transition-all duration-200"
-                        onClick={() => setSelectedStop(stop)}
-                        onMouseEnter={() => setHoveredStop(stop)}
-                        onMouseLeave={() => setHoveredStop(null)}
-                      />
-                      
-                      {/* Stop label */}
-                      <text
-                        x={point.x}
-                        y={point.y - (isHovered ? 25 : 20)}
-                        textAnchor="middle"
-                        className={`text-xs font-medium transition-all duration-200 ${
-                          isHovered ? 'fill-gray-800 text-sm' : 'fill-gray-600'
-                        }`}
-                      >
-                        {stop.school ? stop.school.name : `Stop ${index + 1}`}
-                      </text>
-                      
-                      {/* Hover tooltip */}
-                      {isHovered && (
-                        <g>
-                          <rect
-                            x={point.x - 80}
-                            y={point.y + 15}
-                            width="160"
-                            height="50"
-                            fill="rgba(0,0,0,0.8)"
-                            stroke="white"
-                            strokeWidth="1"
-                            rx="4"
-                            className="drop-shadow-lg"
-                          />
-                          <text
-                            x={point.x}
-                            y={point.y + 30}
-                            textAnchor="middle"
-                            className="text-xs fill-white font-medium"
-                          >
-                            Arrived: {formatTime(stop.arrivalTime || stop.timestamp)}
-                          </text>
-                          <text
-                            x={point.x}
-                            y={point.y + 45}
-                            textAnchor="middle"
-                            className="text-xs fill-white"
-                          >
-                            Duration: {formatDuration(stop.duration)}
-                          </text>
-                          {stop.departureTime && (
-                            <text
-                              x={point.x}
-                              y={point.y + 60}
-                              textAnchor="middle"
-                              className="text-xs fill-white"
-                            >
-                              Left: {formatTime(stop.departureTime)}
-                            </text>
-                          )}
-                        </g>
-                      )}
-                    </g>
-                  );
-                })}
-                
-                {/* End point */}
-                {coordinates.length > 1 && !isRealTime && (
-                  <g>
-                    {(() => {
-                      const endPoint = coordsToSVG(
-                        coordinates[coordinates.length - 1].lat, 
-                        coordinates[coordinates.length - 1].lng
-                      );
-                      return (
-                        <g>
-                          <circle
-                            cx={endPoint.x}
-                            cy={endPoint.y}
-                            r="12"
-                            fill="#ef4444"
-                            stroke="white"
-                            strokeWidth="3"
-                            className="drop-shadow-lg cursor-pointer"
-                            onClick={() => openInMaps(
-                              coordinates[coordinates.length - 1].lat.toString(), 
-                              coordinates[coordinates.length - 1].lng.toString(), 
-                              'End'
-                            )}
-                          />
-                          <text
-                            x={endPoint.x}
-                            y={endPoint.y - 20}
-                            textAnchor="middle"
-                            className="text-sm font-bold fill-red-700"
-                          >
-                            END
-                          </text>
-                        </g>
-                      );
-                    })()}
-                  </g>
-                )}
-                
-                {/* Current position for real-time */}
-                {isRealTime && routeData.currentPosition && (
-                  <g>
-                    {(() => {
-                      const currentPoint = coordsToSVG(
-                        parseFloat(routeData.currentPosition.latitude), 
-                        parseFloat(routeData.currentPosition.longitude)
-                      );
-                      return (
-                        <g>
-                          <circle
-                            cx={currentPoint.x}
-                            cy={currentPoint.y}
-                            r="8"
-                            fill="#3b82f6"
-                            className="animate-pulse"
-                          />
-                          <circle
-                            cx={currentPoint.x}
-                            cy={currentPoint.y}
-                            r="15"
-                            fill="none"
-                            stroke="#3b82f6"
-                            strokeWidth="2"
-                            className="animate-ping"
-                          />
-                          <text
-                            x={currentPoint.x}
-                            y={currentPoint.y - 25}
-                            textAnchor="middle"
-                            className="text-sm font-bold fill-blue-700"
-                          >
-                            DRIVER
-                          </text>
-                        </g>
-                      );
-                    })()}
-                  </g>
-                )}
-                
-                {/* Coordinate labels */}
-                <text x="15" y="25" className="text-xs fill-gray-500 font-mono">
-                  {bounds.maxLat.toFixed(4)}°N
-                </text>
-                <text x="15" y={mapHeight - 15} className="text-xs fill-gray-500 font-mono">
-                  {bounds.minLat.toFixed(4)}°N
-                </text>
-                <text x={mapWidth - 100} y={mapHeight - 15} className="text-xs fill-gray-500 font-mono">
-                  {bounds.maxLng.toFixed(4)}°W
-                </text>
-              </svg>
-              
-              {/* Map Legend */}
-              <div className="flex items-center justify-center gap-6 mt-4 text-sm flex-wrap">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow"></div>
-                  <span>Start</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-amber-500 rounded-full border-2 border-white shadow"></div>
-                  <span>School Stop</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow"></div>
-                  <span>Other Stop</span>
-                </div>
-                {isRealTime && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow animate-pulse"></div>
-                    <span>Current Location</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-1 bg-blue-600 rounded"></div>
-                  <span>Route Path</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <Card className="bg-white">
-        <CardContent className="flex items-center justify-center p-8">
-          <div className="flex items-center gap-2">
-            <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />
-            <span>Loading route data...</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="bg-white border-red-200">
-        <CardContent className="flex items-center justify-center p-8">
-          <div className="text-center">
-            <MapPin className="h-12 w-12 text-red-500 mx-auto mb-2" />
-            <p className="text-red-600">Failed to load route data</p>
-            <p className="text-sm text-gray-500">Please try refreshing the page</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!routeData || (!routeData.path && !routeData.currentPosition)) {
-    return (
-      <Card className="bg-white">
-        <CardContent className="flex items-center justify-center p-8">
-          <div className="text-center">
-            <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600">No route data available</p>
-            <p className="text-sm text-gray-500">Driver may not have started tracking yet</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const routeDuration = getRouteDuration();
 
   return (
     <div className="space-y-6">
-      {/* Route Information Header */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      {/* Route Summary */}
+      <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Navigation className="h-5 w-5 text-blue-600" />
-                {routeName || `Route Session ${sessionId}`}
-              </CardTitle>
-              {driverName && (
-                <p className="text-sm text-gray-600 mt-1">Driver: {driverName}</p>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Route Map - Session #{sessionId}
+            {isRealTime && (
+              <Badge variant="secondary">Live Tracking</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{mapData.path.length}</div>
+              <div className="text-sm text-blue-800">GPS Points</div>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{mapData.stops.length}</div>
+              <div className="text-sm text-green-800">School Stops</div>
+            </div>
+            {routeDuration && (
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{routeDuration}</div>
+                <div className="text-sm text-purple-800">Minutes</div>
+              </div>
+            )}
+            {sessionDetails && (
+              <div className="text-center p-3 bg-orange-50 rounded-lg">
+                <div className="text-lg font-bold text-orange-600">
+                  {sessionDetails.driver?.firstName} {sessionDetails.driver?.lastName}
+                </div>
+                <div className="text-sm text-orange-800">Driver</div>
+              </div>
+            )}
+          </div>
+
+          {/* Route Map Visualization */}
+          <div className="border rounded-lg bg-gray-50 p-4 min-h-[400px] relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100 via-blue-50 to-purple-100">
+              {/* Geographic background pattern */}
+              <div className="absolute inset-0 opacity-20">
+                <svg width="100%" height="100%" viewBox="0 0 800 600">
+                  {/* Road network pattern */}
+                  <defs>
+                    <pattern id="roads" patternUnits="userSpaceOnUse" width="40" height="40">
+                      <rect width="40" height="40" fill="#f3f4f6"/>
+                      <path d="M0,20 L40,20" stroke="#d1d5db" strokeWidth="2"/>
+                      <path d="M20,0 L20,40" stroke="#d1d5db" strokeWidth="2"/>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#roads)"/>
+                  
+                  {/* Area patches for geographic context */}
+                  <ellipse cx="200" cy="150" rx="80" ry="60" fill="#dcfce7" opacity="0.6"/>
+                  <ellipse cx="600" cy="300" rx="100" ry="80" fill="#fef3c7" opacity="0.6"/>
+                  <ellipse cx="400" cy="450" rx="120" ry="70" fill="#e0e7ff" opacity="0.6"/>
+                </svg>
+              </div>
+
+              {/* GPS Route Path */}
+              {mapData.path.length > 1 && (
+                <svg 
+                  width="100%" 
+                  height="100%" 
+                  viewBox="0 0 800 600"
+                  className="absolute inset-0"
+                >
+                  {/* Route path line */}
+                  <path
+                    d={mapData.path.map((point, index) => {
+                      const lat = parseFloat(point.latitude);
+                      const lng = parseFloat(point.longitude);
+                      // Simple coordinate mapping to SVG space
+                      const x = ((lng + 87) * 800) / 2; // Rough Nashville area mapping
+                      const y = ((37 - lat) * 600) / 2;
+                      return `${index === 0 ? 'M' : 'L'} ${Math.max(50, Math.min(750, x))} ${Math.max(50, Math.min(550, y))}`;
+                    }).join(' ')}
+                    fill="none"
+                    stroke="#2563eb"
+                    strokeWidth="3"
+                    strokeDasharray="5,5"
+                    opacity="0.8"
+                  />
+                  
+                  {/* Start point */}
+                  {mapData.path.length > 0 && (
+                    <g>
+                      <circle
+                        cx={Math.max(50, Math.min(750, ((parseFloat(mapData.path[0].longitude) + 87) * 800) / 2))}
+                        cy={Math.max(50, Math.min(550, ((37 - parseFloat(mapData.path[0].latitude)) * 600) / 2))}
+                        r="12"
+                        fill="#16a34a"
+                        stroke="white"
+                        strokeWidth="3"
+                      />
+                      <text
+                        x={Math.max(50, Math.min(750, ((parseFloat(mapData.path[0].longitude) + 87) * 800) / 2))}
+                        y={Math.max(30, Math.min(530, ((37 - parseFloat(mapData.path[0].latitude)) * 600) / 2 - 20))}
+                        textAnchor="middle"
+                        className="text-sm font-bold fill-green-700"
+                      >
+                        START {formatTime(mapData.path[0].timestamp)}
+                      </text>
+                    </g>
+                  )}
+                  
+                  {/* End point */}
+                  {mapData.path.length > 1 && (
+                    <g>
+                      <circle
+                        cx={Math.max(50, Math.min(750, ((parseFloat(mapData.path[mapData.path.length - 1].longitude) + 87) * 800) / 2))}
+                        cy={Math.max(50, Math.min(550, ((37 - parseFloat(mapData.path[mapData.path.length - 1].latitude)) * 600) / 2))}
+                        r="12"
+                        fill="#dc2626"
+                        stroke="white"
+                        strokeWidth="3"
+                      />
+                      <text
+                        x={Math.max(50, Math.min(750, ((parseFloat(mapData.path[mapData.path.length - 1].longitude) + 87) * 800) / 2))}
+                        y={Math.max(30, Math.min(530, ((37 - parseFloat(mapData.path[mapData.path.length - 1].latitude)) * 600) / 2 - 20))}
+                        textAnchor="middle"
+                        className="text-sm font-bold fill-red-700"
+                      >
+                        END {formatTime(mapData.path[mapData.path.length - 1].timestamp)}
+                      </text>
+                    </g>
+                  )}
+                  
+                  {/* School stops */}
+                  {mapData.stops.map((stop, index) => {
+                    const x = Math.max(50, Math.min(750, ((parseFloat(stop.longitude) + 87) * 800) / 2));
+                    const y = Math.max(50, Math.min(550, ((37 - parseFloat(stop.latitude)) * 600) / 2));
+                    
+                    return (
+                      <g key={stop.id}>
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="15"
+                          fill="#f59e0b"
+                          stroke="white"
+                          strokeWidth="3"
+                        />
+                        <text
+                          x={x}
+                          y={y + 5}
+                          textAnchor="middle"
+                          className="text-sm font-bold fill-white"
+                        >
+                          {index + 1}
+                        </text>
+                        <text
+                          x={x}
+                          y={Math.max(30, y - 25)}
+                          textAnchor="middle"
+                          className="text-xs font-semibold fill-orange-800"
+                        >
+                          {stop.school?.name || `Stop ${index + 1}`}
+                        </text>
+                      </g>
+                    );
+                  })}
+                  
+                  {/* Current position for real-time */}
+                  {isRealTime && mapData.currentPosition && (
+                    <g>
+                      <circle
+                        cx={Math.max(50, Math.min(750, ((parseFloat(mapData.currentPosition.longitude) + 87) * 800) / 2))}
+                        cy={Math.max(50, Math.min(550, ((37 - parseFloat(mapData.currentPosition.latitude)) * 600) / 2))}
+                        r="10"
+                        fill="#8b5cf6"
+                        stroke="white"
+                        strokeWidth="3"
+                        className="animate-pulse"
+                      />
+                      <text
+                        x={Math.max(50, Math.min(750, ((parseFloat(mapData.currentPosition.longitude) + 87) * 800) / 2))}
+                        y={Math.max(30, Math.min(530, ((37 - parseFloat(mapData.currentPosition.latitude)) * 600) / 2 - 20))}
+                        textAnchor="middle"
+                        className="text-sm font-bold fill-purple-700"
+                      >
+                        CURRENT
+                      </text>
+                    </g>
+                  )}
+                </svg>
               )}
             </div>
-            <div className="text-right">
-              {routeData.stops && (
-                <div className="text-sm text-gray-600">
-                  {routeData.stops.length} stops • {routeData.totalDistance || 'N/A'} total
+
+            {/* Map Legend */}
+            <div className="absolute bottom-4 left-4 bg-white/90 p-3 rounded-lg shadow-sm">
+              <div className="text-xs font-semibold mb-2">Map Legend</div>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                  <span>Route Start</span>
                 </div>
-              )}
-              {routeData.lastUpdate && (
-                <div className="text-xs text-gray-500">
-                  Last update: {formatTime(routeData.lastUpdate)}
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                  <span>School Stops</span>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+                  <span>Route End</span>
+                </div>
+                {isRealTime && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-purple-600 rounded-full animate-pulse"></div>
+                    <span>Current Position</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* External map link */}
+            <div className="absolute bottom-4 right-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (mapData.path.length > 0) {
+                    const centerLat = mapData.path[Math.floor(mapData.path.length / 2)].latitude;
+                    const centerLng = mapData.path[Math.floor(mapData.path.length / 2)].longitude;
+                    const url = `https://www.google.com/maps?q=${centerLat},${centerLng}&z=14`;
+                    window.open(url, '_blank');
+                  }
+                }}
+                className="bg-white/90"
+              >
+                <Navigation className="h-4 w-4 mr-1" />
+                Open in Maps
+              </Button>
             </div>
           </div>
-        </CardHeader>
+        </CardContent>
       </Card>
 
-      {/* Route Map */}
-      {createRouteVisualization()}
-
-      {/* Stops Timeline */}
-      {routeData.stops && routeData.stops.length > 0 && (
-        <Card className="bg-white">
+      {/* GPS Timeline */}
+      {mapData.path.length > 0 && (
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-gray-600" />
-              Route Stops Timeline
+              <Clock className="h-5 w-5" />
+              GPS Timeline
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {routeData.stops.map((stop: RouteStop, index: number) => (
-                <div 
-                  key={stop.id} 
-                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer ${
-                    selectedStop?.id === stop.id ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 hover:bg-gray-100'
-                  }`}
-                  onClick={() => setSelectedStop(selectedStop?.id === stop.id ? null : stop)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      {stop.school ? (
-                        <Target className="h-4 w-4 text-amber-600" />
-                      ) : (
-                        <Pause className="h-4 w-4 text-red-600" />
-                      )}
-                      <span className="text-sm font-medium">
-                        {formatTime(stop.arrivalTime || stop.timestamp)}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {stop.school ? stop.school.name : `Stop ${index + 1}`}
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {formatDuration(stop.duration)}
-                    </Badge>
+              {mapData.path.filter((_, index) => index % 5 === 0 || index === mapData.path.length - 1).map((point, index) => (
+                <div key={point.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                    {index + 1}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">
-                      {parseFloat(stop.latitude).toFixed(4)}, {parseFloat(stop.longitude).toFixed(4)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openInMaps(stop.latitude, stop.longitude, stop.school?.name || 'Stop');
-                      }}
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{formatTime(point.timestamp)}</div>
+                    <div className="text-xs text-gray-600">
+                      {formatCoordinate(point.latitude)}, {formatCoordinate(point.longitude)}
+                    </div>
                   </div>
+                  {point.speed !== undefined && (
+                    <Badge variant="outline">{Math.round(point.speed)} mph</Badge>
+                  )}
                 </div>
               ))}
             </div>
@@ -594,64 +389,48 @@ export default function RouteMapViewer({
         </Card>
       )}
 
-      {/* Selected Stop Details */}
-      {selectedStop && (
-        <Card className="bg-blue-50 border-blue-200">
+      {/* School Stops Details */}
+      {mapData.stops.length > 0 && (
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-blue-600" />
-              Stop Details
+              <School className="h-5 w-5" />
+              School Stops
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-600">Arrival Time</label>
-                <p className="text-sm">{formatTime(selectedStop.arrivalTime || selectedStop.timestamp)}</p>
-              </div>
-              {selectedStop.departureTime && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Departure Time</label>
-                  <p className="text-sm">{formatTime(selectedStop.departureTime)}</p>
+            <div className="space-y-4">
+              {mapData.stops.map((stop, index) => (
+                <div key={stop.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="font-medium">{stop.school?.name || `Stop ${index + 1}`}</div>
+                        <div className="text-sm text-gray-600">{stop.school?.address}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium">{formatTime(stop.timestamp)}</div>
+                      {stop.duration && (
+                        <div className="text-xs text-gray-600">{stop.duration} min stop</div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                    <span>📍 {formatCoordinate(stop.latitude)}, {formatCoordinate(stop.longitude)}</span>
+                    {stop.studentsPickedUp !== undefined && stop.totalStudents !== undefined && (
+                      <span>👥 {stop.studentsPickedUp}/{stop.totalStudents} students</span>
+                    )}
+                  </div>
+                  
+                  {/* Student pickup details dropdown */}
+                  <StudentPickupDropdown sessionId={sessionId} schoolId={stop.schoolId} />
                 </div>
-              )}
-              <div>
-                <label className="text-sm font-medium text-gray-600">Duration</label>
-                <p className="text-sm">{formatDuration(selectedStop.duration)}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Location</label>
-                <p className="text-sm">{parseFloat(selectedStop.latitude).toFixed(6)}, {parseFloat(selectedStop.longitude).toFixed(6)}</p>
-              </div>
-              {selectedStop.school && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">School</label>
-                    <p className="text-sm">{selectedStop.school.name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Address</label>
-                    <p className="text-sm">{selectedStop.school.address}</p>
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="mt-4 flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openInMaps(selectedStop.latitude, selectedStop.longitude, selectedStop.school?.name || 'Stop')}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                View in Maps
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedStop(null)}
-              >
-                Close Details
-              </Button>
+              ))}
             </div>
           </CardContent>
         </Card>
