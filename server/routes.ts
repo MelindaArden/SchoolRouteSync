@@ -1141,27 +1141,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const route = await storage.getRoute(session.routeId);
       const driver = await storage.getUser(session.driverId);
       
-      // Save to pickup history
+      // Save to pickup history with required date field
+      const sessionDate = session.date || new Date().toISOString().split('T')[0];
       const historyData = {
         sessionId: sessionId,
         routeId: session.routeId,
         driverId: session.driverId,
-        routeName: route?.name || `Route ${session.routeId}`,
-        driverName: driver ? `${driver.firstName} ${driver.lastName}` : 'Unknown Driver',
-        startTime: session.startTime,
-        completedTime: completedTime,
-        durationMinutes: durationMinutes,
+        date: sessionDate, // Required field that was missing
+        completedAt: completedTime,
+        totalStudents: studentPickups.length,
+        studentsPickedUp: studentPickups.filter(p => p.status === 'picked_up').length,
         pickupDetails: JSON.stringify(studentPickups.map(pickup => ({
           studentId: pickup.studentId,
           status: pickup.status,
-          pickupTime: pickup.pickupTime,
-          notes: pickup.notes
+          pickupTime: pickup.pickedUpAt || pickup.pickupTime,
+          notes: pickup.driverNotes || pickup.notes
         }))),
-        totalStudents: studentPickups.length,
-        studentsPickedUp: studentPickups.filter(p => p.status === 'picked_up').length,
-        studentsAbsent: studentPickups.filter(p => p.status === 'absent').length,
-        studentsNoShow: studentPickups.filter(p => p.status === 'no_show').length
+        notes: req.body.notes || null
       };
+      
+      console.log('📊 Creating pickup history with data:', historyData);
       
       await storage.createPickupHistory(historyData);
       
