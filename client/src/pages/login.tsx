@@ -104,6 +104,18 @@ export default function Login({ onLogin }: LoginProps) {
           
           const userData = await fallbackResponse.json();
           console.log("Fallback login success:", userData);
+          
+          // Store user data immediately for mobile devices
+          localStorage.setItem("user", JSON.stringify(userData));
+          if (userData.authToken) {
+            localStorage.setItem("authToken", userData.authToken);
+          }
+          
+          toast({
+            title: "Success",
+            description: "Login successful!",
+          });
+          
           onLogin(userData);
         } else {
           const errorData = await response.json();
@@ -140,38 +152,18 @@ export default function Login({ onLogin }: LoginProps) {
           description: "Login successful!",
         });
         
-        // Small delay to ensure localStorage is saved before redirect on mobile
-        setTimeout(() => {
-          onLogin(userData);
-        }, 200);
+        // Force immediate redirect for mobile devices - no delay needed
+        onLogin(userData);
+        
+        // Force page refresh on mobile Safari to ensure proper state update
+        const isMobileSafari = /iPhone|iPad/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+        if (isMobileSafari) {
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        }
         return; // Exit here to prevent duplicate processing
       }
-      
-      // Enhanced session verification for deployment
-      setTimeout(async () => {
-        try {
-          const sessionCheck = await fetch("/api/session", {
-            credentials: "include",
-            headers: userData.authToken ? {
-              'Authorization': `Bearer ${userData.authToken}`
-            } : {}
-          });
-          
-          if (sessionCheck.ok) {
-            const sessionData = await sessionCheck.json();
-            console.log("Session verification:", sessionData);
-          } else {
-            console.warn("Session verification failed:", await sessionCheck.text());
-          }
-        } catch (error) {
-          console.error("Session verification failed:", error);
-        }
-      }, 1000);
-      
-      toast({
-        title: "Success",
-        description: "Logged in successfully",
-      });
     } catch (error) {
       console.error("Login error:", error);
       toast({

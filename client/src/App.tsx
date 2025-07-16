@@ -126,13 +126,22 @@ function Router() {
 
   const handleLogin = (userData: User) => {
     console.log("App handleLogin called with:", userData);
+    
+    // Immediately set user state for faster mobile response
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
     
-    // Force a small delay for mobile devices to ensure state is set
-    setTimeout(() => {
-      console.log("Login state updated, user:", userData);
-    }, 100);
+    // Force state update on mobile devices
+    const isMobile = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+    if (isMobile) {
+      // Force a re-render by updating state
+      setTimeout(() => {
+        setUser(userData);
+        console.log("Mobile login state forced update, user:", userData);
+      }, 50);
+    }
+    
+    console.log("Login state updated, user:", userData);
   };
 
   const handleMasterLogin = (masterAdminData: any) => {
