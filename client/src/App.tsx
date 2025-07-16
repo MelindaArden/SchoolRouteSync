@@ -12,6 +12,7 @@ import DriverDashboard from "@/pages/driver-dashboard";
 import LeadershipDashboard from "@/pages/leadership-dashboard";
 import SimpleLeadershipDashboard from "@/pages/simple-leadership-dashboard";
 import MinimalLeadershipDashboard from "@/pages/minimal-leadership-dashboard";
+import SimpleAdminDashboard from "@/pages/simple-admin-dashboard";
 import AdminMap from "@/pages/admin-map";
 import RouteSummary from "@/pages/route-summary";
 import MobileDebug from "@/pages/mobile-debug";
@@ -207,7 +208,7 @@ function Router() {
         <>
           <Route path="/">
             {user.role === "leadership" ? (
-              <LeadershipDashboard user={user} onLogout={handleLogout} />
+              <SimpleAdminDashboard user={user} onLogout={handleLogout} />
             ) : (
               <SimpleDriverDashboard user={user} onLogout={handleLogout} />
             )}
@@ -216,7 +217,7 @@ function Router() {
             <LeadershipDashboard user={user} onLogout={handleLogout} />
           </Route>
           <Route path="/simple-admin">
-            <SimpleLeadershipDashboard user={user} onLogout={handleLogout} />
+            <SimpleAdminDashboard user={user} onLogout={handleLogout} />
           </Route>
           <Route path="/full-leadership">
             <LeadershipDashboard user={user} onLogout={handleLogout} />
