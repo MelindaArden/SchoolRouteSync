@@ -425,7 +425,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
           </div>
         )}
 
-        {currentView === "summary" && (
+        {currentView === "summary" && completedSessionData && (
           <RouteSummary
             sessionData={completedSessionData}
             pickupData={completedPickupData}
@@ -442,6 +442,35 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
               setCompletedPickupData([]);
             }}
           />
+        )}
+
+        {currentView === "summary" && !completedSessionData && (
+          <div className="max-w-4xl mx-auto p-4">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Route Completed</h3>
+                <p className="text-gray-600 mb-4">Your route has been completed successfully!</p>
+                <div className="flex space-x-3 justify-center">
+                  <Button
+                    onClick={() => {
+                      setCurrentView("routes");
+                      setShowWelcome(true);
+                      setChecklistCompleted(false);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Start New Route
+                  </Button>
+                  <Button
+                    onClick={() => setCurrentView("routes")}
+                    variant="outline"
+                  >
+                    Back to Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {currentView === "notify" && (

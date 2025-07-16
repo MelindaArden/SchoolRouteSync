@@ -21,6 +21,7 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute, hideHe
   const [gasLevel, setGasLevel] = useState<string>("");
   const [visualInspection, setVisualInspection] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [schoolsExpanded, setSchoolsExpanded] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -237,9 +238,20 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute, hideHe
 
               {/* Schools Details */}
               {currentRoute.schools && currentRoute.schools.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-medium text-gray-900 text-lg">Schools on Your Route</h4>
-                  {currentRoute.schools.map((school: any, index: number) => {
+                <Collapsible open={schoolsExpanded} onOpenChange={setSchoolsExpanded}>
+                  <CollapsibleTrigger asChild>
+                    <div className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2">
+                      <h4 className="font-medium text-gray-900 text-lg">Schools on Your Route ({currentRoute.schools.length})</h4>
+                      {schoolsExpanded ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-500" />
+                      )}
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="space-y-3 mt-3">
+                      {currentRoute.schools.map((school: any, index: number) => {
                     const schoolStudents = school.students || [];
                     const schoolAbsentCount = absentStudents.filter((absence: any) => 
                       schoolStudents.some((student: any) => student.id === absence.studentId)
@@ -291,7 +303,7 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute, hideHe
                             <div className="flex flex-wrap gap-1">
                               {schoolStudents.slice(0, 3).map((student: any) => (
                                 <span key={student.id} className="text-xs bg-white px-2 py-1 rounded border text-gray-700">
-                                  {student.firstName} {student.lastName}
+                                  {student.first_name} {student.last_name}
                                 </span>
                               ))}
                               {schoolStudents.length > 3 && (
@@ -303,9 +315,11 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute, hideHe
                           </div>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
+                        );
+                      })}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
             </div>
           </CardContent>
