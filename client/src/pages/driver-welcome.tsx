@@ -22,7 +22,7 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch driver's routes
+  // Fetch driver's routes with detailed information
   const { data: routes = [], isLoading: routesLoading } = useQuery({
     queryKey: [`/api/drivers/${user.id}/routes`],
   });
@@ -31,6 +31,24 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
   const { data: todaysAbsences = [] } = useQuery({
     queryKey: [`/api/student-absences/date/${new Date().toISOString().split('T')[0]}`],
   });
+
+  // Get route overview data
+  const primaryRoute = routes.length > 0 ? routes[0] : null;
+  const totalSchools = primaryRoute?.schools?.length || 0;
+  const totalStudents = primaryRoute?.schools?.reduce((sum: number, school: any) => 
+    sum + (school.students?.length || 0), 0) || 0;
+  
+  // Calculate absent students for this route
+  const absentStudentsInRoute = todaysAbsences.filter((absence: any) => 
+    primaryRoute?.schools?.some((school: any) => 
+      school.students?.some((student: any) => student.id === absence.studentId)
+    )
+  ).length;
+  
+  const presentStudents = totalStudents - absentStudentsInRoute;
+  
+  // Calculate estimated route time (5 minutes per school + travel time estimate)
+  const estimatedRouteTime = totalSchools > 0 ? (totalSchools * 5) + (totalSchools * 3) : 0;
 
   // Submit safety checklist
   const submitChecklist = useMutation({
@@ -88,8 +106,6 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
   }
 
   const currentRoute = routes.length > 0 ? routes[0] : null;
-  const totalSchools = currentRoute?.schools?.length || 0;
-  const totalStudents = currentRoute?.totalStudents || 0;
 
   // Calculate estimated route time (5 minutes per school + 3 minutes per student)
   const estimatedMinutes = (totalSchools * 5) + (totalStudents * 3);
@@ -174,32 +190,35 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
           <CardHeader>
             <CardTitle className="flex items-center">
               <Bus className="h-5 w-5 mr-2 text-blue-600" />
-              Route Overview
+              Today's Route Overview - {currentRoute.name}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium text-lg text-gray-900 mb-2">
-                  {currentRoute.name}
-                </h3>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <div className="flex items-center justify-center mb-2">
                     <Users className="h-6 w-6 text-blue-600" />
                   </div>
                   <div className="text-2xl font-bold text-blue-600">{totalStudents}</div>
-                  <div className="text-sm text-gray-600">Students</div>
+                  <div className="text-sm text-gray-600">Total Students</div>
                 </div>
                 
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <div className="flex items-center justify-center mb-2">
-                    <Bus className="h-6 w-6 text-green-600" />
+                    <CheckCircle className="h-6 w-6 text-green-600" />
                   </div>
-                  <div className="text-2xl font-bold text-green-600">{totalSchools}</div>
-                  <div className="text-sm text-gray-600">Schools</div>
+                  <div className="text-2xl font-bold text-green-600">{totalStudents - absentStudents.length}</div>
+                  <div className="text-sm text-gray-600">Present</div>
+                </div>
+                
+                <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center justify-center mb-2">
+                    <XCircle className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-yellow-600">{absentStudents.length}</div>
+                  <div className="text-sm text-gray-600">Absent</div>
                 </div>
                 
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
@@ -210,6 +229,79 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
                   <div className="text-sm text-gray-600">Est. Time</div>
                 </div>
               </div>
+
+              {/* Schools Details */}
+              {currentRoute.schools && currentRoute.schools.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900 text-lg">Schools on Your Route</h4>
+                  {currentRoute.schools.map((school: any, index: number) => {
+                    const schoolStudents = school.students || [];
+                    const schoolAbsentCount = absentStudents.filter((absence: any) => 
+                      schoolStudents.some((student: any) => student.id === absence.studentId)
+                    ).length;
+                    const schoolPresentCount = schoolStudents.length - schoolAbsentCount;
+                    
+                    return (
+                      <div key={school.id} className="bg-gray-50 border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <h5 className="font-semibold text-gray-900">{school.name}</h5>
+                              <p className="text-sm text-gray-600">
+                                📍 {school.address || 'Address not available'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="bg-blue-100 px-3 py-1 rounded-full">
+                              <span className="text-sm font-medium text-blue-800">
+                                Pickup: {school.dismissalTime}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                          <div className="bg-green-100 p-2 rounded">
+                            <div className="text-lg font-bold text-green-700">{schoolPresentCount}</div>
+                            <div className="text-xs text-green-600">Present</div>
+                          </div>
+                          <div className="bg-yellow-100 p-2 rounded">
+                            <div className="text-lg font-bold text-yellow-700">{schoolAbsentCount}</div>
+                            <div className="text-xs text-yellow-600">Absent</div>
+                          </div>
+                          <div className="bg-blue-100 p-2 rounded">
+                            <div className="text-lg font-bold text-blue-700">{schoolStudents.length}</div>
+                            <div className="text-xs text-blue-600">Total</div>
+                          </div>
+                        </div>
+
+                        {/* Student Names Preview */}
+                        {schoolStudents.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <p className="text-xs text-gray-500 mb-1">Students to pickup:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {schoolStudents.slice(0, 3).map((student: any) => (
+                                <span key={student.id} className="text-xs bg-white px-2 py-1 rounded border text-gray-700">
+                                  {student.firstName} {student.lastName}
+                                </span>
+                              ))}
+                              {schoolStudents.length > 3 && (
+                                <span className="text-xs text-gray-500 px-2 py-1">
+                                  +{schoolStudents.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
