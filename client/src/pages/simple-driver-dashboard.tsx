@@ -160,6 +160,10 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
         description: "Great job! Your route has been completed.",
       });
 
+      console.log('Setting summary view with data:', { 
+        sessionData: activeSessionData, 
+        pickupData: sessionPickups 
+      });
       setCurrentView("summary");
     } catch (error) {
       toast({
@@ -369,7 +373,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
                         return (
                           <div key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
                             <div className="flex-1">
-                              <div className="font-medium text-gray-900">{student.name}</div>
+                              <div className="font-medium text-gray-900">{student.first_name} {student.last_name}</div>
                               <div className="flex items-center space-x-2 text-sm text-gray-600">
                                 <span>Grade: {student.grade}</span>
                                 {student.phone && (
