@@ -65,10 +65,8 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
         title: "Safety Checklist Complete",
         description: "You can now proceed to start your route.",
       });
-      // Wait a moment for notifications to be sent, then proceed
-      setTimeout(() => {
-        onProceedToRoute();
-      }, 1000);
+      // Safety checklist completed - stay on welcome page
+      // The onProceedToRoute callback will handle navigation
     },
     onError: (error) => {
       toast({

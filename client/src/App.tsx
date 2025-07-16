@@ -208,7 +208,7 @@ function Router() {
           <Route path="/">
             {user.role === "leadership" ? (
               <ErrorBoundary>
-                <MinimalLeadershipDashboard user={user} onLogout={handleLogout} />
+                <LeadershipDashboard user={user} onLogout={handleLogout} />
               </ErrorBoundary>
             ) : (
               <SimpleDriverDashboard user={user} onLogout={handleLogout} />

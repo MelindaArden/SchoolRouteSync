@@ -131,16 +131,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
     );
   }
 
-  // Show welcome screen first
-  if (currentView === "welcome") {
-    return (
-      <DriverWelcome 
-        user={user} 
-        onLogout={onLogout}
-        onProceedToRoute={() => setCurrentView("routes")}
-      />
-    );
-  }
+  // Don't show separate welcome screen - integrate it into the navigation
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -161,6 +152,19 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
 
       {/* Content */}
       <div className="max-w-4xl mx-auto p-4 pb-20">
+        {currentView === "welcome" && (
+          <DriverWelcome 
+            user={user} 
+            onLogout={onLogout}
+            onProceedToRoute={() => {
+              toast({
+                title: "Safety Checklist Complete",
+                description: "Use the Routes tab below to start your pickup session.",
+              });
+            }}
+          />
+        )}
+
         {currentView === "routes" && (
           <div className="space-y-4">
             {/* Route Header */}
@@ -300,32 +304,32 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <div className="flex justify-around py-2">
+      {/* Bottom Navigation - Enhanced for Mobile */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom">
+        <div className="flex justify-around py-3 px-2">
           <Button
             variant={currentView === "routes" ? "default" : "ghost"}
             onClick={() => setCurrentView("routes")}
-            className="flex-1 flex flex-col items-center py-3"
+            className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
           >
-            <RouteIcon className="h-5 w-5 mb-1" />
-            <span className="text-xs">Routes</span>
+            <RouteIcon className="h-6 w-6 mb-1" />
+            <span>Routes</span>
           </Button>
           <Button
             variant={currentView === "notify" ? "default" : "ghost"}
             onClick={() => setCurrentView("notify")}
-            className="flex-1 flex flex-col items-center py-3"
+            className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
           >
-            <AlertTriangle className="h-5 w-5 mb-1" />
-            <span className="text-xs">Notify</span>
+            <AlertTriangle className="h-6 w-6 mb-1" />
+            <span>Notify</span>
           </Button>
           <Button
             variant={currentView === "welcome" ? "default" : "ghost"}
             onClick={() => setCurrentView("welcome")}
-            className="flex-1 flex flex-col items-center py-3"
+            className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
           >
-            <Users className="h-5 w-5 mb-1" />
-            <span className="text-xs">Welcome</span>
+            <Users className="h-6 w-6 mb-1" />
+            <span>Welcome</span>
           </Button>
         </div>
       </div>
