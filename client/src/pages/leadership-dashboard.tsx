@@ -66,55 +66,83 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     end: new Date().toISOString().split('T')[0]
   });
   
-  // FIX #5: WEEKLY PERFORMANCE WITH DRIVER BREAKDOWN
+  // REAL-TIME WEEKLY PERFORMANCE WITH DRIVER BREAKDOWN
   const [selectedPerformanceDay, setSelectedPerformanceDay] = useState<any>(null);
-  const [weeklyPerformance, setWeeklyPerformance] = useState([
-    { 
-      day: 'M', 
-      percentage: 95,
-      drivers: [
-        { name: 'John D.', percentage: 98 },
-        { name: 'Sarah M.', percentage: 92 },
-        { name: 'Mike K.', percentage: 96 }
-      ]
-    },
-    { 
-      day: 'T', 
-      percentage: 88,
-      drivers: [
-        { name: 'John D.', percentage: 85 },
-        { name: 'Sarah M.', percentage: 90 },
-        { name: 'Mike K.', percentage: 89 }
-      ]
-    },
-    { 
-      day: 'W', 
-      percentage: 92,
-      drivers: [
-        { name: 'John D.', percentage: 94 },
-        { name: 'Sarah M.', percentage: 88 },
-        { name: 'Mike K.', percentage: 95 }
-      ]
-    },
-    { 
-      day: 'T', 
-      percentage: 96,
-      drivers: [
-        { name: 'John D.', percentage: 97 },
-        { name: 'Sarah M.', percentage: 95 },
-        { name: 'Mike K.', percentage: 96 }
-      ]
-    },
-    { 
-      day: 'F', 
-      percentage: 90,
-      drivers: [
-        { name: 'John D.', percentage: 93 },
-        { name: 'Sarah M.', percentage: 87 },
-        { name: 'Mike K.', percentage: 90 }
-      ]
-    }
-  ]);
+  
+  // Fetch pickup sessions data for performance calculations with real-time updates
+  const { data: pickupHistoryData = [], isLoading: sessionsDataLoading } = useQuery({
+    queryKey: ['/api/pickup-history'],
+    refetchInterval: 10000, // Update every 10 seconds for real-time performance
+    staleTime: 5000,
+  });
+
+  // Calculate real-time weekly performance based on actual data
+  const calculateWeeklyPerformance = () => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+
+    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((dayName, index) => {
+      const targetDate = new Date(startOfWeek);
+      targetDate.setDate(startOfWeek.getDate() + index);
+      
+      // Filter sessions for this specific day
+      const daySession = pickupHistoryData.filter((session: any) => {
+        const sessionDate = new Date(session.date);
+        return sessionDate.toDateString() === targetDate.toDateString();
+      });
+
+      if (daySession.length === 0) {
+        return { day: dayName, percentage: 0, drivers: [] };
+      }
+
+      // Calculate performance for each driver on this day
+      const driverPerformance = users.filter((user: any) => user.role === 'driver').map((driver: any) => {
+        const driverSessions = daySession.filter((s: any) => s.driverId === driver.id);
+        
+        const totalStudents = driverSessions.reduce((sum: number, session: any) => {
+          try {
+            const pickupDetails = Array.isArray(session.pickupDetails) 
+              ? session.pickupDetails 
+              : session.pickupDetails ? JSON.parse(session.pickupDetails) : [];
+            return sum + pickupDetails.length;
+          } catch (e) {
+            return sum;
+          }
+        }, 0);
+        
+        const completedStudents = driverSessions.reduce((sum: number, session: any) => {
+          try {
+            const pickupDetails = Array.isArray(session.pickupDetails) 
+              ? session.pickupDetails 
+              : session.pickupDetails ? JSON.parse(session.pickupDetails) : [];
+            return sum + pickupDetails.filter((p: any) => p.status === 'picked_up').length;
+          } catch (e) {
+            return sum;
+          }
+        }, 0);
+
+        const percentage = totalStudents > 0 ? Math.round((completedStudents / totalStudents) * 100) : 0;
+        
+        return {
+          name: `${driver.firstName} ${driver.lastName}`,
+          percentage: percentage
+        };
+      });
+
+      // Calculate overall day percentage
+      const totalPickups = driverPerformance.reduce((sum: number, d: any) => sum + d.percentage, 0);
+      const avgPercentage = driverPerformance.length > 0 ? Math.round(totalPickups / driverPerformance.length) : 0;
+
+      return {
+        day: dayName,
+        percentage: avgPercentage,
+        drivers: driverPerformance
+      };
+    });
+  };
+
+  const weeklyPerformance = calculateWeeklyPerformance();
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
@@ -205,9 +233,9 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   });
 
   // Calculate dashboard metrics with real data - only count TODAY's active routes
-  const sessionsData = Array.isArray(sessions) ? (sessions as any[]) : [];
+  const todaysSessions = Array.isArray(sessions) ? (sessions as any[]) : [];
   const today = new Date().toISOString().split('T')[0];
-  const todaysActiveRoutes = sessionsData.filter((s: any) => {
+  const todaysActiveRoutes = todaysSessions.filter((s: any) => {
     const sessionDate = s.date ? s.date.split('T')[0] : s.startTime?.split('T')[0];
     return s.status === "in_progress" && sessionDate === today;
   });

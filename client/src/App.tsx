@@ -15,6 +15,7 @@ import MobileDebug from "@/pages/mobile-debug";
 import DebugAuth from "@/pages/debug-auth";
 import MobileTest from "@/pages/mobile-test";
 import SimpleMobileLogin from "@/pages/simple-mobile-login";
+import SimpleDriverDashboard from "@/pages/simple-driver-dashboard";
 import TMobileTest from "@/pages/tmobile-test";
 import DeploymentTest from "@/pages/deployment-test";
 import MobileLogin from "@/pages/mobile-login";
@@ -205,7 +206,7 @@ function Router() {
             {user.role === "leadership" ? (
               <LeadershipDashboard user={user} onLogout={handleLogout} />
             ) : (
-              <DriverDashboard user={user} onLogout={handleLogout} />
+              <SimpleDriverDashboard user={user} onLogout={handleLogout} />
             )}
           </Route>
           <Route path="/leadership">
