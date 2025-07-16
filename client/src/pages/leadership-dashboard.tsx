@@ -527,21 +527,48 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                     ))}
                   </div>
                   <div className="grid grid-cols-7 gap-2 text-center">
-                    {weeklyPerformance.map((day, index) => (
-                      <div 
-                        key={index}
-                        className={`cursor-pointer rounded py-2 text-sm font-medium transition-all hover:opacity-80 ${
-                          day.percentage >= 95 ? 'bg-green-600 text-white' : 
-                          day.percentage >= 85 ? 'bg-orange-600 text-white' : 'bg-red-600 text-white'
-                        }`}
-                        onClick={() => setSelectedPerformanceDay(selectedPerformanceDay?.day === day.day ? null : day)}
-                        title={`${day.day}: ${day.percentage}% - Tap for driver breakdown`}
-                      >
-                        {day.percentage}%
-                      </div>
-                    ))}
-                    <div className="bg-primary text-white rounded py-2 text-sm font-medium">Today</div>
-                    <div className="bg-gray-200 text-gray-400 rounded py-2 text-sm">--</div>
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((dayName, index) => {
+                      const today = new Date();
+                      const currentDayIndex = (today.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+                      const isToday = index === currentDayIndex;
+                      const dayData = weeklyPerformance[index];
+                      
+                      if (isToday) {
+                        return (
+                          <div 
+                            key={index}
+                            className="bg-primary text-white rounded py-2 text-sm font-medium"
+                            title={`Today (${dayName}): Current performance`}
+                          >
+                            Today
+                          </div>
+                        );
+                      } else if (dayData) {
+                        return (
+                          <div 
+                            key={index}
+                            className={`cursor-pointer rounded py-2 text-sm font-medium transition-all hover:opacity-80 ${
+                              dayData.percentage >= 95 ? 'bg-green-600 text-white' : 
+                              dayData.percentage >= 85 ? 'bg-orange-600 text-white' : 'bg-red-600 text-white'
+                            }`}
+                            onClick={() => setSelectedPerformanceDay(selectedPerformanceDay?.day === dayData.day ? null : dayData)}
+                            title={`${dayData.day}: ${dayData.percentage}% - Tap for driver breakdown`}
+                          >
+                            {dayData.percentage}%
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div 
+                            key={index}
+                            className="bg-gray-200 text-gray-400 rounded py-2 text-sm"
+                            title={`${dayName}: No data available`}
+                          >
+                            --
+                          </div>
+                        );
+                      }
+                    })}
                   </div>
                   {selectedPerformanceDay && (
                     <div className="mt-3 p-3 bg-gray-50 rounded text-sm">

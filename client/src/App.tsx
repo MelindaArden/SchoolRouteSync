@@ -14,6 +14,7 @@ import RouteSummary from "@/pages/route-summary";
 import MobileDebug from "@/pages/mobile-debug";
 import DebugAuth from "@/pages/debug-auth";
 import MobileTest from "@/pages/mobile-test";
+import SimpleMobileLogin from "@/pages/simple-mobile-login";
 import TMobileTest from "@/pages/tmobile-test";
 import DeploymentTest from "@/pages/deployment-test";
 import MobileLogin from "@/pages/mobile-login";
@@ -227,6 +228,7 @@ function Router() {
           <Route path="/mobile-debug" component={MobileDebug} />
           <Route path="/debug-auth" component={DebugAuth} />
           <Route path="/mobile-test" component={MobileTest} />
+          <Route path="/simple-mobile-login" component={() => <SimpleMobileLogin onLogin={handleLogin} />} />
           <Route path="/tmobile-test" component={TMobileTest} />
           <Route path="/deployment-test" component={DeploymentTest} />
           <Route path="/pwa-test" component={PWATest} />
