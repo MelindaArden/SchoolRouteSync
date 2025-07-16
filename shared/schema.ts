@@ -598,7 +598,7 @@ export const gpsRouteTracksRelations = relations(gpsRouteTracks, ({ one }) => ({
   }),
 }));
 
-// GPS Route History Relations
+//GPS Route History Relations
 export const gpsRouteHistoryRelations = relations(gpsRouteHistory, ({ one }) => ({
   session: one(pickupSessions, {
     fields: [gpsRouteHistory.sessionId],
@@ -613,6 +613,35 @@ export const gpsRouteHistoryRelations = relations(gpsRouteHistory, ({ one }) => 
     references: [routes.id],
   }),
 }));
+
+// Safety Checklist table
+export const safetyChecklists = pgTable("safety_checklists", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
+  driverId: integer("driver_id").notNull().references(() => users.id),
+  gasLevel: text("gas_level").notNull(), // Full, 3/4, 1/2, 1/4
+  visualInspection: text("visual_inspection").notNull(), // Yes, No
+  date: text("date").notNull(), // YYYY-MM-DD format
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Safety Checklist Relations
+export const safetyChecklistsRelations = relations(safetyChecklists, ({ one }) => ({
+  business: one(businesses, {
+    fields: [safetyChecklists.businessId],
+    references: [businesses.id],
+  }),
+  driver: one(users, {
+    fields: [safetyChecklists.driverId],
+    references: [users.id],
+  }),
+}));
+
+export const insertSafetyChecklistSchema = createInsertSchema(safetyChecklists).omit({
+  id: true,
+  createdAt: true,
+});
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -647,3 +676,5 @@ export type GpsRouteTrack = typeof gpsRouteTracks.$inferSelect;
 export type InsertGpsRouteTrack = z.infer<typeof insertGpsRouteTrackSchema>;
 export type GpsRouteHistory = typeof gpsRouteHistory.$inferSelect;
 export type InsertGpsRouteHistory = z.infer<typeof insertGpsRouteHistorySchema>;
+export type SafetyChecklist = typeof safetyChecklists.$inferSelect;
+export type InsertSafetyChecklist = z.infer<typeof insertSafetyChecklistSchema>;

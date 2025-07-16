@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { createSafetyChecklist } from "./safety-checklist";
 import "./types"; // Import session type declarations
 import { createAuthToken, validateAuthToken, deleteAuthToken } from "./auth-tokens";
 import { db, pool } from "./db";
@@ -3681,6 +3682,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Failed to fetch route map data" });
       }
+    }
+  });
+
+  // Driver Safety Checklist endpoint
+  app.post("/api/driver-safety-checklist", async (req, res) => {
+    try {
+      const { driverId, gasLevel, visualInspection, date } = req.body;
+      
+      console.log('🔍 Processing safety checklist submission:', {
+        driverId,
+        gasLevel,
+        visualInspection,
+        date
+      });
+      
+      const result = await createSafetyChecklist({
+        driverId,
+        gasLevel,
+        visualInspection,
+        date,
+        businessId: 1 // Default business ID
+      });
+      
+      console.log('✅ Safety checklist processed successfully');
+      if (result.alerts.length > 0) {
+        console.log('⚠️ Safety alerts triggered:', result.alerts);
+      }
+      
+      res.json({
+        success: true,
+        checklist: result.checklist,
+        alerts: result.alerts,
+        message: result.alerts.length > 0 
+          ? `Safety checklist submitted with ${result.alerts.length} alert(s) sent to admins.`
+          : 'Safety checklist submitted successfully.'
+      });
+      
+    } catch (error) {
+      console.error('❌ Error processing safety checklist:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to submit safety checklist",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
