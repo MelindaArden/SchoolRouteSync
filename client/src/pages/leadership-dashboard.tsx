@@ -92,7 +92,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         return sessionDate.toDateString() === targetDate.toDateString();
       });
 
-      if (daySession.length === 0) {
+      if (daySession.length === 0 || !users || !Array.isArray(users)) {
         return { day: dayName, percentage: 0, drivers: [] };
       }
 
@@ -142,7 +142,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     });
   };
 
-  const weeklyPerformance = calculateWeeklyPerformance();
+  const weeklyPerformance = users && pickupHistoryData ? calculateWeeklyPerformance() : [];
 
   // WebSocket connection for real-time updates
   useWebSocket(user.id);
@@ -376,25 +376,43 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                   </div>
                   
                   {/* Hover tooltip with driver breakdown */}
-                  <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg min-w-[200px]">
-                    <div className="font-semibold mb-2">On Time % by Driver:</div>
-                    {users.filter((user: any) => user.role === 'driver').map((driver: any) => {
-                      const driverSessions = sessionsData.filter((s: any) => s.driverId === driver.id);
-                      const driverTotal = driverSessions.reduce((sum: number, session: any) => 
-                        sum + (session.pickupDetails?.length || 0), 0);
-                      const driverCompleted = driverSessions.reduce((sum: number, session: any) => 
-                        sum + (session.pickupDetails?.filter((p: any) => p.status === 'picked_up').length || 0), 0);
-                      const driverPercentage = driverTotal > 0 ? Math.round((driverCompleted / driverTotal) * 100) : 0;
-                      
-                      return (
-                        <div key={driver.id} className="flex justify-between py-1">
-                          <span>{driver.firstName} {driver.lastName}:</span>
-                          <span className="font-semibold">{driverPercentage}%</span>
-                        </div>
-                      );
-                    })}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                  </div>
+                  {users && Array.isArray(users) && (
+                    <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg min-w-[200px]">
+                      <div className="font-semibold mb-2">On Time % by Driver:</div>
+                      {users.filter((user: any) => user.role === 'driver').map((driver: any) => {
+                        const driverSessions = pickupHistoryData.filter((s: any) => s.driverId === driver.id);
+                        const driverTotal = driverSessions.reduce((sum: number, session: any) => {
+                          try {
+                            const pickupDetails = Array.isArray(session.pickupDetails) 
+                              ? session.pickupDetails 
+                              : session.pickupDetails ? JSON.parse(session.pickupDetails) : [];
+                            return sum + pickupDetails.length;
+                          } catch (e) {
+                            return sum;
+                          }
+                        }, 0);
+                        const driverCompleted = driverSessions.reduce((sum: number, session: any) => {
+                          try {
+                            const pickupDetails = Array.isArray(session.pickupDetails) 
+                              ? session.pickupDetails 
+                              : session.pickupDetails ? JSON.parse(session.pickupDetails) : [];
+                            return sum + pickupDetails.filter((p: any) => p.status === 'picked_up').length;
+                          } catch (e) {
+                            return sum;
+                          }
+                        }, 0);
+                        const driverPercentage = driverTotal > 0 ? Math.round((driverCompleted / driverTotal) * 100) : 0;
+                        
+                        return (
+                          <div key={driver.id} className="flex justify-between py-1">
+                            <span>{driver.firstName} {driver.lastName}:</span>
+                            <span className="font-semibold">{driverPercentage}%</span>
+                          </div>
+                        );
+                      })}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

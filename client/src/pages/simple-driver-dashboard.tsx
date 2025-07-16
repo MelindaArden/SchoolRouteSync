@@ -319,6 +319,14 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
             <AlertTriangle className="h-5 w-5 mb-1" />
             <span className="text-xs">Notify</span>
           </Button>
+          <Button
+            variant={currentView === "welcome" ? "default" : "ghost"}
+            onClick={() => setCurrentView("welcome")}
+            className="flex-1 flex flex-col items-center py-3"
+          >
+            <Users className="h-5 w-5 mb-1" />
+            <span className="text-xs">Welcome</span>
+          </Button>
         </div>
       </div>
     </div>
