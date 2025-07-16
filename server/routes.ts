@@ -562,6 +562,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   const isAbsent = await storage.checkStudentAbsence(student.id, today);
                   schoolStudents.push({
                     ...student,
+                    first_name: student.firstName, // Map for frontend compatibility
+                    last_name: student.lastName,   // Map for frontend compatibility
                     assignmentId: assignment.id,
                     isAbsent
                   });
