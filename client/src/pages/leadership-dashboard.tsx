@@ -287,6 +287,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   // Check for critical errors that would prevent page loading
   const hasLoadingErrors = schoolsError || studentsError || usersError || routesError;
   const isDataLoading = schoolsLoading || studentsLoading || usersLoading || routesLoading;
+  const hasConnectionErrors = historyError || sessionsError || pickupsError || issuesError;
 
   // Add comprehensive error handling for blank page issues
   if (hasLoadingErrors) {
