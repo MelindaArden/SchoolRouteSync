@@ -104,10 +104,21 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
   };
 
   const handleCompleteRoute = async () => {
-    // When route is completed, show welcome page again for next route
-    setShowWelcome(true);
-    setChecklistCompleted(false);
     if (!activeSessionData) return;
+
+    // Check if all students are marked
+    const allStudentsMarked = sessionPickups.every((pickup: any) => 
+      pickup.status === 'picked_up' || pickup.status === 'no_show' || pickup.status === 'absent'
+    );
+
+    if (!allStudentsMarked) {
+      toast({
+        title: "Cannot Complete Route",
+        description: "Please mark all students as 'Picked Up' or 'Not Present' before completing the route.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       await apiRequest("PATCH", `/api/pickup-sessions/${activeSessionData.id}`, {
@@ -123,6 +134,9 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
         description: "Great job! Your route has been completed.",
       });
 
+      // When route is completed, show welcome page again for next route
+      setShowWelcome(true);
+      setChecklistCompleted(false);
       setCurrentView("welcome");
     } catch (error) {
       toast({
@@ -214,18 +228,22 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
       {/* Content */}
       <div className="max-w-4xl mx-auto p-4 pb-20">
         {currentView === "welcome" && (
-          <DriverWelcome 
-            user={user} 
-            onLogout={onLogout}
-            onProceedToRoute={() => {
-              setShowWelcome(false); // Hide welcome after checklist completion
-              setCurrentView("routes"); // Switch to routes tab
-              toast({
-                title: "Safety Checklist Complete",
-                description: "You can now start your pickup session.",
-              });
-            }}
-          />
+          <div className="space-y-6">
+            <DriverWelcome 
+              user={user} 
+              onLogout={() => {}} // Empty function since header handles logout
+              onProceedToRoute={() => {
+                setShowWelcome(false);
+                setCurrentView("routes");
+                handleStartRoute();
+                toast({
+                  title: "Safety Checklist Complete",
+                  description: "Route started! Begin picking up students.",
+                });
+              }}
+              hideHeader={true} // Hide header to prevent duplication
+            />
+          </div>
         )}
 
         {currentView === "routes" && (
@@ -330,17 +348,18 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
                                   variant={isPickedUp ? "default" : "outline"}
                                   onClick={() => markStudentPickup(student.id, 'picked_up')}
                                   disabled={isPickedUp}
-                                  className={isPickedUp ? "bg-green-600 hover:bg-green-700" : ""}
+                                  className={isPickedUp ? "bg-green-600 hover:bg-green-700 text-white" : "hover:bg-green-100"}
                                 >
-                                  {isPickedUp ? "Picked Up" : "Pick Up"}
+                                  {isPickedUp ? "✓ Picked Up" : "Pick Up"}
                                 </Button>
                                 <Button
                                   size="sm"
-                                  variant={isNotPresent ? "destructive" : "outline"}
+                                  variant={isNotPresent ? "default" : "outline"}
                                   onClick={() => markStudentPickup(student.id, 'no_show')}
                                   disabled={isNotPresent}
+                                  className={isNotPresent ? "bg-red-600 hover:bg-red-700 text-white" : "hover:bg-red-100"}
                                 >
-                                  {isNotPresent ? "Not Present" : "Not Present"}
+                                  {isNotPresent ? "✗ Not Present" : "Not Present"}
                                 </Button>
                               </div>
                             )}
@@ -543,6 +562,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
             variant={currentView === "welcome" ? "default" : "ghost"}
             onClick={() => setCurrentView("welcome")}
             className="flex-1 flex flex-col items-center py-3 mx-1 text-xs font-medium"
+            disabled={!showWelcome} // Disable if checklist completed and route started
           >
             <Users className="h-5 w-5 mb-1" />
             <span>Welcome</span>

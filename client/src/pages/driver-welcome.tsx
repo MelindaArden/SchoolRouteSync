@@ -13,9 +13,10 @@ interface DriverWelcomeProps {
   user: User;
   onLogout: () => void;
   onProceedToRoute: () => void;
+  hideHeader?: boolean;
 }
 
-export default function DriverWelcome({ user, onLogout, onProceedToRoute }: DriverWelcomeProps) {
+export default function DriverWelcome({ user, onLogout, onProceedToRoute, hideHeader }: DriverWelcomeProps) {
   const [gasLevel, setGasLevel] = useState<string>("");
   const [visualInspection, setVisualInspection] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,20 +128,22 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
 
   if (!currentRoute) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
-              <div className="flex items-center">
-                <Bus className="h-8 w-8 text-blue-600 mr-3" />
-                <h1 className="text-xl font-semibold text-gray-900">Route Runner</h1>
+      <div className={hideHeader ? "" : "min-h-screen bg-gray-50"}>
+        {!hideHeader && (
+          <div className="bg-white shadow-sm border-b">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-4">
+                <div className="flex items-center">
+                  <Bus className="h-8 w-8 text-blue-600 mr-3" />
+                  <h1 className="text-xl font-semibold text-gray-900">Route Runner</h1>
+                </div>
+                <Button onClick={onLogout} variant="outline">
+                  Logout
+                </Button>
               </div>
-              <Button onClick={onLogout} variant="outline">
-                Logout
-              </Button>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="max-w-md mx-auto pt-20 p-4">
           <Card>
@@ -158,21 +161,23 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <Bus className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-xl font-semibold text-gray-900">Route Runner</h1>
+    <div className={hideHeader ? "" : "min-h-screen bg-gray-50"}>
+      {/* Header - only show if not hidden */}
+      {!hideHeader && (
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center">
+                <Bus className="h-8 w-8 text-blue-600 mr-3" />
+                <h1 className="text-xl font-semibold text-gray-900">Route Runner</h1>
+              </div>
+              <Button onClick={onLogout} variant="outline">
+                Logout
+              </Button>
             </div>
-            <Button onClick={onLogout} variant="outline">
-              Logout
-            </Button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Content */}
       <div className="max-w-4xl mx-auto p-4 space-y-6">
