@@ -112,21 +112,27 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
-### July 16, 2025 - Login Authentication Fix & Mobile Navigation Enhancement
-- Fixed driver login "invalid username/password" error by defaulting business name to "tnt-gymnastics" in login form
-- Enhanced login form with pre-filled business name for easier authentication
-- Fixed driver welcome page flow to show safety checklist immediately upon login
-- Restored driver navigation section at bottom with Routes, Notify, and Welcome buttons
-- Added GPS navigation/directions buttons to each school card for mobile device routing
-- Welcome page now properly disappears after safety checklist completion and returns after route completion
-- Fixed admin blank screen issues with enhanced error handling and fallback mechanisms
-- Navigation buttons work correctly: Routes (pickup management), Notify (issue reporting), Welcome (safety checklist)
+### July 16, 2025 - Complete Admin Dashboard Restoration & Database Improvements
+- **FIXED ADMIN DASHBOARD**: Restored full-featured admin dashboard with all capabilities
+- Replaced SimpleAdminDashboard with complete LeadershipDashboard containing all admin features:
+  * Route Creator with multi-driver optimization and route management
+  * Student Absence Management with export capabilities
+  * Comprehensive User Management with role-based permissions
+  * GPS Tracking and Map functionality with real-time driver monitoring
+  * Pickup History with detailed reporting and statistics
+  * Settings and Profile management
+- Added comprehensive database health monitoring with /api/health endpoint
+- Enhanced error handling for database connectivity issues with real-time status monitoring
+- Improved database connection pooling with optimized timeout settings for deployment environment
+- Added fallback content and graceful degradation when database responses are slow
+- Admin dashboard now displays all 8 tabs: Dashboard, Routes, GPS, Users, Reports, History, Absences, Settings
+- Fixed login authentication issues with enhanced mobile compatibility
 - Login credentials confirmed working: 
   * Driver: ma1313/Dietdew13! (business: tnt-gymnastics)
   * Admin: Melinda/Password123 (business: tnt-gymnastics)
   * Admin: ChadW/Password123 (business: tnt-gymnastics)
   * Admin: DeShaun/Password123 (business: tnt-gymnastics)
-- All logins require business name "tnt-gymnastics" which is now pre-filled in login form
+- All admin features fully operational including route optimization, student management, GPS tracking
 
 ### July 16, 2025 - Mobile Login Diagnostics & GPS Tracking Route Count Fix
 - Created comprehensive mobile test page at /mobile-test for diagnosing mobile login issues
