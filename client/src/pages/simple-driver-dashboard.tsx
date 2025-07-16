@@ -4,7 +4,7 @@ import { User } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bus, Route as RouteIcon, Users, CheckCircle, Clock, MapPin, Phone, AlertTriangle } from "lucide-react";
+import { Bus, Route as RouteIcon, Users, CheckCircle, Clock, MapPin, Phone, AlertTriangle, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import DriverWelcome from "./driver-welcome";
@@ -17,6 +17,7 @@ interface SimpleDriverDashboardProps {
 export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDashboardProps) {
   const [currentView, setCurrentView] = useState<"welcome" | "routes" | "notify">("welcome");
   const [activeSession, setActiveSession] = useState<any>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -56,6 +57,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
       });
 
       setActiveSession(session);
+      setShowWelcome(false); // Hide welcome page after route starts
       refetchSessions();
 
       toast({
@@ -73,7 +75,30 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
     }
   };
 
+  const openDirections = (school: any) => {
+    if (school.latitude && school.longitude) {
+      const address = encodeURIComponent(`${school.latitude},${school.longitude}`);
+      // Try to open in Apple Maps on iOS, Google Maps otherwise
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        window.open(`maps://maps.apple.com/?daddr=${address}`, '_blank');
+      } else {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${address}`, '_blank');
+      }
+    } else if (school.address) {
+      const address = encodeURIComponent(school.address);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        window.open(`maps://maps.apple.com/?daddr=${address}`, '_blank');
+      } else {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${address}`, '_blank');
+      }
+    }
+  };
+
   const handleCompleteRoute = async () => {
+    // When route is completed, show welcome page again for next route
+    setShowWelcome(true);
     if (!activeSessionData) return;
 
     try {
@@ -155,7 +180,11 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
     );
   }
 
-  // Don't show separate welcome screen - integrate it into the navigation
+  // Check if user has active session to determine if welcome should show
+  const hasActiveSession = sessions.some((s: any) => s.status === "in_progress");
+
+  // Show welcome page only if no active session and user hasn't completed safety checklist
+  const shouldShowWelcome = !hasActiveSession && showWelcome;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -176,14 +205,16 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
 
       {/* Content */}
       <div className="max-w-4xl mx-auto p-4 pb-20">
-        {currentView === "welcome" && (
+        {currentView === "welcome" && shouldShowWelcome && (
           <DriverWelcome 
             user={user} 
             onLogout={onLogout}
             onProceedToRoute={() => {
+              setShowWelcome(false); // Hide welcome after checklist completion
+              setCurrentView("routes"); // Switch to routes tab
               toast({
                 title: "Safety Checklist Complete",
-                description: "Use the Routes tab below to start your pickup session.",
+                description: "You can now start your pickup session.",
               });
             }}
           />
@@ -242,10 +273,21 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-600">
-                            {schoolData.students?.length || 0} students
+                        <div className="flex items-center space-x-2">
+                          <div className="text-right">
+                            <div className="text-sm text-gray-600">
+                              {schoolData.students?.length || 0} students
+                            </div>
                           </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openDirections(schoolData.school)}
+                            className="flex items-center space-x-1"
+                          >
+                            <Navigation className="h-4 w-4" />
+                            <span className="hidden sm:inline">Directions</span>
+                          </Button>
                         </div>
                       </div>
 
@@ -347,14 +389,16 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
             <AlertTriangle className="h-6 w-6 mb-1" />
             <span>Notify</span>
           </Button>
-          <Button
-            variant={currentView === "welcome" ? "default" : "ghost"}
-            onClick={() => setCurrentView("welcome")}
-            className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
-          >
-            <Users className="h-6 w-6 mb-1" />
-            <span>Welcome</span>
-          </Button>
+          {shouldShowWelcome && (
+            <Button
+              variant={currentView === "welcome" ? "default" : "ghost"}
+              onClick={() => setCurrentView("welcome")}
+              className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
+            >
+              <Users className="h-6 w-6 mb-1" />
+              <span>Welcome</span>
+            </Button>
+          )}
         </div>
       </div>
     </div>
