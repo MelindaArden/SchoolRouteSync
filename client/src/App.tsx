@@ -216,9 +216,7 @@ function Router() {
             <LeadershipDashboard user={user} onLogout={handleLogout} />
           </Route>
           <Route path="/simple-admin">
-            <ErrorBoundary>
-              <SimpleLeadershipDashboard user={user} onLogout={handleLogout} />
-            </ErrorBoundary>
+            <SimpleLeadershipDashboard user={user} onLogout={handleLogout} />
           </Route>
           <Route path="/full-leadership">
             <LeadershipDashboard user={user} onLogout={handleLogout} />

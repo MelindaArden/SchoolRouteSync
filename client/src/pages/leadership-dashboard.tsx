@@ -297,19 +297,98 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
       routesError
     });
     
+    // Return a basic working dashboard instead of error screen
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Loading Dashboard...</h2>
-          <p className="text-gray-600 mb-4">There may be connectivity issues. Please wait or refresh the page.</p>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <div className="mt-4">
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-gray-800">Route Runner - Admin Dashboard</h1>
             <button 
-              onClick={() => window.location.href = '/simple-admin'} 
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              onClick={onLogout}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
             >
-              Switch to Simple Dashboard
+              Logout
             </button>
+          </div>
+        </div>
+        
+        <div className="p-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
+              <div>
+                <h3 className="font-semibold text-yellow-800">Database Connection Issues</h3>
+                <p className="text-yellow-700 text-sm">Some features may be limited due to connectivity issues.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Active Routes</p>
+                    <p className="text-2xl font-bold">--</p>
+                  </div>
+                  <RouteIcon className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Students</p>
+                    <p className="text-2xl font-bold">--</p>
+                  </div>
+                  <Users className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">On Time %</p>
+                    <p className="text-2xl font-bold">--</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Active Alerts</p>
+                    <p className="text-2xl font-bold">--</p>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-red-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">The dashboard is running in limited mode. Please try refreshing the page.</p>
+            <div className="space-x-4">
+              <button 
+                onClick={() => window.location.reload()} 
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Refresh Page
+              </button>
+              <button 
+                onClick={() => window.location.href = '/simple-admin'} 
+                className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+              >
+                Simple Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </div>

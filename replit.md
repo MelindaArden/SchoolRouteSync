@@ -122,6 +122,7 @@ This is a full-stack web application for managing school bus routes, driver assi
 - Enhanced data loading safety checks to prevent undefined variable errors that caused blank pages
 - Fixed driver welcome page navigation allowing drivers to switch between safety checklist, route management, and notifications
 - All admin login credentials working properly: Melinda/Password123, ChadW/Password123, DeShaun/Password123
+- Driver login credentials: ma1313/Dietdew13!, driver1/password123, driver2/password123
 - Driver dashboard now shows three navigation tabs at bottom: Routes for pickup management, Notify for issue reporting, Welcome for safety checklist
 
 ### July 16, 2025 - Mobile Login Diagnostics & GPS Tracking Route Count Fix
