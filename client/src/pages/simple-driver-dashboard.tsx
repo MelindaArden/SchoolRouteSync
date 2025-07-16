@@ -152,10 +152,11 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
       refetchSessions();
 
       // Store completed session data for summary page with enhanced data
+      const now = new Date().toISOString();
       const enhancedSessionData = {
         ...activeSessionData,
-        startedAt: activeSessionData.startTime || activeSessionData.startedAt,
-        completedAt: new Date().toISOString(),
+        startedAt: activeSessionData.startTime || activeSessionData.startedAt || activeSessionData.createdAt || now,
+        completedAt: now,
         route: routes[0] // Include route information
       };
       

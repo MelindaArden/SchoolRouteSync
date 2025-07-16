@@ -85,9 +85,17 @@ export default function RouteSummary({ sessionData, pickupData, onStartNewRoute,
   const noShowCount = pickupData.filter(p => p.status === 'no_show').length;
   const totalStudents = pickupData.length;
 
-  const startTime = new Date(sessionData.startedAt);
-  const endTime = sessionData.completedAt ? new Date(sessionData.completedAt) : new Date();
-  const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)); // minutes
+  // Handle potential null/undefined dates safely
+  const startTimeValue = sessionData.startedAt || sessionData.startTime || sessionData.createdAt;
+  const endTimeValue = sessionData.completedAt || sessionData.completedTime || new Date().toISOString();
+  
+  const startTime = startTimeValue ? new Date(startTimeValue) : new Date();
+  const endTime = endTimeValue ? new Date(endTimeValue) : new Date();
+  
+  // Ensure we have valid dates before calculating duration
+  const duration = (startTime && endTime && !isNaN(startTime.getTime()) && !isNaN(endTime.getTime())) 
+    ? Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)) 
+    : 0; // Default to 0 minutes if dates are invalid
 
   return (
     <div className="max-w-4xl mx-auto p-4 pb-20 space-y-6">
