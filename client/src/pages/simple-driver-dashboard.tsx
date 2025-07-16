@@ -183,8 +183,8 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
   // Check if user has active session to determine if welcome should show
   const hasActiveSession = sessions.some((s: any) => s.status === "in_progress");
 
-  // Show welcome page only if no active session and user hasn't completed safety checklist
-  const shouldShowWelcome = !hasActiveSession && showWelcome;
+  // Show welcome page only if user hasn't completed safety checklist for today
+  const shouldShowWelcome = showWelcome;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -205,7 +205,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
 
       {/* Content */}
       <div className="max-w-4xl mx-auto p-4 pb-20">
-        {currentView === "welcome" && shouldShowWelcome && (
+        {currentView === "welcome" && (
           <DriverWelcome 
             user={user} 
             onLogout={onLogout}
@@ -389,16 +389,14 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
             <AlertTriangle className="h-6 w-6 mb-1" />
             <span>Notify</span>
           </Button>
-          {shouldShowWelcome && (
-            <Button
-              variant={currentView === "welcome" ? "default" : "ghost"}
-              onClick={() => setCurrentView("welcome")}
-              className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
-            >
-              <Users className="h-6 w-6 mb-1" />
-              <span>Welcome</span>
-            </Button>
-          )}
+          <Button
+            variant={currentView === "welcome" ? "default" : "ghost"}
+            onClick={() => setCurrentView("welcome")}
+            className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
+          >
+            <Users className="h-6 w-6 mb-1" />
+            <span>Welcome</span>
+          </Button>
         </div>
       </div>
     </div>
