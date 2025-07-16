@@ -23,33 +23,49 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
   const [activeTab, setActiveTab] = useState<"overview" | "routes" | "users">("overview");
   const { toast } = useToast();
 
-  // Simple data fetching with timeout protection
+  // Health check to monitor database connectivity
+  const { data: health } = useQuery({
+    queryKey: ['/api/health'],
+    retry: 0,
+    refetchInterval: 10000, // Check every 10 seconds
+    staleTime: 5000,
+  });
+
+  // Simple data fetching with timeout protection and error handling
   const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['/api/users'],
-    retry: 1,
-    staleTime: 60000, // Cache for 1 minute
-    gcTime: 300000, // Keep in cache for 5 minutes
+    retry: 0,
+    staleTime: 60000,
+    gcTime: 300000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: schools = [], isLoading: schoolsLoading, error: schoolsError } = useQuery({
     queryKey: ['/api/schools'],
-    retry: 1,
+    retry: 0,
     staleTime: 60000,
     gcTime: 300000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: routes = [], isLoading: routesLoading, error: routesError } = useQuery({
     queryKey: ['/api/routes'],
-    retry: 1,
+    retry: 0,
     staleTime: 60000,
     gcTime: 300000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: todaySessions = [], isLoading: sessionsLoading, error: sessionsError } = useQuery({
     queryKey: ['/api/pickup-sessions/today'],
-    retry: 1,
-    staleTime: 30000, // Cache for 30 seconds
+    retry: 0,
+    staleTime: 30000,
     gcTime: 300000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // Calculate basic stats with error handling
@@ -126,14 +142,22 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
 
       {/* Content */}
       <div className="p-4 space-y-6">
-        {hasErrors && (
+        {(hasErrors || health?.status === 'unhealthy') && (
           <Card className="border-yellow-200 bg-yellow-50">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-5 w-5 text-yellow-600" />
                 <div>
-                  <h3 className="font-semibold text-yellow-800">Connection Issues</h3>
-                  <p className="text-yellow-700 text-sm">Some data may not be current due to database timeout issues.</p>
+                  <h3 className="font-semibold text-yellow-800">Database Connection Issues</h3>
+                  <p className="text-yellow-700 text-sm">
+                    {health?.status === 'unhealthy' 
+                      ? `Database disconnected: ${health.error}`
+                      : 'Some data may not be current due to database timeout issues.'
+                    }
+                  </p>
+                  {health?.responseTime && (
+                    <p className="text-yellow-600 text-xs mt-1">Response time: {health.responseTime}ms</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -150,7 +174,7 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
                     <div>
                       <p className="text-sm text-gray-600">Active Routes</p>
                       <p className="text-2xl font-bold text-blue-600">
-                        {isLoading ? "..." : activeRoutes}
+                        {isLoading ? "..." : sessionsError ? "N/A" : activeRoutes}
                       </p>
                     </div>
                     <Clock className="h-8 w-8 text-blue-600" />
@@ -164,7 +188,7 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
                     <div>
                       <p className="text-sm text-gray-600">Total Drivers</p>
                       <p className="text-2xl font-bold text-green-600">
-                        {isLoading ? "..." : driverCount}
+                        {isLoading ? "..." : usersError ? "N/A" : driverCount}
                       </p>
                     </div>
                     <Users className="h-8 w-8 text-green-600" />
@@ -178,7 +202,7 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
                     <div>
                       <p className="text-sm text-gray-600">Total Schools</p>
                       <p className="text-2xl font-bold text-purple-600">
-                        {isLoading ? "..." : schoolCount}
+                        {isLoading ? "..." : schoolsError ? "N/A" : schoolCount}
                       </p>
                     </div>
                     <School className="h-8 w-8 text-purple-600" />
@@ -192,7 +216,7 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
                     <div>
                       <p className="text-sm text-gray-600">Total Routes</p>
                       <p className="text-2xl font-bold text-orange-600">
-                        {isLoading ? "..." : routeCount}
+                        {isLoading ? "..." : routesError ? "N/A" : routeCount}
                       </p>
                     </div>
                     <Bus className="h-8 w-8 text-orange-600" />
@@ -214,6 +238,11 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
                   <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="text-gray-600 mt-2">Loading routes...</p>
+                  </div>
+                ) : sessionsError ? (
+                  <div className="text-center py-8">
+                    <AlertTriangle className="h-12 w-12 text-yellow-400 mx-auto mb-3" />
+                    <p className="text-gray-600">Unable to load session data</p>
                   </div>
                 ) : todaySessions.length === 0 ? (
                   <div className="text-center py-8">
@@ -264,6 +293,11 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                   <p className="text-gray-600 mt-2">Loading routes...</p>
                 </div>
+              ) : routesError ? (
+                <div className="text-center py-8">
+                  <AlertTriangle className="h-12 w-12 text-yellow-400 mx-auto mb-3" />
+                  <p className="text-gray-600">Unable to load routes data</p>
+                </div>
               ) : routes.length === 0 ? (
                 <div className="text-center py-8">
                   <Bus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
@@ -302,6 +336,11 @@ export default function SimpleAdminDashboard({ user, onLogout }: SimpleAdminDash
                 <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                   <p className="text-gray-600 mt-2">Loading users...</p>
+                </div>
+              ) : usersError ? (
+                <div className="text-center py-8">
+                  <AlertTriangle className="h-12 w-12 text-yellow-400 mx-auto mb-3" />
+                  <p className="text-gray-600">Unable to load users data</p>
                 </div>
               ) : users.length === 0 ? (
                 <div className="text-center py-8">

@@ -86,6 +86,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
+  // Health check endpoint for admin dashboard
+  app.get('/api/health', async (req, res) => {
+    try {
+      const start = Date.now();
+      
+      // Simple database connectivity test with timeout
+      const result = await Promise.race([
+        db.execute(sql`SELECT 1 as test`),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Health check timeout')), 2000)
+        )
+      ]);
+      
+      const dbTime = Date.now() - start;
+      
+      res.json({
+        status: 'healthy',
+        database: 'connected',
+        responseTime: dbTime,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(503).json({
+        status: 'unhealthy',
+        database: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Production deployment login endpoint with enhanced error handling
   app.post("/api/login", async (req, res) => {
     try {
