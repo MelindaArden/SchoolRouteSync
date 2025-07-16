@@ -642,7 +642,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                           <div className="font-semibold mb-2">{day} Performance:</div>
                           {users.filter((user: any) => user.role === 'driver').map((driver: any) => {
                             // Calculate driver performance for this day
-                            const driverSessions = sessionsData.filter((s: any) => {
+                            const driverSessions = pickupHistoryData.filter((s: any) => {
                               const sessionDate = new Date(s.date);
                               const dayOfWeek = sessionDate.getDay();
                               const targetDay = (index + 1) % 7; // Convert to match JS getDay()
@@ -671,7 +671,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
                               <span className="text-blue-400">
                                 {users.filter((u: any) => u.role === 'driver').length > 0 
                                   ? Math.round(users.filter((u: any) => u.role === 'driver').reduce((sum: number, driver: any) => {
-                                      const driverSessions = sessionsData.filter((s: any) => {
+                                      const driverSessions = pickupHistoryData.filter((s: any) => {
                                         const sessionDate = new Date(s.date);
                                         const dayOfWeek = sessionDate.getDay();
                                         const targetDay = (index + 1) % 7;

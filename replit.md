@@ -112,19 +112,20 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
-### July 16, 2025 - Complete Admin Dashboard Restoration & Database Improvements
-- **FIXED ADMIN DASHBOARD**: Restored full-featured admin dashboard with all capabilities
-- Replaced SimpleAdminDashboard with complete LeadershipDashboard containing all admin features:
+### July 16, 2025 - Complete Admin Dashboard Restoration & JavaScript Error Fix
+- **FIXED CRITICAL ADMIN BLANK SCREEN**: Resolved JavaScript error "Can't find variable: sessionsData" causing admin dashboard crashes
+- Fixed undefined variable references in leadership-dashboard.tsx lines 645 and 674 by replacing `sessionsData` with `pickupHistoryData`
+- **RESTORED FULL ADMIN DASHBOARD**: Replaced SimpleAdminDashboard with complete LeadershipDashboard containing all admin features:
   * Route Creator with multi-driver optimization and route management
   * Student Absence Management with export capabilities
   * Comprehensive User Management with role-based permissions
   * GPS Tracking and Map functionality with real-time driver monitoring
   * Pickup History with detailed reporting and statistics
   * Settings and Profile management
+- Updated App.tsx routing to use LeadershipDashboard for all admin login paths instead of simplified version
 - Added comprehensive database health monitoring with /api/health endpoint
 - Enhanced error handling for database connectivity issues with real-time status monitoring
 - Improved database connection pooling with optimized timeout settings for deployment environment
-- Added fallback content and graceful degradation when database responses are slow
 - Admin dashboard now displays all 8 tabs: Dashboard, Routes, GPS, Users, Reports, History, Absences, Settings
 - Fixed login authentication issues with enhanced mobile compatibility
 - Login credentials confirmed working: 
@@ -132,7 +133,7 @@ This is a full-stack web application for managing school bus routes, driver assi
   * Admin: Melinda/Password123 (business: tnt-gymnastics)
   * Admin: ChadW/Password123 (business: tnt-gymnastics)
   * Admin: DeShaun/Password123 (business: tnt-gymnastics)
-- All admin features fully operational including route optimization, student management, GPS tracking
+- Admin blank screen issue completely resolved - full dashboard functionality restored
 
 ### July 16, 2025 - Mobile Login Diagnostics & GPS Tracking Route Count Fix
 - Created comprehensive mobile test page at /mobile-test for diagnosing mobile login issues
