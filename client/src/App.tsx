@@ -13,6 +13,7 @@ import AdminMap from "@/pages/admin-map";
 import RouteSummary from "@/pages/route-summary";
 import MobileDebug from "@/pages/mobile-debug";
 import DebugAuth from "@/pages/debug-auth";
+import MobileTest from "@/pages/mobile-test";
 import TMobileTest from "@/pages/tmobile-test";
 import DeploymentTest from "@/pages/deployment-test";
 import MobileLogin from "@/pages/mobile-login";
@@ -124,8 +125,14 @@ function Router() {
   }, []);
 
   const handleLogin = (userData: User) => {
+    console.log("App handleLogin called with:", userData);
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
+    
+    // Force a small delay for mobile devices to ensure state is set
+    setTimeout(() => {
+      console.log("Login state updated, user:", userData);
+    }, 100);
   };
 
   const handleMasterLogin = (masterAdminData: any) => {
@@ -210,6 +217,7 @@ function Router() {
           <Route path="/mobile-login" component={() => <MobileLogin onLogin={handleLogin} />} />
           <Route path="/mobile-debug" component={MobileDebug} />
           <Route path="/debug-auth" component={DebugAuth} />
+          <Route path="/mobile-test" component={MobileTest} />
           <Route path="/tmobile-test" component={TMobileTest} />
           <Route path="/deployment-test" component={DeploymentTest} />
           <Route path="/pwa-test" component={PWATest} />

@@ -121,6 +121,9 @@ export default function Login({ onLogin }: LoginProps) {
         const userData = await response.json();
         console.log("Login success:", userData);
         
+        // Critical: Store user data for mobile devices
+        localStorage.setItem("user", JSON.stringify(userData));
+        
         // Store authentication token for mobile Safari compatibility
         if (userData.authToken) {
           localStorage.setItem("authToken", userData.authToken);
@@ -132,7 +135,16 @@ export default function Login({ onLogin }: LoginProps) {
           localStorage.setItem("mobileToken", userData.token);
         }
         
-        onLogin(userData);
+        toast({
+          title: "Success",
+          description: "Login successful!",
+        });
+        
+        // Small delay to ensure localStorage is saved before redirect on mobile
+        setTimeout(() => {
+          onLogin(userData);
+        }, 200);
+        return; // Exit here to prevent duplicate processing
       }
       
       // Enhanced session verification for deployment

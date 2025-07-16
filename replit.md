@@ -112,6 +112,15 @@ This is a full-stack web application for managing school bus routes, driver assi
 
 ## Changelog
 
+### July 16, 2025 - Mobile Login Diagnostics & GPS Tracking Route Count Fix
+- Created comprehensive mobile test page at /mobile-test for diagnosing mobile login issues
+- Enhanced mobile login flow with improved localStorage handling and authentication delays
+- Fixed GPS tracking components to show accurate active driver counts (0-3) instead of 23
+- Added proper today-only filtering across all GPS tracking components (SimpleGpsTracking, DriverLocationMap, DriverTracking, AdminMap)
+- Improved mobile authentication with better error handling and token management
+- Added diagnostic tools for troubleshooting browser capabilities, network connectivity, and authentication state
+- Mobile test page provides step-by-step diagnostics and automated login testing for mobile devices
+
 ### July 15, 2025 - Mobile Optimization & Real-time Admin Updates with Accurate Route Counting
 - Fixed critical route counting issue where admin dashboard showed 23 active routes instead of actual today's routes (max 3 drivers)
 - Enhanced route counting logic to only include TODAY's in-progress sessions for accurate active route display
