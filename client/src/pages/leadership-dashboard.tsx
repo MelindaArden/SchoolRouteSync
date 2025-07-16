@@ -293,6 +293,14 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Loading Dashboard...</h2>
           <p className="text-gray-600 mb-4">There may be connectivity issues. Please wait or refresh the page.</p>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <div className="mt-4">
+            <button 
+              onClick={() => window.location.href = '/simple-admin'} 
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Switch to Simple Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );

@@ -207,13 +207,18 @@ function Router() {
           <Route path="/">
             {user.role === "leadership" ? (
               <ErrorBoundary>
-                <SimpleLeadershipDashboard user={user} onLogout={handleLogout} />
+                <LeadershipDashboard user={user} onLogout={handleLogout} />
               </ErrorBoundary>
             ) : (
               <SimpleDriverDashboard user={user} onLogout={handleLogout} />
             )}
           </Route>
           <Route path="/leadership">
+            <ErrorBoundary>
+              <LeadershipDashboard user={user} onLogout={handleLogout} />
+            </ErrorBoundary>
+          </Route>
+          <Route path="/simple-admin">
             <ErrorBoundary>
               <SimpleLeadershipDashboard user={user} onLogout={handleLogout} />
             </ErrorBoundary>
