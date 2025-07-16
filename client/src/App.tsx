@@ -4,11 +4,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PWANotifications } from "@/components/PWANotifications";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useState, useEffect } from "react";
 import { User } from "./lib/types";
 import Login from "@/pages/login";
 import DriverDashboard from "@/pages/driver-dashboard";
 import LeadershipDashboard from "@/pages/leadership-dashboard";
+import SimpleLeadershipDashboard from "@/pages/simple-leadership-dashboard";
 import AdminMap from "@/pages/admin-map";
 import RouteSummary from "@/pages/route-summary";
 import MobileDebug from "@/pages/mobile-debug";
@@ -204,13 +206,22 @@ function Router() {
         <>
           <Route path="/">
             {user.role === "leadership" ? (
-              <LeadershipDashboard user={user} onLogout={handleLogout} />
+              <ErrorBoundary>
+                <SimpleLeadershipDashboard user={user} onLogout={handleLogout} />
+              </ErrorBoundary>
             ) : (
               <SimpleDriverDashboard user={user} onLogout={handleLogout} />
             )}
           </Route>
           <Route path="/leadership">
-            <LeadershipDashboard user={user} onLogout={handleLogout} />
+            <ErrorBoundary>
+              <SimpleLeadershipDashboard user={user} onLogout={handleLogout} />
+            </ErrorBoundary>
+          </Route>
+          <Route path="/full-leadership">
+            <ErrorBoundary>
+              <LeadershipDashboard user={user} onLogout={handleLogout} />
+            </ErrorBoundary>
           </Route>
           <Route path="/admin-map">
             <AdminMap />

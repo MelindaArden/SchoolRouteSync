@@ -56,6 +56,7 @@ interface LeadershipDashboardProps {
 }
 
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
+  console.log("LeadershipDashboard rendering with user:", user);
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
@@ -277,7 +278,27 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   // Check for critical errors that would prevent page loading
   const hasDataErrors = schoolsError || studentsError || usersError || routesError;
 
-  if (isLoading && !hasDataErrors) {
+  // Add comprehensive error handling for blank page issues
+  if (hasDataErrors) {
+    console.error("Leadership Dashboard Data Errors:", {
+      schoolsError,
+      studentsError, 
+      usersError,
+      routesError
+    });
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Loading Dashboard...</h2>
+          <p className="text-gray-600 mb-4">There may be connectivity issues. Please wait or refresh the page.</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
