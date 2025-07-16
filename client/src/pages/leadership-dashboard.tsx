@@ -77,8 +77,33 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     staleTime: 5000,
   });
 
+  // Data fetching with proper error handling
+  const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({
+    queryKey: ['/api/users'],
+    retry: 1,
+  });
+
+  const { data: schools = [], isLoading: schoolsLoading, error: schoolsError } = useQuery({
+    queryKey: ['/api/schools'],
+    retry: 1,
+  });
+
+  const { data: students = [], isLoading: studentsLoading, error: studentsError } = useQuery({
+    queryKey: ['/api/students'],
+    retry: 1,
+  });
+
+  const { data: routes = [], isLoading: routesLoading, error: routesError } = useQuery({
+    queryKey: ['/api/routes'],
+    retry: 1,
+  });
+
   // Calculate real-time weekly performance based on actual data
   const calculateWeeklyPerformance = () => {
+    if (!users || !Array.isArray(users) || usersLoading) {
+      return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => ({ day, percentage: 0, drivers: [] }));
+    }
+
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
@@ -93,7 +118,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         return sessionDate.toDateString() === targetDate.toDateString();
       });
 
-      if (daySession.length === 0 || !users || !Array.isArray(users)) {
+      if (daySession.length === 0) {
         return { day: dayName, percentage: 0, drivers: [] };
       }
 
@@ -173,30 +198,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     };
   }, [canNotify, showDriverAlert]);
 
-  // Fetch data for dynamic counts with error handling
-  const { data: schools = [], error: schoolsError } = useQuery({
-    queryKey: ['/api/schools'],
-    retry: 1,
-    staleTime: 30000, // Keep data fresh for 30 seconds
-  });
-
-  const { data: students = [], error: studentsError } = useQuery({
-    queryKey: ['/api/students'],
-    retry: 1,
-    staleTime: 30000,
-  });
-
-  const { data: users = [], error: usersError } = useQuery({
-    queryKey: ['/api/users'],
-    retry: 1,
-    staleTime: 30000,
-  });
-
-  const { data: routes = [], error: routesError } = useQuery({
-    queryKey: ['/api/routes'],
-    retry: 1,
-    staleTime: 30000,
-  });
+  // Remove duplicate queries - already defined above
 
   // Fetch today's sessions for overview with timeout protection
   const { data: sessions = [], isLoading, error: sessionsError } = useQuery({
@@ -277,6 +279,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
 
   // Check for critical errors that would prevent page loading
   const hasDataErrors = schoolsError || studentsError || usersError || routesError;
+  const isDataLoading = schoolsLoading || studentsLoading || usersLoading || routesLoading;
 
   // Add comprehensive error handling for blank page issues
   if (hasDataErrors) {
@@ -306,10 +309,13 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
     );
   }
 
-  if (isLoading) {
+  if (isDataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard data...</p>
+        </div>
       </div>
     );
   }
