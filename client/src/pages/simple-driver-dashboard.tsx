@@ -15,9 +15,10 @@ interface SimpleDriverDashboardProps {
 }
 
 export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDashboardProps) {
-  const [currentView, setCurrentView] = useState<"welcome" | "routes" | "notify">("welcome");
+  const [currentView, setCurrentView] = useState<"welcome" | "routes" | "notify" | "navigation">("welcome");
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [checklistCompleted, setChecklistCompleted] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -75,6 +76,12 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
     }
   };
 
+  const handleChecklistComplete = () => {
+    setChecklistCompleted(true);
+    setShowWelcome(false);
+    setCurrentView("routes");
+  };
+
   const openDirections = (school: any) => {
     if (school.latitude && school.longitude) {
       const address = encodeURIComponent(`${school.latitude},${school.longitude}`);
@@ -99,6 +106,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
   const handleCompleteRoute = async () => {
     // When route is completed, show welcome page again for next route
     setShowWelcome(true);
+    setChecklistCompleted(false);
     if (!activeSessionData) return;
 
     try {
@@ -368,33 +376,175 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
             </Card>
           </div>
         )}
+
+        {currentView === "navigation" && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-900">Navigation</h2>
+            
+            {/* Current Route Navigation */}
+            {routes.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Navigation className="h-5 w-5 mr-2 text-blue-600" />
+                    Route Navigation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {routes[0].schools && routes[0].schools.map((schoolData: any, index: number) => (
+                      <div key={schoolData.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full text-sm font-medium">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <h4 className="font-medium">{schoolData.school?.name}</h4>
+                              <div className="flex items-center space-x-1 text-sm text-gray-600">
+                                <Clock className="h-3 w-3" />
+                                <span>Dismissal: {schoolData.school?.dismissalTime}</span>
+                              </div>
+                              {schoolData.school?.address && (
+                                <div className="flex items-center space-x-1 text-sm text-gray-600">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{schoolData.school?.address}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col space-y-2">
+                            <Button
+                              size="sm"
+                              onClick={() => openDirections(schoolData.school)}
+                              className="bg-blue-600 hover:bg-blue-700 flex items-center space-x-1"
+                            >
+                              <Navigation className="h-4 w-4" />
+                              <span>Navigate</span>
+                            </Button>
+                            {schoolData.school?.phone && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(`tel:${schoolData.school?.phone}`, '_self')}
+                                className="flex items-center space-x-1"
+                              >
+                                <Phone className="h-4 w-4" />
+                                <span>Call</span>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Student Count */}
+                        <div className="mt-3 text-sm text-gray-600">
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-1" />
+                            <span>{schoolData.students?.length || 0} students to pick up</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Quick Navigation Options */}
+                  <div className="mt-6 border-t pt-4">
+                    <h4 className="font-medium mb-3">Quick Navigation</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          // Navigate to first school
+                          if (routes[0]?.schools?.[0]?.school) {
+                            openDirections(routes[0].schools[0].school);
+                          }
+                        }}
+                        className="flex items-center justify-start space-x-2"
+                      >
+                        <Navigation className="h-4 w-4" />
+                        <span>Navigate to First School</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          // Open turn-by-turn for entire route
+                          const allSchools = routes[0]?.schools?.map((s: any) => s.school) || [];
+                          if (allSchools.length > 0) {
+                            // Create multi-destination navigation
+                            const waypoints = allSchools.map((school: any) => {
+                              if (school.latitude && school.longitude) {
+                                return `${school.latitude},${school.longitude}`;
+                              }
+                              return encodeURIComponent(school.address || school.name);
+                            }).join('|');
+                            
+                            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                            if (isIOS) {
+                              window.open(`maps://maps.apple.com/?daddr=${waypoints}`, '_blank');
+                            } else {
+                              window.open(`https://www.google.com/maps/dir/?api=1&destination=${waypoints}`, '_blank');
+                            }
+                          }
+                        }}
+                        className="flex items-center justify-start space-x-2"
+                      >
+                        <RouteIcon className="h-4 w-4" />
+                        <span>Navigate Entire Route</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {routes.length === 0 && (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <Navigation className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">No Route Assigned</h3>
+                  <p className="text-gray-600">
+                    You don't have any routes assigned. Contact your administrator for route assignment.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom Navigation - Enhanced for Mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom">
-        <div className="flex justify-around py-3 px-2">
+        <div className="flex justify-around py-2 px-1">
           <Button
             variant={currentView === "routes" ? "default" : "ghost"}
             onClick={() => setCurrentView("routes")}
-            className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
+            className="flex-1 flex flex-col items-center py-3 mx-1 text-xs font-medium"
           >
-            <RouteIcon className="h-6 w-6 mb-1" />
+            <RouteIcon className="h-5 w-5 mb-1" />
             <span>Routes</span>
           </Button>
           <Button
             variant={currentView === "notify" ? "default" : "ghost"}
             onClick={() => setCurrentView("notify")}
-            className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
+            className="flex-1 flex flex-col items-center py-3 mx-1 text-xs font-medium"
           >
-            <AlertTriangle className="h-6 w-6 mb-1" />
+            <AlertTriangle className="h-5 w-5 mb-1" />
             <span>Notify</span>
+          </Button>
+          <Button
+            variant={currentView === "navigation" ? "default" : "ghost"}
+            onClick={() => setCurrentView("navigation")}
+            className="flex-1 flex flex-col items-center py-3 mx-1 text-xs font-medium"
+          >
+            <Navigation className="h-5 w-5 mb-1" />
+            <span>Navigation</span>
           </Button>
           <Button
             variant={currentView === "welcome" ? "default" : "ghost"}
             onClick={() => setCurrentView("welcome")}
-            className="flex-1 flex flex-col items-center py-4 mx-1 text-xs font-medium"
+            className="flex-1 flex flex-col items-center py-3 mx-1 text-xs font-medium"
           >
-            <Users className="h-6 w-6 mb-1" />
+            <Users className="h-5 w-5 mb-1" />
             <span>Welcome</span>
           </Button>
         </div>

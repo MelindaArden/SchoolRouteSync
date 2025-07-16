@@ -49,6 +49,9 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
   
   // Calculate estimated route time (5 minutes per school + travel time estimate)
   const estimatedRouteTime = totalSchools > 0 ? (totalSchools * 5) + (totalSchools * 3) : 0;
+  
+  // Check if user can proceed with checklist
+  const canProceed = gasLevel && visualInspection;
 
   // Submit safety checklist
   const submitChecklist = useMutation({
@@ -65,8 +68,8 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
         title: "Safety Checklist Complete",
         description: "You can now proceed to start your route.",
       });
-      // Safety checklist completed - stay on welcome page
-      // The onProceedToRoute callback will handle navigation
+      // Call the onProceedToRoute callback to navigate to route page
+      onProceedToRoute();
     },
     onError: (error) => {
       toast({
@@ -153,8 +156,6 @@ export default function DriverWelcome({ user, onLogout, onProceedToRoute }: Driv
       </div>
     );
   }
-
-  const canProceed = gasLevel && visualInspection;
 
   return (
     <div className="min-h-screen bg-gray-50">
