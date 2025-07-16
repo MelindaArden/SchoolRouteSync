@@ -1,347 +1,177 @@
-import { useQuery } from "@tanstack/react-query";
-import { useLocation, Link } from "wouter";
-import { User } from "@/lib/types";
-import Navigation from "@/components/shared/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  CheckCircle, 
-  Clock, 
-  Users, 
-  AlertTriangle,
-  Home,
-  Calendar,
-  MapPin
-} from "lucide-react";
-
-interface StudentPickup {
-  id: number;
-  status: "pending" | "picked_up" | "absent" | "no_show";
-  student: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    grade: string;
-  };
-  school: {
-    id: number;
-    name: string;
-  };
-  pickedUpAt?: string;
-  driverNotes?: string;
-}
-
-interface SessionDetails {
-  id: number;
-  routeId: number;
-  driverId: number;
-  date: string;
-  status: string;
-  startTime?: string;
-  completedTime?: string;
-  notes?: string;
-  pickups: StudentPickup[];
-  route: {
-    id: number;
-    name: string;
-  };
-  driver: {
-    id: number;
-    firstName: string;
-    lastName: string;
-  };
-}
+import { CheckCircle, Clock, Users, MapPin } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface RouteSummaryProps {
-  user: User;
-  onLogout: () => void;
-  sessionId: string;
+  sessionData: any;
+  pickupData: any[];
+  onStartNewRoute: () => void;
+  onBackToDashboard: () => void;
 }
 
-export default function RouteSummary({ user, onLogout, sessionId }: RouteSummaryProps) {
-  const [, setLocation] = useLocation();
-
-  // Fetch session details with pickup information
-  const { data: sessionDetails, isLoading } = useQuery<SessionDetails>({
-    queryKey: [`/api/pickup-sessions/${sessionId}`],
-  });
-
-  if (isLoading) {
+export default function RouteSummary({ sessionData, pickupData, onStartNewRoute, onBackToDashboard }: RouteSummaryProps) {
+  if (!sessionData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="max-w-4xl mx-auto p-4">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-gray-500">No route data available</p>
+            <Button onClick={onBackToDashboard} className="mt-4">
+              Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  if (!sessionDetails) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation user={user} onLogout={onLogout} role="driver" />
-        <div className="max-w-md mx-auto pt-20 p-4">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-800 mb-2">Session Not Found</h3>
-              <p className="text-gray-600 mb-4">Could not load route summary.</p>
-              <Button onClick={() => setLocation("/")}>
-                Return to Dashboard
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  const pickedUpCount = pickupData.filter(p => p.status === 'picked_up').length;
+  const noShowCount = pickupData.filter(p => p.status === 'no_show').length;
+  const totalStudents = pickupData.length;
 
-  // Return early if no session details
-  if (!sessionDetails) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-gray-600">Session not found</p>
-          <Button onClick={() => setLocation("/")} className="mt-4">
-            Return to Dashboard
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const pickedUpStudents = sessionDetails.pickups?.filter((p: StudentPickup) => p.status === "picked_up") || [];
-  const absentStudents = sessionDetails.pickups?.filter((p: StudentPickup) => p.status === "absent" || p.status === "no_show") || [];
-  const pendingStudents = sessionDetails.pickups?.filter((p: StudentPickup) => p.status === "pending") || [];
-  
-  const totalStudents = sessionDetails.pickups?.length || 0;
-  const completionRate = totalStudents > 0 ? Math.round((pickedUpStudents.length / totalStudents) * 100) : 100;
-
-  const startTime = sessionDetails.startTime ? new Date(sessionDetails.startTime) : null;
-  const completedTime = sessionDetails.completedTime ? new Date(sessionDetails.completedTime) : null;
-  
-  // Use durationMinutes from session, or calculate from pickup times if available
-  let routeDuration = sessionDetails.durationMinutes;
-  
-  // Check for null/undefined specifically, not falsy (since 0 is a valid duration)
-  if (routeDuration === null || routeDuration === undefined) {
-    if (sessionDetails.pickups) {
-      const firstPickupTime = sessionDetails.pickups
-        .filter(p => p.pickedUpAt)
-        .map(p => new Date(p.pickedUpAt!))
-        .sort((a, b) => a.getTime() - b.getTime())[0];
-      
-      if (firstPickupTime && completedTime) {
-        routeDuration = Math.round((completedTime.getTime() - firstPickupTime.getTime()) / (1000 * 60));
-        // Ensure minimum 1 minute for very quick routes
-        if (routeDuration < 1) routeDuration = 1;
-      }
-    }
-  }
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
-  };
+  const startTime = new Date(sessionData.startedAt);
+  const endTime = sessionData.completedAt ? new Date(sessionData.completedAt) : new Date();
+  const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)); // minutes
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} onLogout={onLogout} role="driver" />
-      
-      <div className="max-w-2xl mx-auto pt-20 p-4 space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Route Completed!</h1>
-          <p className="text-gray-600">Great job finishing your pickup route</p>
+    <div className="max-w-4xl mx-auto p-4 space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div className="flex justify-center">
+          <CheckCircle className="h-16 w-16 text-green-500" />
         </div>
+        <h1 className="text-3xl font-bold text-gray-900">Route Complete!</h1>
+        <p className="text-gray-600">Great job completing your pickup route</p>
+      </div>
 
-        {/* Route Summary Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900">{pickedUpStudents.length}</div>
-              <div className="text-sm text-gray-600">Students Picked Up</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4 text-center">
-              <Clock className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900">
-                {routeDuration !== null && routeDuration !== undefined ? `${routeDuration}m` : '--'}
-              </div>
-              <div className="text-sm text-gray-600">Route Duration</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Route Details */}
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MapPin className="h-5 w-5" />
-              <span>Route Details</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Date:</span>
-              <span className="font-medium">
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  timeZone: 'America/New_York'
-                })}
-              </span>
-            </div>
-            
-            {startTime && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Start Time:</span>
-                <span className="font-medium">{formatTime(startTime)}</span>
-              </div>
-            )}
-            
-            {completedTime && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Completed Time:</span>
-                <span className="font-medium">{formatTime(completedTime)}</span>
-              </div>
-            )}
-            
-            {(routeDuration !== null && routeDuration !== undefined) && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Route Duration:</span>
-                <span className="font-medium">{routeDuration} minutes</span>
-              </div>
-            )}
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Completion Rate:</span>
-              <Badge variant={completionRate === 100 ? "default" : "secondary"}>
-                {completionRate}%
-              </Badge>
-            </div>
+          <CardContent className="p-6 text-center">
+            <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-gray-900">{pickedUpCount}</div>
+            <div className="text-sm text-gray-600">Students Picked Up</div>
           </CardContent>
         </Card>
 
-        {/* Student Lists */}
-        {pickedUpStudents.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-green-600">
-                <CheckCircle className="h-5 w-5" />
-                <span>Students Picked Up ({pickedUpStudents.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {pickedUpStudents.map((pickup: any) => (
-                  <div key={pickup.id} className="flex items-center justify-between p-2 bg-green-50 rounded">
-                    <div>
-                      <span className="font-medium">
-                        {pickup.student?.firstName} {pickup.student?.lastName}
-                      </span>
-                      <span className="text-sm text-gray-600 ml-2">
-                        Grade {pickup.student?.grade}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {pickup.school?.name}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Clock className="h-8 w-8 text-green-500 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-gray-900">{duration}m</div>
+            <div className="text-sm text-gray-600">Total Time</div>
+          </CardContent>
+        </Card>
 
-        {absentStudents.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-yellow-600">
-                <AlertTriangle className="h-5 w-5" />
-                <span>Absent Students ({absentStudents.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {absentStudents.map((pickup: any) => (
-                  <div key={pickup.id} className="flex items-center justify-between p-2 bg-yellow-50 rounded">
-                    <div>
-                      <span className="font-medium">
-                        {pickup.student?.firstName} {pickup.student?.lastName}
-                      </span>
-                      <span className="text-sm text-gray-600 ml-2">
-                        Grade {pickup.student?.grade}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {pickup.school?.name}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardContent className="p-6 text-center">
+            <MapPin className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-gray-900">{sessionData.route?.schools?.length || 0}</div>
+            <div className="text-sm text-gray-600">Schools Visited</div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {pendingStudents.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-gray-600">
-                <Clock className="h-5 w-5" />
-                <span>Not Picked Up ({pendingStudents.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {pendingStudents.map((pickup: any) => (
-                  <div key={pickup.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div>
-                      <span className="font-medium">
-                        {pickup.student?.firstName} {pickup.student?.lastName}
-                      </span>
-                      <span className="text-sm text-gray-600 ml-2">
-                        Grade {pickup.student?.grade}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {pickup.school?.name}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      {/* Route Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Route Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-600">Route Name</label>
+              <p className="text-lg font-semibold">{sessionData.route?.name || 'Unknown Route'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Driver</label>
+              <p className="text-lg font-semibold">{sessionData.driver?.first_name} {sessionData.driver?.last_name}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Started</label>
+              <p className="text-lg">{formatDistanceToNow(startTime, { addSuffix: true })}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Completed</label>
+              <p className="text-lg">{sessionData.completedAt ? formatDistanceToNow(endTime, { addSuffix: true }) : 'Just now'}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Actions */}
-        <div className="flex space-x-4">
-          <Button 
-            onClick={() => setLocation("/")} 
-            className="flex-1"
-            variant="outline"
-          >
-            <Home className="h-4 w-4 mr-2" />
-            Return to Dashboard
-          </Button>
-          <Button 
-            onClick={() => setLocation("/")} 
-            className="flex-1"
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Start New Route
-          </Button>
-        </div>
+      {/* Student Pickup Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Student Pickup Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center text-sm text-gray-600">
+              <span>Total Students: {totalStudents}</span>
+              <span>Completion Rate: {totalStudents > 0 ? Math.round((pickedUpCount / totalStudents) * 100) : 0}%</span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pickedUpCount > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-green-700">✓ Picked Up ({pickedUpCount})</h4>
+                  <div className="space-y-1">
+                    {pickupData
+                      .filter(p => p.status === 'picked_up')
+                      .map(pickup => (
+                        <div key={pickup.id} className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            {pickup.student?.first_name} {pickup.student?.last_name}
+                          </Badge>
+                          {pickup.pickedUpAt && (
+                            <span className="text-xs text-gray-500">
+                              {new Date(pickup.pickedUpAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {noShowCount > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-red-700">✗ Not Present ({noShowCount})</h4>
+                  <div className="space-y-1">
+                    {pickupData
+                      .filter(p => p.status === 'no_show')
+                      .map(pickup => (
+                        <div key={pickup.id} className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="bg-red-100 text-red-800">
+                            {pickup.student?.first_name} {pickup.student?.last_name}
+                          </Badge>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <Button 
+          onClick={onStartNewRoute}
+          size="lg"
+          className="bg-green-600 hover:bg-green-700"
+        >
+          Start New Route
+        </Button>
+        <Button 
+          onClick={onBackToDashboard}
+          variant="outline"
+          size="lg"
+        >
+          Back to Dashboard
+        </Button>
       </div>
     </div>
   );

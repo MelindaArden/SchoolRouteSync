@@ -8,6 +8,7 @@ import { Bus, Route as RouteIcon, Users, CheckCircle, Clock, MapPin, Phone, Aler
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import DriverWelcome from "./driver-welcome";
+import RouteSummary from "./route-summary";
 
 interface SimpleDriverDashboardProps {
   user: User;
@@ -15,10 +16,12 @@ interface SimpleDriverDashboardProps {
 }
 
 export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDashboardProps) {
-  const [currentView, setCurrentView] = useState<"welcome" | "routes" | "notify" | "navigation">("welcome");
+  const [currentView, setCurrentView] = useState<"routes" | "notify" | "navigation" | "summary">("routes");
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showWelcome, setShowWelcome] = useState(true);
   const [checklistCompleted, setChecklistCompleted] = useState(false);
+  const [completedSessionData, setCompletedSessionData] = useState<any>(null);
+  const [completedPickupData, setCompletedPickupData] = useState<any[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -148,15 +151,16 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
       setActiveSession(null);
       refetchSessions();
 
+      // Store completed session data for summary page
+      setCompletedSessionData(activeSessionData);
+      setCompletedPickupData(sessionPickups);
+
       toast({
         title: "Route Completed",
         description: "Great job! Your route has been completed.",
       });
 
-      // When route is completed, show welcome page again for next route
-      setShowWelcome(true);
-      setChecklistCompleted(false);
-      setCurrentView("welcome");
+      setCurrentView("summary");
     } catch (error) {
       toast({
         title: "Error",
@@ -262,40 +266,44 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
 
       {/* Content */}
       <div className="max-w-4xl mx-auto p-4 pb-20">
-        {currentView === "welcome" && (
-          <div className="space-y-6">
-            <DriverWelcome 
-              user={user} 
-              onLogout={() => {}} // Empty function since header handles logout
-              onProceedToRoute={() => {
-                setShowWelcome(false);
-                setCurrentView("routes");
-                handleStartRoute();
-                toast({
-                  title: "Safety Checklist Complete",
-                  description: "Route started! Begin picking up students.",
-                });
-              }}
-              hideHeader={true} // Hide header to prevent duplication
-            />
-          </div>
-        )}
-
         {currentView === "routes" && (
           <div className="space-y-4">
-            {/* Route Header */}
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Your Route</h2>
-              {activeSessionData ? (
-                <Button onClick={handleCompleteRoute} variant="outline">
-                  Complete Route
-                </Button>
-              ) : (
-                <Button onClick={handleStartRoute} className="bg-green-600 hover:bg-green-700">
-                  Start Route
-                </Button>
-              )}
-            </div>
+            {/* Show Welcome/Safety Checklist First */}
+            {showWelcome && !checklistCompleted && (
+              <div className="mb-6">
+                <DriverWelcome 
+                  user={user} 
+                  onLogout={() => {}} // Empty function since header handles logout
+                  onProceedToRoute={() => {
+                    setShowWelcome(false);
+                    setChecklistCompleted(true);
+                    handleStartRoute();
+                    toast({
+                      title: "Safety Checklist Complete",
+                      description: "Route started! Begin picking up students.",
+                    });
+                  }}
+                  hideHeader={true} // Hide header to prevent duplication
+                />
+              </div>
+            )}
+
+            {/* Route Content - only show after checklist is complete */}
+            {(!showWelcome || checklistCompleted) && (
+              <>
+                {/* Route Header */}
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900">Your Route</h2>
+                  {activeSessionData ? (
+                    <Button onClick={handleCompleteRoute} variant="outline">
+                      Complete Route
+                    </Button>
+                  ) : (
+                    <Button onClick={handleStartRoute} className="bg-green-600 hover:bg-green-700">
+                      Start Route
+                    </Button>
+                  )}
+                </div>
 
             {/* Route Information */}
             {routes.length > 0 && (
@@ -407,8 +415,29 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
                   ))}
                 </CardContent>
               </Card>
+                )}
+              </>
             )}
           </div>
+        )}
+
+        {currentView === "summary" && (
+          <RouteSummary
+            sessionData={completedSessionData}
+            pickupData={completedPickupData}
+            onStartNewRoute={() => {
+              setCurrentView("routes");
+              setShowWelcome(true);
+              setChecklistCompleted(false);
+              setCompletedSessionData(null);
+              setCompletedPickupData([]);
+            }}
+            onBackToDashboard={() => {
+              setCurrentView("routes");
+              setCompletedSessionData(null);
+              setCompletedPickupData([]);
+            }}
+          />
         )}
 
         {currentView === "notify" && (
@@ -590,15 +619,6 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
           >
             <Navigation className="h-5 w-5 mb-1" />
             <span>Navigation</span>
-          </Button>
-          <Button
-            variant={currentView === "welcome" ? "default" : "ghost"}
-            onClick={() => setCurrentView("welcome")}
-            className="flex-1 flex flex-col items-center py-3 mx-1 text-xs font-medium"
-            disabled={!showWelcome} // Disable if checklist completed and route started
-          >
-            <Users className="h-5 w-5 mb-1" />
-            <span>Welcome</span>
           </Button>
         </div>
       </div>
