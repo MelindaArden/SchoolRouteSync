@@ -20,14 +20,18 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch driver's routes
-  const { data: routes = [], isLoading } = useQuery({
+  // Fetch driver's routes with error handling
+  const { data: routes = [], isLoading, error: routesError } = useQuery({
     queryKey: [`/api/drivers/${user.id}/routes`],
+    retry: 0,
+    staleTime: 30000,
   });
 
-  // Fetch today's sessions
-  const { data: sessions = [], refetch: refetchSessions } = useQuery({
+  // Fetch today's sessions with error handling
+  const { data: sessions = [], refetch: refetchSessions, error: sessionsError } = useQuery({
     queryKey: [`/api/drivers/${user.id}/sessions/today`],
+    retry: 0,
+    staleTime: 15000,
   });
 
   // Fetch session pickups for active session
@@ -122,6 +126,26 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
       });
     }
   };
+
+  // Show error state if queries fail
+  if (routesError || sessionsError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="max-w-md mx-4">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-800 mb-2">Connection Issue</h3>
+            <p className="text-gray-600 mb-4">
+              Unable to load your route data. Please check your connection and try again.
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

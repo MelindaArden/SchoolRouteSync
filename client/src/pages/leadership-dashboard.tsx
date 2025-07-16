@@ -58,6 +58,10 @@ interface LeadershipDashboardProps {
 export default function LeadershipDashboard({ user, onLogout }: LeadershipDashboardProps) {
   console.log("LeadershipDashboard rendering with user:", user);
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
+  
+  // Check if we have critical data loading errors
+  const hasCriticalErrors = usersError || schoolsError || studentsError || routesError;
+  const hasConnectionErrors = historyError || sessionsError || pickupsError;
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
   const [absenceView, setAbsenceView] = useState<"management" | "export">("management");
@@ -70,32 +74,38 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   // REAL-TIME WEEKLY PERFORMANCE WITH DRIVER BREAKDOWN
   const [selectedPerformanceDay, setSelectedPerformanceDay] = useState<any>(null);
   
-  // Fetch pickup sessions data for performance calculations with real-time updates
-  const { data: pickupHistoryData = [], isLoading: sessionsDataLoading } = useQuery({
+  // Fetch pickup sessions data for performance calculations with better error handling
+  const { data: pickupHistoryData = [], isLoading: sessionsDataLoading, error: historyError } = useQuery({
     queryKey: ['/api/pickup-history'],
-    refetchInterval: 10000, // Update every 10 seconds for real-time performance
-    staleTime: 5000,
+    refetchInterval: 30000, // Reduced frequency to 30 seconds to prevent timeouts
+    staleTime: 15000,
+    retry: 0, // Don't retry failed requests to prevent cascade failures
+    enabled: activeTab === "dashboard", // Only fetch when needed
   });
 
-  // Data fetching with proper error handling
+  // Data fetching with optimized error handling and conditional loading
   const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['/api/users'],
-    retry: 1,
+    retry: 0,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const { data: schools = [], isLoading: schoolsLoading, error: schoolsError } = useQuery({
     queryKey: ['/api/schools'],
-    retry: 1,
+    retry: 0,
+    staleTime: 30000,
   });
 
   const { data: students = [], isLoading: studentsLoading, error: studentsError } = useQuery({
     queryKey: ['/api/students'],
-    retry: 1,
+    retry: 0,
+    staleTime: 30000,
   });
 
   const { data: routes = [], isLoading: routesLoading, error: routesError } = useQuery({
     queryKey: ['/api/routes'],
-    retry: 1,
+    retry: 0,
+    staleTime: 30000,
   });
 
   // Calculate real-time weekly performance based on actual data
@@ -278,11 +288,11 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   const routeCount = Array.isArray(routes) ? routes.length : 0;
 
   // Check for critical errors that would prevent page loading
-  const hasDataErrors = schoolsError || studentsError || usersError || routesError;
+  const hasLoadingErrors = schoolsError || studentsError || usersError || routesError;
   const isDataLoading = schoolsLoading || studentsLoading || usersLoading || routesLoading;
 
   // Add comprehensive error handling for blank page issues
-  if (hasDataErrors) {
+  if (hasLoadingErrors) {
     console.error("Leadership Dashboard Data Errors:", {
       schoolsError,
       studentsError, 
@@ -680,7 +690,7 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
         {activeTab === "routes" && !showForm && (
           <div className="p-2 sm:p-4 space-y-4">
             {/* Error State Display */}
-            {hasDataErrors && (
+            {hasConnectionErrors && (
               <Card className="border-red-200 bg-red-50">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 text-red-800">

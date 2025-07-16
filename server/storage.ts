@@ -211,7 +211,17 @@ export class DatabaseStorage implements IStorage {
 
   // Routes
   async getRoutes(): Promise<Route[]> {
-    return await db.select().from(routes).where(eq(routes.isActive, true)).orderBy(asc(routes.name));
+    try {
+      return await Promise.race([
+        db.select().from(routes).where(eq(routes.isActive, true)).orderBy(asc(routes.name)),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 3000)
+        )
+      ]);
+    } catch (error) {
+      console.error('Database query timeout in getRoutes:', error);
+      return [];
+    }
   }
 
   async getRoute(id: number): Promise<Route | undefined> {
@@ -463,7 +473,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDriverLocations(): Promise<DriverLocation[]> {
-    return await db.select().from(driverLocations).orderBy(desc(driverLocations.timestamp));
+    try {
+      return await Promise.race([
+        db.select().from(driverLocations).orderBy(desc(driverLocations.timestamp)).limit(100),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 3000)
+        )
+      ]);
+    } catch (error) {
+      console.error('Database query timeout in getDriverLocations:', error);
+      return [];
+    }
   }
 
   async getDriverLocationsBySession(sessionId: number): Promise<DriverLocation[]> {
@@ -474,7 +494,17 @@ export class DatabaseStorage implements IStorage {
 
   // Issues
   async getIssues(): Promise<Issue[]> {
-    return await db.select().from(issues).orderBy(desc(issues.reportedAt));
+    try {
+      return await Promise.race([
+        db.select().from(issues).orderBy(desc(issues.reportedAt)).limit(50),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 3000)
+        )
+      ]);
+    } catch (error) {
+      console.error('Database query timeout in getIssues:', error);
+      return [];
+    }
   }
 
   async getIssue(id: number): Promise<Issue | undefined> {
@@ -498,7 +528,17 @@ export class DatabaseStorage implements IStorage {
 
   // Pickup History
   async getPickupHistory(): Promise<PickupHistory[]> {
-    return await db.select().from(pickupHistory).orderBy(desc(pickupHistory.completedAt));
+    try {
+      return await Promise.race([
+        db.select().from(pickupHistory).orderBy(desc(pickupHistory.completedAt)).limit(100),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 3000)
+        )
+      ]);
+    } catch (error) {
+      console.error('Database query timeout in getPickupHistory:', error);
+      return [];
+    }
   }
 
   async getPickupHistoryByDriver(driverId: number): Promise<PickupHistory[]> {
