@@ -38,10 +38,14 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
 
   // Fetch session pickups for active session
   const activeSessionData = sessions.find((s: any) => s.status === "in_progress");
-  const { data: sessionPickups = [] } = useQuery({
-    queryKey: [`/api/student-pickups?sessionId=${activeSessionData?.id}`],
+  const { data: sessionPickups = [], refetch: refetchPickups } = useQuery({
+    queryKey: [`/api/student-pickups`, { sessionId: activeSessionData?.id }],
+    queryFn: () => 
+      activeSessionData 
+        ? fetch(`/api/student-pickups?sessionId=${activeSessionData.id}`).then(res => res.json())
+        : Promise.resolve([]),
     enabled: !!activeSessionData?.id,
-    refetchInterval: 5000, // Update every 5 seconds
+    refetchInterval: 2000, // Update every 2 seconds for real-time updates
   });
 
   const handleStartRoute = async () => {
@@ -106,15 +110,30 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
   const handleCompleteRoute = async () => {
     if (!activeSessionData) return;
 
-    // Check if all students are marked
-    const allStudentsMarked = sessionPickups.every((pickup: any) => 
-      pickup.status === 'picked_up' || pickup.status === 'no_show' || pickup.status === 'absent'
-    );
+    // Get all students from the route
+    const allStudents: any[] = [];
+    routes[0]?.schools?.forEach((schoolData: any) => {
+      if (schoolData.students) {
+        allStudents.push(...schoolData.students);
+      }
+    });
+
+    // Check if every student has a pickup record with a valid status
+    const allStudentsMarked = allStudents.every((student: any) => {
+      const pickup = sessionPickups.find((p: any) => p.studentId === student.id);
+      return pickup && (pickup.status === 'picked_up' || pickup.status === 'no_show' || pickup.status === 'absent');
+    });
 
     if (!allStudentsMarked) {
+      const unmarkedStudents = allStudents.filter((student: any) => {
+        const pickup = sessionPickups.find((p: any) => p.studentId === student.id);
+        return !pickup || (pickup.status !== 'picked_up' && pickup.status !== 'no_show' && pickup.status !== 'absent');
+      });
+      
+      console.log('Unmarked students:', unmarkedStudents.map(s => s.name));
       toast({
         title: "Cannot Complete Route",
-        description: "Please mark all students as 'Picked Up' or 'Not Present' before completing the route.",
+        description: `Please mark all students as 'Picked Up' or 'Not Present' before completing the route. ${unmarkedStudents.length} students still need to be marked.`,
         variant: "destructive",
       });
       return;
@@ -151,21 +170,37 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
     if (!activeSessionData) return;
 
     try {
-      await apiRequest("POST", `/api/student-pickups`, {
-        sessionId: activeSessionData.id,
-        studentId,
-        status,
-        pickedUpAt: status === 'picked_up' ? new Date().toISOString() : null,
-      });
+      // Find existing pickup record
+      const existingPickup = sessionPickups.find((p: any) => p.studentId === studentId);
+      
+      if (existingPickup) {
+        // Update existing record
+        await apiRequest("PATCH", `/api/student-pickups/${existingPickup.id}`, {
+          status,
+          pickedUpAt: status === 'picked_up' ? new Date().toISOString() : null,
+        });
+      } else {
+        // Create new record if none exists
+        await apiRequest("POST", `/api/student-pickups`, {
+          sessionId: activeSessionData.id,
+          studentId,
+          status,
+          pickedUpAt: status === 'picked_up' ? new Date().toISOString() : null,
+        });
+      }
 
-      // Refresh the pickup data
-      queryClient.invalidateQueries({ queryKey: [`/api/student-pickups?sessionId=${activeSessionData.id}`] });
+      // Refresh the pickup data immediately
+      await queryClient.invalidateQueries({ queryKey: [`/api/student-pickups`, { sessionId: activeSessionData.id }] });
+      
+      // Also refetch to ensure we have latest data
+      refetchPickups();
 
       toast({
         title: "Student Updated",
         description: `Student marked as ${status.replace('_', ' ')}`,
       });
     } catch (error) {
+      console.error('Error updating student pickup:', error);
       toast({
         title: "Error",
         description: "Failed to update student status",
@@ -346,8 +381,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
                                 <Button
                                   size="sm"
                                   variant={isPickedUp ? "default" : "outline"}
-                                  onClick={() => markStudentPickup(student.id, 'picked_up')}
-                                  disabled={isPickedUp}
+                                  onClick={() => markStudentPickup(student.id, isPickedUp ? 'pending' : 'picked_up')}
                                   className={isPickedUp ? "bg-green-600 hover:bg-green-700 text-white" : "hover:bg-green-100"}
                                 >
                                   {isPickedUp ? "✓ Picked Up" : "Pick Up"}
@@ -355,8 +389,7 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
                                 <Button
                                   size="sm"
                                   variant={isNotPresent ? "default" : "outline"}
-                                  onClick={() => markStudentPickup(student.id, 'no_show')}
-                                  disabled={isNotPresent}
+                                  onClick={() => markStudentPickup(student.id, isNotPresent ? 'pending' : 'no_show')}
                                   className={isNotPresent ? "bg-red-600 hover:bg-red-700 text-white" : "hover:bg-red-100"}
                                 >
                                   {isNotPresent ? "✗ Not Present" : "Not Present"}
