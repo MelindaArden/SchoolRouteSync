@@ -16,7 +16,7 @@ interface SimpleDriverDashboardProps {
 }
 
 export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDashboardProps) {
-  const [currentView, setCurrentView] = useState<"routes" | "notify" | "navigation" | "summary">("routes");
+  const [currentView, setCurrentView] = useState<"routes" | "notify" | "navigation" | "summary" | "welcome">("routes");
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showWelcome, setShowWelcome] = useState(true);
   const [checklistCompleted, setChecklistCompleted] = useState(false);
@@ -151,9 +151,33 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
       setActiveSession(null);
       refetchSessions();
 
-      // Store completed session data for summary page
-      setCompletedSessionData(activeSessionData);
-      setCompletedPickupData(sessionPickups);
+      // Store completed session data for summary page with enhanced data
+      const enhancedSessionData = {
+        ...activeSessionData,
+        startedAt: activeSessionData.startTime || activeSessionData.startedAt,
+        completedAt: new Date().toISOString(),
+        route: routes[0] // Include route information
+      };
+      
+      // Enhance pickup data with student information
+      const enhancedPickupData = sessionPickups.map((pickup: any) => {
+        // Find student data from routes
+        let studentData = null;
+        routes[0]?.schools?.forEach((school: any) => {
+          const student = school.students?.find((s: any) => s.id === pickup.studentId);
+          if (student) {
+            studentData = student;
+          }
+        });
+        
+        return {
+          ...pickup,
+          student: studentData
+        };
+      });
+      
+      setCompletedSessionData(enhancedSessionData);
+      setCompletedPickupData(enhancedPickupData);
 
       toast({
         title: "Route Completed",
@@ -440,6 +464,13 @@ export default function SimpleDriverDashboard({ user, onLogout }: SimpleDriverDa
               setCurrentView("routes");
               setCompletedSessionData(null);
               setCompletedPickupData([]);
+            }}
+            onNavigate={(view) => {
+              setCurrentView(view);
+              if (view === "routes") {
+                setCompletedSessionData(null);
+                setCompletedPickupData([]);
+              }
             }}
           />
         )}

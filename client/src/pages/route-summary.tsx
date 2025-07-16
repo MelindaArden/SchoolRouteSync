@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, Users, MapPin } from "lucide-react";
+import { CheckCircle, Clock, Users, MapPin, Home, AlertTriangle, Navigation } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface RouteSummaryProps {
@@ -9,23 +9,74 @@ interface RouteSummaryProps {
   pickupData: any[];
   onStartNewRoute: () => void;
   onBackToDashboard: () => void;
+  onNavigate?: (view: string) => void;
 }
 
-export default function RouteSummary({ sessionData, pickupData, onStartNewRoute, onBackToDashboard }: RouteSummaryProps) {
+export default function RouteSummary({ sessionData, pickupData, onStartNewRoute, onBackToDashboard, onNavigate }: RouteSummaryProps) {
   console.log('RouteSummary rendered with:', { sessionData, pickupData });
   
   if (!sessionData) {
     console.log('No session data found, showing fallback');
     return (
-      <div className="max-w-4xl mx-auto p-4">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-gray-500">No route data available</p>
-            <Button onClick={onBackToDashboard} className="mt-4">
+      <div className="max-w-4xl mx-auto p-4 pb-20">
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <CheckCircle className="h-16 w-16 text-green-500" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900">Route Complete!</h1>
+          <p className="text-gray-600">Your route has been successfully completed</p>
+          <div className="space-y-4">
+            <Button 
+              onClick={onStartNewRoute}
+              size="lg"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Start New Route
+            </Button>
+            <Button 
+              onClick={onBackToDashboard}
+              variant="outline"
+              size="lg"
+            >
               Back to Dashboard
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Bottom Navigation Menu */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+          <div className="flex justify-around items-center max-w-md mx-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600"
+              onClick={() => onNavigate && onNavigate("routes")}
+            >
+              <Home className="h-5 w-5" />
+              <span className="text-xs">Routes</span>
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600"
+              onClick={() => onNavigate && onNavigate("notify")}
+            >
+              <AlertTriangle className="h-5 w-5" />
+              <span className="text-xs">Notify</span>
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600"
+              onClick={() => onNavigate && onNavigate("welcome")}
+            >
+              <Navigation className="h-5 w-5" />
+              <span className="text-xs">Welcome</span>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -39,7 +90,7 @@ export default function RouteSummary({ sessionData, pickupData, onStartNewRoute,
   const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)); // minutes
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
+    <div className="max-w-4xl mx-auto p-4 pb-20 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="flex justify-center">
@@ -175,6 +226,41 @@ export default function RouteSummary({ sessionData, pickupData, onStartNewRoute,
         >
           Back to Dashboard
         </Button>
+      </div>
+
+      {/* Bottom Navigation Menu */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 safe-area-pb">
+        <div className="flex justify-around items-center max-w-md mx-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600"
+            onClick={() => onNavigate && onNavigate("routes")}
+          >
+            <Home className="h-5 w-5" />
+            <span className="text-xs">Routes</span>
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600"
+            onClick={() => onNavigate && onNavigate("notify")}
+          >
+            <AlertTriangle className="h-5 w-5" />
+            <span className="text-xs">Notify</span>
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600"
+            onClick={() => onNavigate && onNavigate("welcome")}
+          >
+            <Navigation className="h-5 w-5" />
+            <span className="text-xs">Welcome</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
