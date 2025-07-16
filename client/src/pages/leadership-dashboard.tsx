@@ -59,9 +59,6 @@ export default function LeadershipDashboard({ user, onLogout }: LeadershipDashbo
   console.log("LeadershipDashboard rendering with user:", user);
   const [activeTab, setActiveTab] = useState<"dashboard" | "routes" | "gps" | "users" | "reports" | "history" | "absences" | "settings">("dashboard");
   
-  // Check if we have critical data loading errors
-  const hasCriticalErrors = usersError || schoolsError || studentsError || routesError;
-  const hasConnectionErrors = historyError || sessionsError || pickupsError;
   const [showForm, setShowForm] = useState<"school" | "student" | "driver" | "route" | "user" | null>(null);
   const [routesView, setRoutesView] = useState<"management" | "schools" | "students" | "routes" | "optimizer" | "multi-optimizer" | "creator">("management");
   const [absenceView, setAbsenceView] = useState<"management" | "export">("management");
