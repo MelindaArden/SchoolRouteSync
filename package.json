@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-sns": "^3.840.0",
-    "@expo/cli": "^0.24.20",
+    "@expo/cli": "^0.24.20", "@neondatabase/serverless": "^0.10.4",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",
