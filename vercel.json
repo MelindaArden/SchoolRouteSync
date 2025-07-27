@@ -1,18 +1,12 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/public"
-      }
-    },
-    {
-      "src": "api/[...route].ts",
-      "use": "@vercel/node"
+  "buildCommand": "vite build",
+  "outputDirectory": "dist/public",
+  "functions": {
+    "api/[...route].ts": {
+      "runtime": "@vercel/node@3.2.18"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/api/(.*)",
@@ -20,12 +14,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/public/$1"
+      "dest": "/$1"
     }
-  ],
-  "functions": {
-    "api/[...route].ts": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
