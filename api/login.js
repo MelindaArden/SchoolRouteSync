@@ -33,22 +33,23 @@ export default async function handler(req, res) {
     
     const result = await pool.query(query, [username, business || 'tnt-gymnastics']);
     
-    if (result.rows.length === 0) {
+    if (result.rows.length === 0 || result.rows[0].password !== password) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const user = result.rows[0];
-
-    if (user.password !== password) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
     const { password: _, ...userWithoutPassword } = user;
     
     return res.status(200).json({
       success: true,
+      isAuthenticated: true,
       user: userWithoutPassword,
-      token: `token_${user.id}_${Date.now()}`
+      authToken: `token_${user.id}_${Date.now()}`,
+      debug: {
+        loginMethod: 'regular',
+        isMobile: false,
+        sessionId: `regular_${Date.now()}`
+      }
     });
 
   } catch (error) {
