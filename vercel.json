@@ -16,6 +16,10 @@
     {
       "src": "api/login.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/session.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -26,6 +30,10 @@
     {
       "src": "/api/login",
       "dest": "/api/login.js"
+    },
+    {
+      "src": "/api/session",
+      "dest": "/api/session.js"
     },
     {
       "src": "/(.*)",
