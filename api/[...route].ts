@@ -1,20 +1,51 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import { users, businesses } from '../shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { pgTable, varchar, text, integer, boolean, timestamp } from 'drizzle-orm/pg-core';
 import ws from 'ws';
 import * as bcrypt from 'bcryptjs';
+
+// Define schema inline for Vercel compatibility
+const businesses = pgTable('businesses', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  name: varchar('name', { length: 255 }).notNull().unique(),
+  contactEmail: varchar('contact_email', { length: 255 }),
+  contactPhone: varchar('contact_phone', { length: 20 }),
+  address: text('address'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+const users = pgTable('users', {
+  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+  username: varchar('username', { length: 50 }).notNull(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }),
+  firstName: varchar('first_name', { length: 100 }),
+  lastName: varchar('last_name', { length: 100 }),
+  role: varchar('role', { length: 20 }).notNull().default('driver'),
+  businessId: integer('business_id').notNull(),
+  isActive: boolean('is_active').default(true),
+  lastLogin: timestamp('last_login'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  notificationEmail: varchar('notification_email', { length: 255 }),
+});
 
 // Configure Neon for serverless
 neonConfig.webSocketConstructor = ws;
 
 // Initialize database connection
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
+
 const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
   max: 1, // Reduced for serverless
   idleTimeoutMillis: 5000,
-  connectionTimeoutMillis: 10000
+  connectionTimeoutMillis: 15000
 });
 const db = drizzle({ client: pool });
 
@@ -38,7 +69,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ 
         status: 'ok', 
         message: 'Route Runner API is running on Vercel',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        databaseUrl: process.env.DATABASE_URL ? 'Connected' : 'Missing'
       });
     }
 
