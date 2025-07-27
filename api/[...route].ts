@@ -1,4 +1,22 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { users, businesses } from '../shared/schema';
+import { eq, and } from 'drizzle-orm';
+import ws from 'ws';
+import * as bcrypt from 'bcryptjs';
+
+// Configure Neon for serverless
+neonConfig.webSocketConstructor = ws;
+
+// Initialize database connection
+const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: 1, // Reduced for serverless
+  idleTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000
+});
+const db = drizzle({ client: pool });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
@@ -11,20 +29,93 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  // Basic API endpoint to test deployment
-  if (req.url === '/api/health') {
-    return res.status(200).json({ 
-      status: 'ok', 
-      message: 'Route Runner API is running on Vercel',
-      timestamp: new Date().toISOString()
+  const { url, method } = req;
+  const path = url?.replace('/api', '') || '';
+
+  try {
+    // Health check endpoint
+    if (path === '/health') {
+      return res.status(200).json({ 
+        status: 'ok', 
+        message: 'Route Runner API is running on Vercel',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Login endpoint
+    if (path === '/login' && method === 'POST') {
+      const { username, password, businessName } = req.body;
+
+      if (!username || !password || !businessName) {
+        return res.status(400).json({ message: 'Username, password, and business name are required' });
+      }
+
+      try {
+        // Find business first
+        const [business] = await db
+          .select()
+          .from(businesses)
+          .where(eq(businesses.name, businessName.toLowerCase()))
+          .limit(1);
+
+        if (!business) {
+          return res.status(401).json({ message: 'Invalid business name' });
+        }
+
+        // Find user in this business
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(
+            and(
+              eq(users.username, username),
+              eq(users.businessId, business.id)
+            )
+          )
+          .limit(1);
+
+        if (!user) {
+          return res.status(401).json({ message: 'Invalid username or password' });
+        }
+
+        // Verify password
+        const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+        if (!isValidPassword) {
+          return res.status(401).json({ message: 'Invalid username or password' });
+        }
+
+        // Return user data (excluding password)
+        const { passwordHash, ...userData } = user;
+        return res.status(200).json({
+          user: userData,
+          business: business,
+          message: 'Login successful'
+        });
+
+      } catch (error) {
+        console.error('Login error:', error);
+        return res.status(500).json({ message: 'Database connection error' });
+      }
+    }
+
+    // Session endpoint for authentication check
+    if (path === '/session' && method === 'GET') {
+      // For now, return unauthorized since we don't have session handling in serverless
+      return res.status(401).json({ message: 'No active session' });
+    }
+
+    // Default response for unhandled routes
+    return res.status(404).json({
+      message: 'Route not found',
+      availableRoutes: ['/health', '/login', '/session'],
+      note: 'More API endpoints will be added as needed'
+    });
+
+  } catch (error) {
+    console.error('API error:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
     });
   }
-
-  // For now, return a helpful message for other routes
-  return res.status(200).json({
-    message: 'Route Runner API - Full functionality coming soon',
-    url: req.url,
-    method: req.method,
-    note: 'This is a simplified handler for initial Vercel deployment testing'
-  });
 }
