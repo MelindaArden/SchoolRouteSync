@@ -20,6 +20,10 @@
     {
       "src": "api/session.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/mobile-login.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -34,6 +38,10 @@
     {
       "src": "/api/session",
       "dest": "/api/session.js"
+    },
+    {
+      "src": "/api/mobile-login",
+      "dest": "/api/mobile-login.js"
     },
     {
       "src": "/(.*)",
