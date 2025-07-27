@@ -10,22 +10,26 @@
       }
     },
     {
-      "src": "api/login.js",
+      "src": "api/health.js",
       "use": "@vercel/node"
     },
     {
-      "src": "api/health.js", 
+      "src": "api/login.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/health",
+      "dest": "/api/health.js"
+    },
+    {
+      "src": "/api/login",
+      "dest": "/api/login.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/public/$1"
+      "dest": "/$1"
     }
   ]
 }
