@@ -15,17 +15,19 @@ export default async function handler(req, res) {
 
   try {
     const authHeader = req.headers.authorization;
+    
+    // If no authorization header, return not authenticated (but 200 status)
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
+      return res.status(200).json({ 
         isAuthenticated: false,
-        message: 'No valid token provided' 
+        message: 'No token provided' 
       });
     }
 
     const token = authHeader.split(' ')[1];
     
     if (!token.startsWith('token_')) {
-      return res.status(401).json({ 
+      return res.status(200).json({ 
         isAuthenticated: false,
         message: 'Invalid token format' 
       });
@@ -47,7 +49,7 @@ export default async function handler(req, res) {
     const result = await pool.query(query, [userId]);
     
     if (result.rows.length === 0) {
-      return res.status(401).json({ 
+      return res.status(200).json({ 
         isAuthenticated: false,
         message: 'User not found' 
       });
@@ -58,12 +60,13 @@ export default async function handler(req, res) {
     return res.status(200).json({
       isAuthenticated: true,
       success: true,
+      userId: user.id,
       user: user
     });
 
   } catch (error) {
     console.error('Session error:', error);
-    return res.status(401).json({ 
+    return res.status(200).json({ 
       isAuthenticated: false,
       message: 'Session validation failed',
       error: error.message 
