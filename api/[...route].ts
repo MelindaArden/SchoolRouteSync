@@ -1,27 +1,30 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import express from 'express';
-import { registerRoutes } from '../server/routes';
-
-// Create Express app
-const app = express();
-
-// Disable x-powered-by header
-app.disable('x-powered-by');
-
-// Initialize routes
-let initialized = false;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!initialized) {
-    try {
-      await registerRoutes(app);
-      initialized = true;
-    } catch (error) {
-      console.error('Failed to initialize routes:', error);
-      return res.status(500).json({ error: 'Server initialization failed' });
-    }
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  // Handle preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
 
-  // Handle the request with Express
-  app(req as any, res as any);
+  // Basic API endpoint to test deployment
+  if (req.url === '/api/health') {
+    return res.status(200).json({ 
+      status: 'ok', 
+      message: 'Route Runner API is running on Vercel',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // For now, return a helpful message for other routes
+  return res.status(200).json({
+    message: 'Route Runner API - Full functionality coming soon',
+    url: req.url,
+    method: req.method,
+    note: 'This is a simplified handler for initial Vercel deployment testing'
+  });
 }
