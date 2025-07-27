@@ -2,23 +2,15 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
+      "src": "package.json", 
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "vite build",
+        "buildCommand": "npm run build",
         "distDir": "dist/public"
       }
-    },
-    {
-      "src": "api/[...route].ts",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/[...route]"
-    },
     {
       "src": "/(.*)",
       "dest": "/dist/public/$1"
