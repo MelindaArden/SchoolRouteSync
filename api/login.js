@@ -1,3 +1,5 @@
+import { Pool } from '@neondatabase/serverless';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -11,10 +13,50 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  // Simple test response for now
-  return res.status(200).json({
-    message: 'Login endpoint working',
-    received: req.body,
-    timestamp: new Date().toISOString()
-  });
+  try {
+    const { username, password, business } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password required' });
+    }
+
+    const pool = new Pool({ 
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+
+    const query = `
+      SELECT id, username, password, role, "businessId", "firstName", "lastName", email, "notificationEmail"
+      FROM users 
+      WHERE username = $1 AND "businessId" = $2
+    `;
+    
+    const result = await pool.query(query, [username, business || 'tnt-gymnastics']);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const user = result.rows[0];
+
+    if (user.password !== password) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const { password: _, ...userWithoutPassword } = user;
+    
+    return res.status(200).json({
+      success: true,
+      user: userWithoutPassword,
+      token: `token_${user.id}_${Date.now()}`
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ 
+      message: 'Login failed', 
+      error: error.message,
+      details: 'Database connection or query error'
+    });
+  }
 }
